@@ -65,20 +65,36 @@ model User {
     accounts       Account[]
     sessions       Session[]
     posts          Post[]
-    financeEntries FinanceEntry[]
-    workDays       WorkDay[]
+    financeEntries     FinanceEntry[]
+    workDays           WorkDay[]
+    serviceCategories  ServiceCategory[]
+    services           Service[]
 }
 
 model WorkDay {
-    id       String   @id @default(cuid())
-    date     DateTime @db.Date
-    user     User     @relation(fields: [userId], references: [id])
-    userId   String
-    earnings Float    @default(0)
-    notes    String?
+    id            String           @id @default(cuid())
+    date          DateTime         @db.Date
+    user          User             @relation(fields: [userId], references: [id])
+    userId        String
+    earnings      Float            @default(0)
+    notes         String?
+    financeEntry  FinanceEntry?
+    services      WorkDayService[]
 
     @@unique([date, userId])
     @@index([date])
+}
+
+model WorkDayService {
+    id         String   @id @default(cuid())
+    workDay    WorkDay  @relation(fields: [workDayId], references: [id], onDelete: Cascade)
+    workDayId  String
+    service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    serviceId  String
+    quantity   Int      @default(1)
+    priceSnap  Float    // ár a bejegyzés pillanatában
+
+    @@unique([workDayId, serviceId])
 }
 
 model FinanceEntry {
@@ -90,6 +106,8 @@ model FinanceEntry {
     createdAt   DateTime @default(now())
     createdBy   User     @relation(fields: [createdById], references: [id])
     createdById String
+    workDay     WorkDay? @relation(fields: [workDayId], references: [id], onDelete: Cascade)
+    workDayId   String?  @unique
 
     @@index([date])
     @@index([type])
@@ -101,4 +119,35 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model ServiceCategory {
+    id        String    @id @default(cuid())
+    name      String
+    order     Int       @default(0)
+    createdAt DateTime  @default(now())
+    user      User      @relation(fields: [userId], references: [id])
+    userId    String
+    services  Service[]
+
+    @@index([userId])
+}
+
+model Service {
+    id           String           @id @default(cuid())
+    name         String
+    price        Float
+    duration     Int              @default(30)
+    description  String?
+    active       Boolean          @default(true)
+    order        Int              @default(0)
+    createdAt    DateTime         @default(now())
+    category     ServiceCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+    categoryId   String
+    user         User             @relation(fields: [userId], references: [id])
+    userId       String
+    workDays     WorkDayService[]
+
+    @@index([categoryId])
+    @@index([userId])
 }
