@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-cinzel: var(--font-cinzel), serif;
+  --font-cormorant: var(--font-cormorant), Georgia, serif;
+
+  --color-bg:           #07040f;
+  --color-bg2:          #100820;
+  --color-gold:         #c9a84c;
+  --color-gold-light:   #e8cc7a;
+  --color-gold-dim:     #7a6229;
+  --color-purple:       #7c3aed;
+  --color-purple-soft:  #a78bfa;
+  --color-rose:         #e8b4c8;
+  --color-rose-dark:    #c47a99;
+  --color-cream:        #f5e6d3;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  min-height: 100%;
+  background: var(--color-bg);
+  color: var(--color-cream);
+  font-family: var(--font-cormorant, Georgia, serif);
+}
+
+::selection {
+  background: rgba(201,168,76,0.3);
+  color: var(--color-cream);
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-gold-dim); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold); }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0;   transform: scale(0.5); }
+  50%       { opacity: 1;   transform: scale(1.4); filter: drop-shadow(0 0 4px #e8cc7a); }
+}
+@keyframes drift {
+  0%   { opacity: 0;   transform: translateY(0)      rotate(0deg);   }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.5; }
+  100% { opacity: 0;   transform: translateY(-110vh) rotate(720deg); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(201,168,76,0.35), 0 0 60px rgba(201,168,76,0.12); }
+  50%       { box-shadow: 0 0 40px rgba(201,168,76,0.55), 0 0 90px rgba(201,168,76,0.22); }
+}
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33%       { transform: translate(30px,-20px) scale(1.05); }
+  66%       { transform: translate(-20px,15px) scale(0.95); }
+}
+@keyframes rotateSlow {
+  to { transform: rotate(360deg); }
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-7px); }
+}
+@keyframes borderGlow {
+  0%,100% { border-color: rgba(201,168,76,0.2); }
+  50%     { border-color: rgba(201,168,76,0.55); }
+}

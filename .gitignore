@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# env files — SOHA ne kerüljön fel
+.env
+.env.*
+!.env.example
+
+# next.js
+web/.next/
+web/out/
+
+# prisma generated
+web/generated/
+
+# build
+web/build/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+
+# clojure
+.cpcache/
+target/
+.nrepl-port
