@@ -72,12 +72,19 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
 
   const { data: categories = [] } = api.calendar.services.useQuery();
 
-  const [tab,         setTab]         = useState<"work" | "cost">("work");
-  const [userId,      setUserId]      = useState(users[0]?.id ?? "");
-  const [selectedSvc, setSelectedSvc] = useState<Set<string>>(new Set());
-  const [earnings,    setEarnings]    = useState("");
+  const [tab,            setTab]            = useState<"work" | "cost">("work");
+  const [userId,         setUserId]         = useState(users[0]?.id ?? "");
+  const [selectedSvc,    setSelectedSvc]    = useState<Set<string>>(new Set());
+  const [earnings,       setEarnings]       = useState("");
   const [earningsManual, setEarningsManual] = useState(false);
-  const [wNotes,      setWNotes]      = useState("");
+  const [wNotes,         setWNotes]         = useState("");
+  // Service search
+  const [svcSearch,      setSvcSearch]      = useState("");
+  const [svcOpen,        setSvcOpen]        = useState(false);
+  // Material cost inline
+  const [matDesc,        setMatDesc]        = useState("");
+  const [matAmt,         setMatAmt]         = useState("");
+  // Cost tab
   const [costType,    setCostType]    = useState<CostType>("material");
   const [costDesc,    setCostDesc]    = useState("");
   const [costAmt,     setCostAmt]     = useState("");
@@ -89,17 +96,26 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
   const dayCosts   = costEntries.reduce((s, e) => s + e.amount, 0);
   const dayProfit  = dayRevenue - dayCosts;
 
-  // All services flat for price lookup
-  const allServices: Record<string, ServiceItem> = {};
-  categories.forEach(c => c.services.forEach(s => { allServices[s.id] = s; }));
-
   // Auto-calculate earnings from selected services
-  function toggleService(svcId: string) {
+  function addService(svcId: string) {
     setSelectedSvc(prev => {
       const next = new Set(prev);
-      if (next.has(svcId)) next.delete(svcId); else next.add(svcId);
+      next.add(svcId);
       if (!earningsManual) {
-        const total = Array.from(next).reduce((s, id) => s + (allServices[id]?.price ?? 0), 0);
+        const total = Array.from(next).reduce((s, id) => s + (allServicesMap[id]?.price ?? 0), 0);
+        setEarnings(total > 0 ? String(total) : "");
+      }
+      return next;
+    });
+    setSvcSearch(""); setSvcOpen(false);
+  }
+
+  function removeService(svcId: string) {
+    setSelectedSvc(prev => {
+      const next = new Set(prev);
+      next.delete(svcId);
+      if (!earningsManual) {
+        const total = Array.from(next).reduce((s, id) => s + (allServicesMap[id]?.price ?? 0), 0);
         setEarnings(total > 0 ? String(total) : "");
       }
       return next;
@@ -112,8 +128,19 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
   }
 
   function resetWork() {
-    setSelectedSvc(new Set()); setEarnings(""); setEarningsManual(false); setWNotes("");
+    setSelectedSvc(new Set()); setEarnings(""); setEarningsManual(false);
+    setWNotes(""); setSvcSearch(""); setSvcOpen(false); setMatDesc(""); setMatAmt("");
   }
+
+  // Filtered services for dropdown
+  const allServicesFlat: (ServiceItem & { categoryName: string })[] = [];
+  categories.forEach(c => c.services.forEach(s => allServicesFlat.push({ ...s, categoryName: c.name })));
+  const allServicesMap: Record<string, ServiceItem> = {};
+  allServicesFlat.forEach(s => { allServicesMap[s.id] = s; });
+
+  const filteredSvcs = svcSearch.trim()
+    ? allServicesFlat.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(svcSearch.toLowerCase()))
+    : allServicesFlat;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 pt-12"
@@ -211,14 +238,17 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
 
         {/* Work entry form */}
         {tab === "work" && (
-          <form onSubmit={e => {
+          <form onSubmit={async e => {
             e.preventDefault();
-            upsert.mutate({
+            await upsert.mutateAsync({
               date: dateStr, userId,
               earnings: parseFloat(earnings) || 0,
               notes: wNotes || undefined,
               serviceIds: Array.from(selectedSvc),
             });
+            if (matDesc.trim() && matAmt) {
+              await addC.mutateAsync({ date: dateStr, type: "material", description: matDesc.trim(), amount: parseFloat(matAmt) });
+            }
             resetWork();
           }} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
@@ -238,68 +268,115 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
               </div>
             </div>
 
-            {/* Service picker */}
-            {categories.length > 0 && (
-              <div>
-                <label style={labelStyle}>Elvégzett szolgáltatások</label>
-                <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.5rem", paddingRight: "0.25rem" }}>
-                  {categories.map(cat => (
-                    <div key={cat.id}>
-                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.14em", color: "rgba(201,168,76,0.5)", textTransform: "uppercase", marginBottom: "0.3rem" }}>
-                        {cat.name}
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                        {cat.services.map(svc => {
-                          const sel = selectedSvc.has(svc.id);
-                          const col = userColors[userId] ?? "#c9a84c";
-                          return (
-                            <button key={svc.id} type="button" onClick={() => toggleService(svc.id)}
-                              style={{
-                                padding: "0.35rem 0.75rem", borderRadius: "7px", cursor: "pointer",
-                                border: sel ? `1px solid ${col}88` : "1px solid rgba(255,255,255,0.08)",
-                                background: sel ? `${col}18` : "rgba(255,255,255,0.03)",
-                                color: sel ? col : "rgba(245,230,211,0.5)",
-                                fontFamily: "var(--font-cormorant)", fontSize: "0.9rem",
-                                transition: "all 0.18s",
-                                display: "flex", alignItems: "center", gap: "0.35rem",
-                              }}>
-                              <span>{svc.name}</span>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", fontWeight: 700, opacity: 0.8 }}>{fmt(svc.price)}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Service search dropdown */}
+            <div style={{ position: "relative" }}>
+              <label style={labelStyle}>Elvégzett szolgáltatások</label>
 
-            {/* Earnings + notes */}
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  Kereset (Ft)
-                  {selectedSvc.size > 0 && !earningsManual && (
-                    <span style={{ color: "rgba(110,231,183,0.7)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>
-                  )}
-                </label>
-                <input type="number" value={earnings} onChange={e => handleEarningsChange(e.target.value)}
-                  placeholder="0" min="0" required style={{
-                    ...inputStyle,
-                    borderColor: selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "rgba(255,255,255,0.1)",
-                  }}
-                  onFocus={e => { e.target.style.borderColor = userColors[userId] ?? "var(--color-gold)"; }}
-                  onBlur={e => { e.target.style.borderColor = selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "rgba(255,255,255,0.1)"; }} />
+              {/* Selected service tags */}
+              {selectedSvc.size > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
+                  {Array.from(selectedSvc).map(id => {
+                    const svc = allServicesMap[id]; if (!svc) return null;
+                    const col = userColors[userId] ?? "#c9a84c";
+                    return (
+                      <div key={id} style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.28rem 0.65rem", borderRadius: "7px", background: `${col}18`, border: `1px solid ${col}55` }}>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: col }}>{svc.name}</span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: col, fontWeight: 700, opacity: 0.75 }}>{fmt(svc.price)}</span>
+                        <button type="button" onClick={() => removeService(id)}
+                          style={{ background: "none", border: "none", color: `${col}88`, cursor: "pointer", fontSize: "0.75rem", padding: "0 0.1rem", lineHeight: 1 }}>✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Search input */}
+              <div style={{ position: "relative" }}>
+                <input
+                  value={svcSearch}
+                  onChange={e => { setSvcSearch(e.target.value); setSvcOpen(true); }}
+                  onFocus={() => setSvcOpen(true)}
+                  onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
+                  placeholder={allServicesFlat.length === 0 ? "Nincs még szolgáltatás felvéve…" : "Keress: pl. Balayage…"}
+                  style={{ ...inputStyle }}
+                />
+                {svcSearch && (
+                  <button type="button" onClick={() => { setSvcSearch(""); setSvcOpen(false); }}
+                    style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>
+                )}
               </div>
-              <div style={{ flex: 2 }}>
-                <label style={labelStyle}>Megjegyzés</label>
-                <input value={wNotes} onChange={e => setWNotes(e.target.value)} placeholder="pl. Extra kezelés..." style={inputStyle}
-                  onFocus={e => { e.target.style.borderColor = "var(--color-gold)"; }}
+
+              {/* Dropdown list */}
+              {svcOpen && filteredSvcs.length > 0 && (
+                <div style={{ position: "absolute", left: 0, right: 0, zIndex: 100, background: "#120e22", border: "1px solid rgba(201,168,76,0.25)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                  {filteredSvcs.map((svc, i) => {
+                    const already = selectedSvc.has(svc.id);
+                    const col = userColors[userId] ?? "#c9a84c";
+                    const showCat = i === 0 || filteredSvcs[i - 1]?.categoryName !== svc.categoryName;
+                    return (
+                      <div key={svc.id}>
+                        {showCat && (
+                          <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(201,168,76,0.4)", textTransform: "uppercase" }}>
+                            {svc.categoryName}
+                          </div>
+                        )}
+                        <div
+                          onMouseDown={() => { if (!already) addService(svc.id); }}
+                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: already ? "default" : "pointer", background: already ? "rgba(255,255,255,0.02)" : "transparent", transition: "background 0.15s", opacity: already ? 0.45 : 1 }}
+                          onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = `${col}12`; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(255,255,255,0.02)" : "transparent"; }}>
+                          {already && <span style={{ fontSize: "0.65rem", color: col }}>✓</span>}
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "rgba(245,230,211,0.4)" : "var(--color-cream)", flex: 1 }}>{svc.name}</span>
+                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: col, fontWeight: 700 }}>{fmt(svc.price)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Earnings */}
+            <div>
+              <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                Munkadíj (Ft)
+                {selectedSvc.size > 0 && !earningsManual && (
+                  <span style={{ color: "rgba(110,231,183,0.7)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>
+                )}
+              </label>
+              <input type="number" value={earnings} onChange={e => handleEarningsChange(e.target.value)}
+                placeholder="0" min="0" required style={{
+                  ...inputStyle,
+                  borderColor: selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "rgba(255,255,255,0.1)",
+                }}
+                onFocus={e => { e.target.style.borderColor = userColors[userId] ?? "var(--color-gold)"; }}
+                onBlur={e => { e.target.style.borderColor = selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "rgba(255,255,255,0.1)"; }} />
+            </div>
+
+            {/* Inline material cost */}
+            <div style={{ padding: "0.85rem 1rem", background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.55)", textTransform: "uppercase" }}>✦ Anyagköltség (opcionális)</div>
+              <div style={{ display: "flex", gap: "0.6rem" }}>
+                <input value={matDesc} onChange={e => setMatDesc(e.target.value)} placeholder="pl. L'Oréal festék…"
+                  style={{ ...inputStyle, flex: 2 }}
+                  onFocus={e => { e.target.style.borderColor = "#fbbf24"; }}
+                  onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }} />
+                <input type="number" value={matAmt} onChange={e => setMatAmt(e.target.value)} placeholder="0 Ft"
+                  min="0" style={{ ...inputStyle, flex: 1 }}
+                  onFocus={e => { e.target.style.borderColor = "#fbbf24"; }}
                   onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }} />
               </div>
             </div>
-            <SaveBtn loading={upsert.isPending} />
+
+            {/* Notes */}
+            <div>
+              <label style={labelStyle}>Megjegyzés</label>
+              <input value={wNotes} onChange={e => setWNotes(e.target.value)} placeholder="pl. Extra kezelés…" style={inputStyle}
+                onFocus={e => { e.target.style.borderColor = "var(--color-gold)"; }}
+                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }} />
+            </div>
+
+            <SaveBtn loading={upsert.isPending || addC.isPending} />
           </form>
         )}
 
