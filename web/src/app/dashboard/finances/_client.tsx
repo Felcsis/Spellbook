@@ -290,7 +290,7 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
 };
 
-export default function FinancesClient() {
+export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }) {
   const now = new Date();
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -325,7 +325,7 @@ export default function FinancesClient() {
             Pénzügyek ✦
           </h1>
           <p style={{ fontStyle: "italic", color: "var(--color-rose)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem" }}>
-            Bevételek, kiadások és nyereség áttekintése
+            {isAdmin ? "Bevételek, kiadások és nyereség áttekintése" : "Saját bevételeid és anyagköltségeid"}
           </p>
         </div>
         <button
@@ -364,14 +364,16 @@ export default function FinancesClient() {
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
         <SummaryCard label="Bevétel"      value={revenue}  color="#6ee7b7" icon="◈" />
         <SummaryCard label="Anyagköltség" value={material} color="#fbbf24" icon="✦" />
-        <SummaryCard label="Bérek"        value={wage}     color="#a78bfa" icon="♦" />
-        <SummaryCard
-          label="Nyereség"
-          value={profit}
-          color={profit >= 0 ? "#6ee7b7" : "#f87171"}
-          icon="✧"
-          sub={revenue > 0 ? `Árrés: ${Math.round((profit / revenue) * 100)}%` : undefined}
-        />
+        {isAdmin && <SummaryCard label="Bérek" value={wage} color="#a78bfa" icon="♦" />}
+        {isAdmin && (
+          <SummaryCard
+            label="Nyereség"
+            value={profit}
+            color={profit >= 0 ? "#6ee7b7" : "#f87171"}
+            icon="✧"
+            sub={revenue > 0 ? `Árrés: ${Math.round((profit / revenue) * 100)}%` : undefined}
+          />
+        )}
       </div>
 
       {/* Entries list */}
