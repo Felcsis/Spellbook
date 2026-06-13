@@ -70,6 +70,7 @@ model User {
     workDays           WorkDay[]
     serviceCategories  ServiceCategory[]
     services           Service[]
+    guestCards         GuestCard[]
 }
 
 model WorkDay {
@@ -112,6 +113,54 @@ model FinanceEntry {
 
     @@index([date])
     @@index([type])
+}
+
+model Guest {
+    id        String      @id @default(cuid())
+    name      String
+    phone     String?
+    notes     String?
+    createdAt DateTime    @default(now())
+    cards     GuestCard[]
+
+    @@index([name])
+}
+
+model GuestCard {
+    id        String              @id @default(cuid())
+    date      DateTime            @db.Date
+    guest     Guest               @relation(fields: [guestId], references: [id], onDelete: Cascade)
+    guestId   String
+    worker    User                @relation(fields: [workerId], references: [id])
+    workerId  String
+    total     Float               @default(0)
+    notes     String?
+    createdAt DateTime            @default(now())
+    services  GuestCardService[]
+    materials GuestCardMaterial[]
+
+    @@index([guestId])
+    @@index([date])
+}
+
+model GuestCardService {
+    id      String    @id @default(cuid())
+    card    GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+    cardId  String
+    name    String
+    price   Float
+}
+
+model GuestCardMaterial {
+    id        String    @id @default(cuid())
+    card      GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+    cardId    String
+    name      String
+    brand     String?
+    colorCode String?
+    grams     Float
+    unitPrice Float
+    lineTotal Float
 }
 
 model Material {

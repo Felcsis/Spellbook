@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 const NAV_ADMIN = [
   { key: "dashboard",    icon: "◈", label: "Főoldal",        href: "/dashboard" },
   { key: "appointments", icon: "✦", label: "Időpontok",      href: null },
-  { key: "services",     icon: "✂", label: "Szolgáltatások", href: "/dashboard/services" },
-  { key: "clients",      icon: "♦", label: "Vendégek",       href: null },
+  { key: "services",     icon: "✂", label: "Szolgáltatások & Anyagtár", href: "/dashboard/services" },
+  { key: "clients",      icon: "♦", label: "Vendégek",       href: "/dashboard/guests" },
   { key: "finances",     icon: "✧", label: "Pénzügyek",      href: "/dashboard/finances" },
   { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
 ];
