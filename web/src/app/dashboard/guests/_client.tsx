@@ -465,7 +465,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
                 {svcTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--color-teal)" }}>Szolgáltatás: {fmt(svcTotal)}</span>}
-                {matTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--color-teal)"
+                {matTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--color-teal)" }}>Anyag: {fmt(matTotal)}</span>}
               </div>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.14em", color: dim }}>
                 VÉGÖSSZEG <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", color: gold, fontWeight: 700, marginLeft: "0.5rem" }}>{fmt(grandTotal)}</span>
