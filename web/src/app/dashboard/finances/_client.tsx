@@ -88,8 +88,8 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
     : allServices;
 
   const filteredMat = matSearch.trim()
-    ? matCatalog.filter(m => m.name.toLowerCase().includes(matSearch.toLowerCase()))
-    : matCatalog;
+    ? allServices.filter(s => s.name.toLowerCase().includes(matSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(matSearch.toLowerCase()))
+    : allServices;
 
   const matTotal = selectedMats.reduce((s, m) => s + m.price, 0);
 
@@ -185,24 +185,31 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                   onChange={e => { setMatSearch(e.target.value); setMatOpen(true); }}
                   onFocus={() => setMatOpen(true)}
                   onBlur={() => setTimeout(() => setMatOpen(false), 150)}
-                  placeholder={matCatalog.length === 0 ? "Előbb adj hozzá anyagokat a Szolgáltatások → Anyagtár oldalon" : "Keress: pl. Szőkítő, festék…"}
+                  placeholder={allServices.length === 0 ? "Előbb add fel az árlistát a Szolgáltatások oldalon" : "Keress az árlistán: pl. Szőkítő, festék…"}
                   style={{ ...inputStyle, borderColor: "rgba(251,191,36,0.2)" }}
                 />
                 {matSearch && <button type="button" onClick={() => { setMatSearch(""); setMatOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
 
                 {matOpen && filteredMat.length > 0 && (
                   <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#120e22", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
-                    {filteredMat.map(m => {
+                    {filteredMat.map((m, i) => {
                       const already = !!selectedMats.find(s => s.id === m.id);
+                      const showCat = i === 0 || filteredMat[i - 1]?.categoryName !== m.categoryName;
                       return (
-                        <div key={m.id} onMouseDown={() => { if (!already) addMat(m); }}
-                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
-                          onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                          {already && <span style={{ fontSize: "0.7rem", color: "#fbbf24" }}>✓</span>}
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{m.name}</span>
-                          {m.unit && <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.45)" }}>{m.unit}</span>}
-                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
+                        <div key={m.id}>
+                          {showCat && (
+                            <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(251,191,36,0.4)", textTransform: "uppercase" }}>
+                              {m.categoryName}
+                            </div>
+                          )}
+                          <div onMouseDown={() => { if (!already) addMat({ id: m.id, name: m.name, price: m.price, unit: null }); }}
+                            style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
+                            onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                            {already && <span style={{ fontSize: "0.7rem", color: "#fbbf24" }}>✓</span>}
+                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{m.name}</span>
+                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
+                          </div>
                         </div>
                       );
                     })}
