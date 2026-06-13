@@ -46,7 +46,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
             onClick={() => href && router.push(href)}
             style={{
               background: "var(--bg-card)",
-              border: "1px solid rgba(74,124,126,0.2)",
+              border: "1px solid rgba(122,124,58,0.2)",
               borderRadius: "16px",
               padding: "1.75rem 1.5rem",
               textAlign: "left",
@@ -66,7 +66,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
             }}
             onMouseLeave={e => {
               const el = e.currentTarget;
-              el.style.borderColor = "rgba(74,124,126,0.2)";
+              el.style.borderColor = "rgba(122,124,58,0.2)";
               el.style.boxShadow = "0 2px 12px var(--bg-today)";
               el.style.transform = "translateY(0)";
             }}

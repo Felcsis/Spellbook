@@ -134,7 +134,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
       <div
         style={{
           background: "var(--bg-modal)",
-          border: "1px solid rgba(74,124,126,0.25)",
+          border: "1px solid rgba(122,124,58,0.25)",
           borderRadius: "20px",
           padding: "2.25rem 2.5rem",
           width: "100%",
@@ -383,7 +383,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
       {/* Title */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", textShadow: "0 0 24px rgba(74,124,126,0.2)", animation: "float 4s ease-in-out infinite" }}>
+          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", textShadow: "0 0 24px rgba(122,124,58,0.2)", animation: "float 4s ease-in-out infinite" }}>
             Pénzügyek ✦
           </h1>
           <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem" }}>
@@ -396,7 +396,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
             padding: "0.75rem 1.5rem",
             borderRadius: "10px",
             border: "none",
-            background: "linear-gradient(120deg, #4a7c7e 0%, #6a9c9e 50%, #4a7c7e 100%)",
+            background: "linear-gradient(120deg, var(--color-teal) 0%, var(--color-teal-light) 50%, var(--color-teal) 100%)",
             backgroundSize: "200% auto",
             color: "#fff",
             fontFamily: "var(--font-cinzel)",
@@ -405,7 +405,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
             letterSpacing: "0.18em",
             cursor: "pointer",
             animation: "shimmer 3s linear infinite",
-            boxShadow: "0 4px 20px rgba(74,124,126,0.2)",
+            boxShadow: "0 4px 20px rgba(122,124,58,0.2)",
             flexShrink: 0,
           }}
         >

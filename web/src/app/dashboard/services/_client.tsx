@@ -13,7 +13,7 @@ type Category = {
 };
 
 // ── Style helpers ──────────────────────────────────────────────────────────
-const gold   = "#4a7c7e";
+const gold   = "var(--color-teal)";
 const cream  = "var(--text-primary)";
 const dimmed = "var(--text-soft)";
 const panelBg = "rgba(20,12,40,0.6)";
@@ -55,7 +55,7 @@ const inputStyle: React.CSSProperties = {
 
 function Btn({ onClick, children, variant = "primary", disabled }: { onClick: () => void; children: React.ReactNode; variant?: "primary" | "ghost" | "danger"; disabled?: boolean }) {
   const bg: Record<string, string> = {
-    primary: "linear-gradient(135deg, rgba(196,92,122,0.5), rgba(74,124,126,0.4))",
+    primary: "linear-gradient(135deg, rgba(196,92,122,0.5), rgba(122,124,58,0.4))",
     ghost:   "var(--bg-today)",
     danger:  "rgba(220,50,50,0.15)",
   };
@@ -354,7 +354,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "2rem" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.6rem", color: gold, letterSpacing: "0.12em", margin: 0, textShadow: "0 0 24px rgba(74,124,126,0.2)" }}>
+          <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.6rem", color: gold, letterSpacing: "0.12em", margin: 0, textShadow: "0 0 24px rgba(122,124,58,0.2)" }}>
             ✂ Szolgáltatások & Anyagtár
           </h1>
           <p style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "1rem", margin: "0.4rem 0 0" }}>

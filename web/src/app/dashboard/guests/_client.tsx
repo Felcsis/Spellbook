@@ -7,7 +7,7 @@ import { api } from "~/trpc/react";
 const fmt = (n: number) =>
   new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 
-const gold  = "#4a7c7e";
+const gold  = "var(--color-teal)";
 const cream = "var(--text-primary)";
 const dim   = "var(--text-soft)";
 
@@ -55,7 +55,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
 
   return (
     <div style={{ background: "var(--bg-panel)", border: "1px solid var(--bg-active)", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.25)"; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(122,124,58,0.25)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--bg-active)"; }}>
 
       <div style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
@@ -94,7 +94,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
               <div style={{ ...labelStyle, color: "rgba(251,191,36,0.55)", marginBottom: "0.4rem" }}>✦ Szín recept</div>
               <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 0.9fr 0.7fr 0.9fr", gap: "0.25rem 0.6rem", alignItems: "center" }}>
                 {["Anyag","Márka","Kód","Gramm","Ár"].map(h => (
-                  <div key={h} style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.12em", color: "rgba(74,124,126,0.25)", textTransform: "uppercase", paddingBottom: "0.2rem", borderBottom: "1px solid var(--bg-highlight)" }}>{h}</div>
+                  <div key={h} style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.12em", color: "rgba(122,124,58,0.25)", textTransform: "uppercase", paddingBottom: "0.2rem", borderBottom: "1px solid var(--bg-highlight)" }}>{h}</div>
                 ))}
                 {card.materials.map(m => (
                   <>
@@ -147,7 +147,7 @@ function GuestRow({ guest, onDeleteCard, onNewCard }: {
 
       <div style={{ padding: "1.1rem 1.4rem", display: "flex", alignItems: "center", gap: "1rem", cursor: "pointer" }}
         onClick={() => setOpen(o => !o)}>
-        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg,rgba(124,58,237,0.55),rgba(74,124,126,0.25))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "1rem", color: cream, flexShrink: 0, border: "1px solid var(--border)" }}>
+        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg,rgba(124,58,237,0.55),rgba(122,124,58,0.25))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "1rem", color: cream, flexShrink: 0, border: "1px solid var(--border)" }}>
           {(guest.name[0] ?? "?").toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -287,7 +287,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "3rem 1rem" }}>
-        <div style={{ background: "var(--bg-modal)", border: "1px solid rgba(74,124,126,0.2)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
+        <div style={{ background: "var(--bg-modal)", border: "1px solid rgba(122,124,58,0.2)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
           onClick={e => e.stopPropagation()}>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.75rem" }}>
@@ -308,7 +308,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                     onBlur={() => setTimeout(() => setGuestOpen(false), 150)}
                     placeholder="Keress vendéget…"
                     readOnly={!!prefillGuestId}
-                    style={{ ...inputStyle, borderColor: guestId ? "rgba(74,124,126,0.4)" : "var(--border)", opacity: prefillGuestId ? 0.75 : 1 }} />
+                    style={{ ...inputStyle, borderColor: guestId ? "rgba(122,124,58,0.4)" : "var(--border)", opacity: prefillGuestId ? 0.75 : 1 }} />
                   {guestId && <div style={{ position: "absolute", right: "0.85rem", top: "50%", transform: "translateY(-50%)", color: gold, fontSize: "0.8rem" }}>✓</div>}
                   {guestOpen && !prefillGuestId && (
                     <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
@@ -523,7 +523,7 @@ export default function GuestsClient() {
           <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-pink)", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>Minden vendég szín receptje és látogatási előzménye</p>
         </div>
         <button onClick={() => openNewCard()}
-          style={{ padding: "0.75rem 1.5rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg,#7a6229 0%,#c9a84c 50%,#7a6229 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 20px rgba(74,124,126,0.2)", flexShrink: 0 }}>
+          style={{ padding: "0.75rem 1.5rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg,#7a6229 0%,#c9a84c 50%,#7a6229 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 20px rgba(122,124,58,0.2)", flexShrink: 0 }}>
           ＋ Új kártya
         </button>
       </div>

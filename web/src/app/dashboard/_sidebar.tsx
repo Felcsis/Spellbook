@@ -40,9 +40,9 @@ export default function SidebarLayout({
       {/* Subtle background orbs */}
       <div className="pointer-events-none fixed inset-0 z-0">
         {[
-          { w: 500, h: 500, top: -120, left: -120, c: "rgba(196,92,122,0.07)", d: "0s" },
-          { w: 420, h: 420, bottom: -80, right: -80, c: "rgba(74,124,126,0.07)", d: "-5s" },
-          { w: 320, h: 320, top: "42%", left: "55%", c: "rgba(122,140,90,0.06)", d: "-9s" },
+          { w: 500, h: 500, top: -120, left: -120,  c: "rgba(161,106,132,0.09)", d: "0s" },
+          { w: 420, h: 420, bottom: -80, right: -80, c: "rgba(252,156,81,0.07)",  d: "-5s" },
+          { w: 320, h: 320, top: "42%", left: "55%", c: "rgba(153,154,87,0.08)",  d: "-9s" },
         ].map((o, i) => (
           <div
             key={i}
