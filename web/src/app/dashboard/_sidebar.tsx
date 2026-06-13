@@ -1,8 +1,8 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "~/app/_theme-toggle";
+import { logout } from "./_actions";
 
 const NAV_ADMIN = [
   { key: "dashboard",    icon: "◈", label: "Főoldal",        href: "/dashboard" },
@@ -158,7 +158,7 @@ export default function SidebarLayout({
               {user.name}
             </div>
             <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={() => logout()}
               style={{ fontSize: "0.75rem", color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-cormorant)", padding: 0, transition: "color 0.2s" }}
               onMouseEnter={e => { (e.target as HTMLElement).style.color = "var(--color-pink)"; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.color = "var(--text-soft)"; }}
