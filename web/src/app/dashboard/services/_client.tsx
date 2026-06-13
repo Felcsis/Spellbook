@@ -134,7 +134,7 @@ function CategoryModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Service row ────────────────────────────────────────────────────────────
-function ServiceRow({ svc, onEdit }: { svc: Service; onEdit: () => void }) {
+function ServiceRow({ svc, onEdit, isAdmin }: { svc: Service; onEdit: () => void; isAdmin: boolean }) {
   const utils = api.useUtils();
   const del    = api.services.deleteService.useMutation({ onSuccess: () => void utils.services.listCategories.invalidate() });
   const toggle = api.services.updateService.useMutation({ onSuccess: () => void utils.services.listCategories.invalidate() });
@@ -160,19 +160,21 @@ function ServiceRow({ svc, onEdit }: { svc: Service; onEdit: () => void }) {
       <div style={{ fontSize: "0.8rem", color: dimmed, minWidth: 60, textAlign: "right" }}>
         {svc.duration} perc
       </div>
-      <div style={{ display: "flex", gap: "0.4rem" }}>
-        <button onClick={() => toggle.mutate({ id: svc.id, active: !svc.active })} title={svc.active ? "Inaktiválás" : "Aktiválás"} style={{ background: "none", border: "none", cursor: "pointer", color: svc.active ? gold : dimmed, fontSize: "1rem" }}>
-          {svc.active ? "✦" : "✧"}
-        </button>
-        <button onClick={onEdit} style={{ background: "none", border: "none", cursor: "pointer", color: dimmed, fontSize: "0.9rem" }}>✎</button>
-        <button onClick={() => { if (confirm(`Törlöd: „${svc.name}"?`)) del.mutate({ id: svc.id }); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.6)", fontSize: "0.9rem" }}>✕</button>
-      </div>
+      {isAdmin && (
+        <div style={{ display: "flex", gap: "0.4rem" }}>
+          <button onClick={() => toggle.mutate({ id: svc.id, active: !svc.active })} title={svc.active ? "Inaktiválás" : "Aktiválás"} style={{ background: "none", border: "none", cursor: "pointer", color: svc.active ? gold : dimmed, fontSize: "1rem" }}>
+            {svc.active ? "✦" : "✧"}
+          </button>
+          <button onClick={onEdit} style={{ background: "none", border: "none", cursor: "pointer", color: dimmed, fontSize: "0.9rem" }}>✎</button>
+          <button onClick={() => { if (confirm(`Törlöd: „${svc.name}"?`)) del.mutate({ id: svc.id }); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.6)", fontSize: "0.9rem" }}>✕</button>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Category block ─────────────────────────────────────────────────────────
-function CategoryBlock({ cat }: { cat: Category }) {
+function CategoryBlock({ cat, isAdmin }: { cat: Category; isAdmin: boolean }) {
   const utils = api.useUtils();
   const [addSvc, setAddSvc]   = useState(false);
   const [editSvc, setEditSvc] = useState<Service | null>(null);
@@ -205,11 +207,13 @@ function CategoryBlock({ cat }: { cat: Category }) {
           </span>
         )}
         <span style={{ fontSize: "0.8rem", color: dimmed }}>{cat.services.length} tétel</span>
-        <button onClick={() => setAddSvc(true)} style={{ background: "none", border: "none", cursor: "pointer", color: gold, fontSize: "1.1rem" }} title="Új szolgáltatás">＋</button>
-        <button
-          onClick={() => { if (confirm(`Törlöd a „${cat.name}" kategóriát és az összes benne lévő szolgáltatást?`)) delCat.mutate({ id: cat.id }); }}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.5)", fontSize: "0.9rem" }}
-        >✕</button>
+        {isAdmin && <>
+          <button onClick={() => setAddSvc(true)} style={{ background: "none", border: "none", cursor: "pointer", color: gold, fontSize: "1.1rem" }} title="Új szolgáltatás">＋</button>
+          <button
+            onClick={() => { if (confirm(`Törlöd a „${cat.name}" kategóriát és az összes benne lévő szolgáltatást?`)) delCat.mutate({ id: cat.id }); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.5)", fontSize: "0.9rem" }}
+          >✕</button>
+        </>}
       </div>
 
       {/* Services */}
@@ -220,58 +224,180 @@ function CategoryBlock({ cat }: { cat: Category }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {cat.services.map(svc => (
-            <ServiceRow key={svc.id} svc={svc} onEdit={() => setEditSvc(svc)} />
+            <ServiceRow key={svc.id} svc={svc} onEdit={() => setEditSvc(svc)} isAdmin={isAdmin} />
           ))}
         </div>
       )}
 
-      {addSvc && <ServiceModal categoryId={cat.id} onClose={() => setAddSvc(false)} />}
-      {editSvc && <ServiceModal categoryId={cat.id} service={editSvc} onClose={() => setEditSvc(null)} />}
+      {isAdmin && addSvc && <ServiceModal categoryId={cat.id} onClose={() => setAddSvc(false)} />}
+      {isAdmin && editSvc && <ServiceModal categoryId={cat.id} service={editSvc} onClose={() => setEditSvc(null)} />}
+    </div>
+  );
+}
+
+// ── Material row ───────────────────────────────────────────────────────────
+type Material = { id: string; name: string; price: number; unit: string | null; active: boolean };
+
+function MaterialRow({ mat }: { mat: Material }) {
+  const utils  = api.useUtils();
+  const inv    = () => void utils.materials.listAll.invalidate();
+  const upd    = api.materials.update.useMutation({ onSuccess: inv });
+  const toggle = api.materials.toggleActive.useMutation({ onSuccess: inv });
+  const del    = api.materials.delete.useMutation({ onSuccess: inv });
+
+  const [editing, setEditing] = useState(false);
+  const [name, setName]   = useState(mat.name);
+  const [price, setPrice] = useState(String(mat.price));
+  const [unit, setUnit]   = useState(mat.unit ?? "");
+
+  function save() {
+    const p = parseFloat(price);
+    if (!name.trim() || isNaN(p)) return;
+    upd.mutate({ id: mat.id, name, price: p, unit: unit || undefined });
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", padding: "0.6rem 0.9rem", background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.25)", borderRadius: 8 }}>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Anyag neve" autoFocus style={{ ...inputStyle, flex: 2 }} />
+        <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="Ár" style={{ ...inputStyle, flex: 1 }} />
+        <input value={unit} onChange={e => setUnit(e.target.value)} placeholder="egység (pl. adag)" style={{ ...inputStyle, flex: 1 }} />
+        <Btn onClick={save} disabled={upd.isPending}>Ment</Btn>
+        <Btn variant="ghost" onClick={() => setEditing(false)}>✕</Btn>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.65rem 1rem", background: mat.active ? "rgba(251,191,36,0.04)" : "rgba(255,255,255,0.02)", border: "1px solid rgba(251,191,36,0.12)", borderRadius: 8, opacity: mat.active ? 1 : 0.45, transition: "opacity 0.2s" }}>
+      <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: mat.active ? cream : dimmed, fontSize: "1rem" }}>{mat.name}</div>
+      {mat.unit && <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.82rem" }}>{mat.unit}</div>}
+      <div style={{ fontFamily: "var(--font-cormorant)", color: "#fbbf24", fontSize: "1rem", minWidth: 80, textAlign: "right" }}>
+        {mat.price.toLocaleString("hu-HU")} Ft
+      </div>
+      <div style={{ display: "flex", gap: "0.4rem" }}>
+        <button onClick={() => toggle.mutate({ id: mat.id, active: !mat.active })} title={mat.active ? "Inaktiválás" : "Aktiválás"} style={{ background: "none", border: "none", cursor: "pointer", color: mat.active ? "#fbbf24" : dimmed, fontSize: "1rem" }}>
+          {mat.active ? "✦" : "✧"}
+        </button>
+        <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", color: dimmed, fontSize: "0.9rem" }}>✎</button>
+        <button onClick={() => { if (confirm(`Törlöd: „${mat.name}"?`)) del.mutate({ id: mat.id }); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.5)", fontSize: "0.9rem" }}>✕</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Materials panel ────────────────────────────────────────────────────────
+function MaterialsPanel() {
+  const utils = api.useUtils();
+  const { data: materials = [], isLoading } = api.materials.listAll.useQuery();
+  const create = api.materials.create.useMutation({ onSuccess: () => { void utils.materials.listAll.invalidate(); setName(""); setPrice(""); setUnit(""); } });
+
+  const [name, setName]   = useState("");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit]   = useState("");
+
+  function add() {
+    const p = parseFloat(price);
+    if (!name.trim() || isNaN(p)) return;
+    create.mutate({ name, price: p, unit: unit || undefined });
+  }
+
+  return (
+    <div>
+      {/* Add row */}
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem", backdropFilter: "blur(12px)" }}>
+        <div style={{ flex: 2 }}>
+          <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Anyag neve</div>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Szőkítőpor, L'Oréal festék…" style={inputStyle}
+            onKeyDown={e => e.key === "Enter" && add()} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Ár (Ft)</div>
+          <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="6000" style={inputStyle}
+            onKeyDown={e => e.key === "Enter" && add()} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Egység (opc.)</div>
+          <input value={unit} onChange={e => setUnit(e.target.value)} placeholder="pl. adag, tubus" style={inputStyle}
+            onKeyDown={e => e.key === "Enter" && add()} />
+        </div>
+        <Btn onClick={add} disabled={!name.trim() || !price || create.isPending}>＋ Hozzáad</Btn>
+      </div>
+
+      {/* List */}
+      {isLoading ? (
+        <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", padding: "2rem", textAlign: "center" }}>Betöltés...</div>
+      ) : materials.length === 0 ? (
+        <div style={{ background: panelBg, border, borderRadius: 12, padding: "3rem", textAlign: "center", backdropFilter: "blur(12px)" }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✦</div>
+          <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "0.85rem", letterSpacing: "0.1em" }}>Még nincs anyag felvéve</div>
+          <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, marginTop: "0.5rem" }}>Add hozzá a szőkítőt, festéket és egyéb anyagokat.</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+          {materials.map(m => <MaterialRow key={m.id} mat={m} />)}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────
-export default function ServicesClient() {
+export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
   const { data: categories, isLoading } = api.services.listCategories.useQuery();
+  const [tab, setTab]     = useState<"services" | "materials">("services");
   const [addCat, setAddCat] = useState(false);
 
   return (
     <div style={{ maxWidth: 760 }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "2.5rem" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "2rem" }}>
         <div>
           <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.6rem", color: gold, letterSpacing: "0.12em", margin: 0, textShadow: "0 0 24px rgba(201,168,76,0.3)" }}>
-            ✂ Szolgáltatások
+            ✂ Szolgáltatások & Anyagtár
           </h1>
           <p style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "1rem", margin: "0.4rem 0 0" }}>
-            Árlista — kategóriák és kezelések kezelése
+            Árlista és felhasznált anyagok kezelése
           </p>
         </div>
-        <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>
+        {tab === "services" && isAdmin && <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>}
       </div>
 
-      {/* Content */}
-      {isLoading ? (
-        <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>Betöltés...</div>
-      ) : !categories?.length ? (
-        <div
-          style={{ background: panelBg, border, borderRadius: 14, padding: "3rem", textAlign: "center", backdropFilter: "blur(12px)" }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>✂</div>
-          <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>
-            Még nincs árlista
+      {/* Tab switcher */}
+      <div style={{ display: "flex", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 10, padding: 3, gap: 3, marginBottom: "2rem", width: "fit-content" }}>
+        {([["services", "✂ Szolgáltatások"], ["materials", "✦ Anyagtár"]] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)}
+            style={{ padding: "0.5rem 1.25rem", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.12em", background: tab === key ? "rgba(201,168,76,0.18)" : "transparent", color: tab === key ? gold : dimmed, transition: "all 0.2s" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Services tab */}
+      {tab === "services" && (
+        isLoading ? (
+          <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>Betöltés...</div>
+        ) : !categories?.length ? (
+          <div style={{ background: panelBg, border, borderRadius: 14, padding: "3rem", textAlign: "center", backdropFilter: "blur(12px)" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>✂</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>Még nincs árlista</div>
+            {isAdmin && (
+              <>
+                <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "1rem", marginBottom: "1.5rem" }}>Hozd létre az első kategóriát, majd adj hozzá szolgáltatásokat.</div>
+                <Btn onClick={() => setAddCat(true)}>＋ Első kategória</Btn>
+              </>
+            )}
           </div>
-          <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "1rem", marginBottom: "1.5rem" }}>
-            Hozd létre az első kategóriát, majd adj hozzá szolgáltatásokat.
-          </div>
-          <Btn onClick={() => setAddCat(true)}>＋ Első kategória</Btn>
-        </div>
-      ) : (
-        categories.map(cat => <CategoryBlock key={cat.id} cat={cat} />)
+        ) : (
+          categories.map(cat => <CategoryBlock key={cat.id} cat={cat} isAdmin={isAdmin} />)
+        )
       )}
 
-      {addCat && <CategoryModal onClose={() => setAddCat(false)} />}
+      {/* Materials tab */}
+      {tab === "materials" && <MaterialsPanel />}
+
+      {isAdmin && addCat && <CategoryModal onClose={() => setAddCat(false)} />}
     </div>
   );
 }

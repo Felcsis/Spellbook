@@ -70,7 +70,8 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
   const addC   = api.calendar.addCost.useMutation({ onSuccess: inv });
   const delC   = api.calendar.deleteCost.useMutation({ onSuccess: inv });
 
-  const { data: categories = [] } = api.calendar.services.useQuery();
+  const { data: categories = [] }  = api.calendar.services.useQuery();
+  const { data: matCatalog = [] }  = api.materials.list.useQuery();
 
   const [tab,            setTab]            = useState<"work" | "cost">("work");
   const [userId,         setUserId]         = useState(users[0]?.id ?? "");
@@ -84,6 +85,8 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
   // Material cost inline
   const [matDesc,        setMatDesc]        = useState("");
   const [matAmt,         setMatAmt]         = useState("");
+  const [matOpen,        setMatOpen]        = useState(false);
+  const [matManual,      setMatManual]      = useState(false);
   // Cost tab
   const [costType,    setCostType]    = useState<CostType>("material");
   const [costDesc,    setCostDesc]    = useState("");
@@ -129,8 +132,13 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
 
   function resetWork() {
     setSelectedSvc(new Set()); setEarnings(""); setEarningsManual(false);
-    setWNotes(""); setSvcSearch(""); setSvcOpen(false); setMatDesc(""); setMatAmt("");
+    setWNotes(""); setSvcSearch(""); setSvcOpen(false);
+    setMatDesc(""); setMatAmt(""); setMatOpen(false); setMatManual(false);
   }
+
+  const filteredMat = matDesc.trim()
+    ? matCatalog.filter(m => m.name.toLowerCase().includes(matDesc.toLowerCase()))
+    : matCatalog;
 
   // Filtered services for dropdown
   const allServicesFlat: (ServiceItem & { categoryName: string })[] = [];
@@ -357,14 +365,44 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
             <div style={{ padding: "0.85rem 1rem", background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.55)", textTransform: "uppercase" }}>✦ Anyagköltség (opcionális)</div>
               <div style={{ display: "flex", gap: "0.6rem" }}>
-                <input value={matDesc} onChange={e => setMatDesc(e.target.value)} placeholder="pl. L'Oréal festék…"
-                  style={{ ...inputStyle, flex: 2 }}
+                {/* Material search */}
+                <div style={{ flex: 2, position: "relative" }}>
+                  <input value={matDesc} onChange={e => { setMatDesc(e.target.value); setMatOpen(true); }}
+                    onFocus={() => setMatOpen(true)}
+                    onBlur={() => setTimeout(() => setMatOpen(false), 150)}
+                    placeholder={matCatalog.length === 0 ? "pl. Szőkítő…" : "Keress az anyagtárban…"}
+                    style={{ ...inputStyle, width: "100%" }}
+                    onFocusCapture={e => { (e.target as HTMLInputElement).style.borderColor = "#fbbf24"; }}
+                    onBlurCapture={e => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.1)"; }} />
+                  {matDesc && (
+                    <button type="button" onClick={() => { setMatDesc(""); setMatAmt(""); setMatManual(false); setMatOpen(false); }}
+                      style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
+                  )}
+                  {matOpen && filteredMat.length > 0 && (
+                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#120e22", border: "1px solid rgba(251,191,36,0.25)", borderRadius: "10px", marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                      {filteredMat.map(m => (
+                        <div key={m.id}
+                          onMouseDown={() => {
+                            setMatDesc(m.name);
+                            if (!matManual) setMatAmt(String(m.price));
+                            setMatOpen(false);
+                          }}
+                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.85rem", cursor: "pointer", transition: "background 0.15s" }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "var(--color-cream)", flex: 1 }}>{m.name}</span>
+                          {m.unit && <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.5)" }}>{m.unit}</span>}
+                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <input type="number" value={matAmt} onChange={e => { setMatAmt(e.target.value); setMatManual(true); }}
+                  placeholder="0 Ft" min="0"
+                  style={{ ...inputStyle, flex: 1, borderColor: matAmt && !matManual ? "rgba(251,191,36,0.4)" : "rgba(255,255,255,0.1)" }}
                   onFocus={e => { e.target.style.borderColor = "#fbbf24"; }}
-                  onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }} />
-                <input type="number" value={matAmt} onChange={e => setMatAmt(e.target.value)} placeholder="0 Ft"
-                  min="0" style={{ ...inputStyle, flex: 1 }}
-                  onFocus={e => { e.target.style.borderColor = "#fbbf24"; }}
-                  onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }} />
+                  onBlur={e => { e.target.style.borderColor = matAmt && !matManual ? "rgba(251,191,36,0.4)" : "rgba(255,255,255,0.1)"; }} />
               </div>
             </div>
 

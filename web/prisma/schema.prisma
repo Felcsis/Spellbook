@@ -62,6 +62,7 @@ model User {
     emailVerified  DateTime?
     image          String?
     password       String?
+    role           String         @default("staff")  // "admin" | "staff"
     accounts       Account[]
     sessions       Session[]
     posts          Post[]
@@ -111,6 +112,18 @@ model FinanceEntry {
 
     @@index([date])
     @@index([type])
+}
+
+model Material {
+    id        String   @id @default(cuid())
+    name      String
+    price     Float
+    unit      String?  // pl. "adag", "tubus", "csomag"
+    active    Boolean  @default(true)
+    order     Int      @default(0)
+    createdAt DateTime @default(now())
+
+    @@index([name])
 }
 
 model VerificationToken {

@@ -69,7 +69,9 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
   });
   const [svcOpen, setSvcOpen]   = useState(false);
 
-  const { data: categories = [] } = api.services.listCategories.useQuery();
+  const { data: categories = [] }  = api.services.listCategories.useQuery();
+  const { data: matCatalog = [] }  = api.materials.list.useQuery();
+
   const allServices: { id: string; name: string; price: number; categoryName: string }[] = [];
   for (const c of categories) {
     for (const s of (c.services ?? [])) {
@@ -77,9 +79,10 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
     }
   }
 
+  const suggestions = type === "material" ? matCatalog : allServices;
   const filtered = description.trim()
-    ? allServices.filter(s => s.name.toLowerCase().includes(description.toLowerCase()) || s.categoryName.toLowerCase().includes(description.toLowerCase()))
-    : allServices;
+    ? suggestions.filter(s => s.name.toLowerCase().includes(description.toLowerCase()))
+    : suggestions;
 
   const create = api.finance.create.useMutation({
     onSuccess: async () => {
@@ -173,24 +176,27 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
 
             {/* Dropdown */}
             {svcOpen && filtered.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#120e22", border: "1px solid rgba(201,168,76,0.25)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
-                {filtered.map((svc, i) => {
-                  const showCat = i === 0 || filtered[i - 1]?.categoryName !== svc.categoryName;
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#120e22", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                {filtered.map((item, i) => {
+                  const cat = "categoryName" in item ? item.categoryName : null;
+                  const unit = "unit" in item ? (item as { unit?: string | null }).unit : null;
+                  const showCat = cat && (i === 0 || ("categoryName" in filtered[i - 1]! && (filtered[i - 1] as { categoryName: string }).categoryName !== cat));
                   return (
-                    <div key={svc.id}>
+                    <div key={item.id}>
                       {showCat && (
-                        <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(201,168,76,0.4)", textTransform: "uppercase" }}>
-                          {svc.categoryName}
+                        <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: `${cfg.color}66`, textTransform: "uppercase" }}>
+                          {cat}
                         </div>
                       )}
                       <div
-                        onMouseDown={() => pickService(svc.name, svc.price)}
+                        onMouseDown={() => pickService(item.name, item.price)}
                         style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: "pointer", transition: "background 0.15s" }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.color}12`; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                       >
-                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{svc.name}</span>
-                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: cfg.color, fontWeight: 700 }}>{new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(svc.price)}</span>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{item.name}</span>
+                        {unit && <span style={{ fontSize: "0.72rem", color: `${cfg.color}66` }}>{unit}</span>}
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: cfg.color, fontWeight: 700 }}>{fmt(item.price)}</span>
                       </div>
                     </div>
                   );

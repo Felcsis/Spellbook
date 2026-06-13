@@ -5,11 +5,20 @@ export const financeRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({ year: z.number(), month: z.number() }))
     .query(async ({ ctx, input }) => {
-      const from = new Date(input.year, input.month - 1, 1);
-      const to   = new Date(input.year, input.month, 1);
-      // All finance entries (incl. WorkDay-linked revenue)
+      const from    = new Date(input.year, input.month - 1, 1);
+      const to      = new Date(input.year, input.month, 1);
+      const isAdmin = ctx.session.user.role === "admin";
+
       return ctx.db.financeEntry.findMany({
-        where: { date: { gte: from, lt: to } },
+        where: {
+          date: { gte: from, lt: to },
+          ...(!isAdmin && {
+            OR: [
+              { createdById: ctx.session.user.id },
+              { workDay: { userId: ctx.session.user.id } },
+            ],
+          }),
+        },
         orderBy: { date: "desc" },
         include: {
           createdBy: { select: { name: true } },

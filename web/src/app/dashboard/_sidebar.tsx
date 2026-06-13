@@ -3,14 +3,20 @@
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-const NAV = [
+const NAV_ADMIN = [
   { key: "dashboard",    icon: "◈", label: "Főoldal",        href: "/dashboard" },
   { key: "appointments", icon: "✦", label: "Időpontok",      href: null },
   { key: "services",     icon: "✂", label: "Szolgáltatások", href: "/dashboard/services" },
   { key: "clients",      icon: "♦", label: "Vendégek",       href: null },
   { key: "finances",     icon: "✧", label: "Pénzügyek",      href: "/dashboard/finances" },
   { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
-] as const;
+];
+
+const NAV_STAFF = [
+  { key: "dashboard",    icon: "◈", label: "Főoldal",        href: "/dashboard" },
+  { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
+  { key: "finances",     icon: "✧", label: "Bevételeim",     href: "/dashboard/finances" },
+];
 
 function initials(name?: string | null) {
   return (name ?? "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
@@ -21,11 +27,12 @@ export default function SidebarLayout({
   activeKey,
   children,
 }: {
-  user: { name?: string | null; email?: string | null };
+  user: { name?: string | null; email?: string | null; role?: string | null };
   activeKey: string;
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const NAV = user.role === "admin" ? NAV_ADMIN : NAV_STAFF;
 
   return (
     <div className="flex min-h-screen" style={{ animation: "fadeIn 0.5s ease" }}>

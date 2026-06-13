@@ -5,5 +5,5 @@ import ServicesClient from "./_client";
 export default async function ServicesPage() {
   const session = await auth();
   if (!session) redirect("/login");
-  return <ServicesClient />;
+  return <ServicesClient isAdmin={session.user.role === "admin"} />;
 }

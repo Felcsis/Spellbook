@@ -1,56 +1,57 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
+function requireAdmin(role: string) {
+  if (role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Csak admin módosíthatja az árlistát." });
+  }
+}
+
 export const servicesRouter = createTRPCRouter({
-  // --- Categories ---
+  // Mindenki látja az árlistát (staff is)
   listCategories: protectedProcedure.query(({ ctx }) =>
     ctx.db.serviceCategory.findMany({
-      where: { userId: ctx.session.user.id },
       orderBy: { order: "asc" },
       include: {
         services: {
-          where: { userId: ctx.session.user.id },
           orderBy: { order: "asc" },
         },
       },
     })
   ),
 
+  // Az alábbiak csak adminnak
   createCategory: protectedProcedure
     .input(z.object({ name: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
       const last = await ctx.db.serviceCategory.findFirst({
-        where: { userId: ctx.session.user.id },
         orderBy: { order: "desc" },
-        select: { order: true },
+        select:  { order: true },
       });
       return ctx.db.serviceCategory.create({
-        data: {
-          name: input.name,
-          order: (last?.order ?? -1) + 1,
-          userId: ctx.session.user.id,
-        },
+        data: { name: input.name, order: (last?.order ?? -1) + 1, userId: ctx.session.user.id },
       });
     }),
 
   updateCategory: protectedProcedure
     .input(z.object({ id: z.string(), name: z.string().min(1) }))
-    .mutation(({ ctx, input }) =>
-      ctx.db.serviceCategory.update({
-        where: { id: input.id, userId: ctx.session.user.id },
-        data: { name: input.name },
-      })
-    ),
+    .mutation(({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      return ctx.db.serviceCategory.update({
+        where: { id: input.id },
+        data:  { name: input.name },
+      });
+    }),
 
   deleteCategory: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ ctx, input }) =>
-      ctx.db.serviceCategory.delete({
-        where: { id: input.id, userId: ctx.session.user.id },
-      })
-    ),
+    .mutation(({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      return ctx.db.serviceCategory.delete({ where: { id: input.id } });
+    }),
 
-  // --- Services ---
   createService: protectedProcedure
     .input(z.object({
       categoryId:  z.string(),
@@ -60,10 +61,11 @@ export const servicesRouter = createTRPCRouter({
       description: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
       const last = await ctx.db.service.findFirst({
-        where: { categoryId: input.categoryId },
+        where:   { categoryId: input.categoryId },
         orderBy: { order: "desc" },
-        select: { order: true },
+        select:  { order: true },
       });
       return ctx.db.service.create({
         data: {
@@ -88,18 +90,15 @@ export const servicesRouter = createTRPCRouter({
       active:      z.boolean().optional(),
     }))
     .mutation(({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
       const { id, ...data } = input;
-      return ctx.db.service.update({
-        where: { id, userId: ctx.session.user.id },
-        data,
-      });
+      return ctx.db.service.update({ where: { id }, data });
     }),
 
   deleteService: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ ctx, input }) =>
-      ctx.db.service.delete({
-        where: { id: input.id, userId: ctx.session.user.id },
-      })
-    ),
+    .mutation(({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      return ctx.db.service.delete({ where: { id: input.id } });
+    }),
 });

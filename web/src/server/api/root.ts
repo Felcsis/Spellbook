@@ -2,6 +2,7 @@ import { postRouter } from "~/server/api/routers/post";
 import { financeRouter } from "~/server/api/routers/finance";
 import { calendarRouter } from "~/server/api/routers/calendar";
 import { servicesRouter } from "~/server/api/routers/services";
+import { materialsRouter } from "~/server/api/routers/materials";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -9,6 +10,7 @@ export const appRouter = createTRPCRouter({
   finance: financeRouter,
   calendar: calendarRouter,
   services: servicesRouter,
+  materials: materialsRouter,
 });
 
 export type AppRouter = typeof appRouter;
