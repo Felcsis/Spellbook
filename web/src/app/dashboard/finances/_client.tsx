@@ -6,9 +6,9 @@ import { api } from "~/trpc/react";
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
 const TYPE_CONFIG = {
-  revenue:  { label: "Bevétel",       color: "#7a9e8c", dim: "rgba(122,158,140,0.15)", icon: "◈" },
-  material: { label: "Anyagköltség",  color: "#c49060", dim: "rgba(196,144,96,0.15)",  icon: "✦" },
-  wage:     { label: "Bér",           color: "#9278b0", dim: "rgba(146,120,176,0.15)", icon: "♦" },
+  revenue:  { label: "Bevétel",       color: "#7a9e8c", dim: "rgba(122,158,140,0.12)", icon: "◈" },
+  material: { label: "Anyagköltség",  color: "#c49060", dim: "rgba(196,144,96,0.12)",  icon: "✦" },
+  wage:     { label: "Bér",           color: "#9278b0", dim: "rgba(146,120,176,0.12)", icon: "♦" },
 } as const;
 
 type EntryType = keyof typeof TYPE_CONFIG;
@@ -17,84 +17,399 @@ function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 }
 
-function SummaryCard({ label, value, color, icon, sub }: { label: string; value: number; color: string; icon: string; sub?: string }) {
-  return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: `1px solid ${color}44`,
-        borderRadius: "16px",
-        padding: "1.5rem 1.75rem",
-        backdropFilter: "blur(16px)",
-        flex: "1 1 180px",
-        minWidth: 160,
-        transition: "transform 0.25s, box-shadow 0.25s",
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px rgba(0,0,0,0.35), 0 0 20px ${color}22`;
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-        (e.currentTarget as HTMLElement).style.boxShadow = "none";
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-        <span style={{ color, fontSize: "1.1rem", filter: `drop-shadow(0 0 6px ${color}88)` }}>{icon}</span>
-        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: `${color}cc` }}>
-          {label}
-        </span>
-      </div>
-      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.6rem", color, fontWeight: 700, lineHeight: 1 }}>
-        {fmt(value)}
-      </div>
-      {sub && (
-        <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginTop: "0.3rem", fontStyle: "italic" }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  );
+function toDateStr(d: Date) { return d.toISOString().slice(0, 10); }
+
+function weekBounds(d: Date) {
+  const dow = (d.getDay() + 6) % 7;
+  const mon = new Date(d); mon.setDate(d.getDate() - dow); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+  return { mon, sun };
 }
 
-function AddModal({ onClose, year, month }: { onClose: () => void; year: number; month: number }) {
+const inputStyle: React.CSSProperties = {
+  background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "10px",
+  padding: "0.7rem 1rem", color: "var(--text-primary)",
+  fontFamily: "var(--font-cormorant)", fontSize: "1rem",
+  outline: "none", transition: "border-color 0.2s, box-shadow 0.2s", width: "100%",
+};
+
+const navBtn: React.CSSProperties = {
+  background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px",
+  color: "var(--color-teal)", fontSize: "1.2rem", width: 36, height: 36, cursor: "pointer",
+  display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s",
+};
+
+// ── Visit entry (combined revenue + material + guest card) ────────────────────
+const MAT_OPTIONS = [
+  { name: "Tartós festék",      unitPrice: 90,   unit: "g" },
+  { name: "Féltartós színező",  unitPrice: 90,   unit: "g" },
+  { name: "Fizikai színező",    unitPrice: 90,   unit: "g" },
+  { name: "Toner",              unitPrice: 110,  unit: "g" },
+  { name: "Szőkítő",            unitPrice: 80,   unit: "g" },
+  { name: "Pigment eltávolító", unitPrice: 5000, unit: "csomag" },
+];
+
+type SelSvc = { id: string; name: string; price: number; duration: number; categoryName: string; gender?: string };
+type MatRow = { name: string; brand: string; colorCode: string; grams: string; unitPrice: number; lineTotal: number };
+
+function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }) {
   const utils = api.useUtils();
-  const [type, setType]   = useState<EntryType>("revenue");
-  const [date, setDate]   = useState(() => new Date(year, month - 1, new Date().getDate()).toISOString().slice(0, 10));
+  const { data: categories = [] }  = api.services.listCategories.useQuery();
+  const { data: allGuests = [] }   = api.guests.listGuests.useQuery();
+  const createFinance  = api.finance.create.useMutation();
+  const createGuest    = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
+  const createCard     = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
 
-  // Non-material fields
-  const [description, setDesc]        = useState("");
-  const [amount, setAmount]           = useState("");
-  const [amountManual, setAmountManual] = useState(false);
-  const [svcOpen, setSvcOpen]         = useState(false);
+  // Services
+  const [activeCat,  setActiveCat]  = useState<string | null>(null);
+  const [selSvcs,    setSelSvcs]    = useState<SelSvc[]>([]);
+  const [svcSearch,  setSvcSearch]  = useState("");
+  const [svcOpen,    setSvcOpen]    = useState(false);
 
-  // Material multi-select — qty × unitPrice = lineTotal
-  type SelMat = { id: string; name: string; unitPrice: number; description: string | null; qty: string };
-  const [matSearch, setMatSearch]     = useState("");
-  const [matOpen, setMatOpen]         = useState(false);
-  const [selectedMats, setSelectedMats] = useState<SelMat[]>([]);
+  // Guest
+  const [guestSearch,   setGuestSearch]   = useState("");
+  const [guestId,       setGuestId]       = useState("");
+  const [guestOpen,     setGuestOpen]     = useState(false);
+  const [showNewGuest,  setShowNewGuest]  = useState(false);
+  const [newGuestName,  setNewGuestName]  = useState("");
 
-  const { data: categories = [] } = api.services.listCategories.useQuery();
+  // Materials
+  const [showMats,  setShowMats]  = useState(false);
+  const [matRows,   setMatRows]   = useState<MatRow[]>([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
+  const [matSearch, setMatSearch] = useState("");
+  const [matOpen,   setMatOpen]   = useState(false);
+  const [activeMat, setActiveMat] = useState(0);
 
-  const allServices: { id: string; name: string; price: number; description: string | null; categoryName: string }[] = [];
-  for (const c of categories) {
-    for (const s of (c.services ?? [])) {
-      allServices.push({ id: s.id, name: s.name, price: s.price, description: s.description ?? null, categoryName: c.name });
+  // Date + amount
+  const [date,      setDate]      = useState(() => new Date().toISOString().slice(0, 10));
+  const [manualAmt, setManualAmt] = useState("");
+  const [isManual,  setIsManual]  = useState(false);
+  const [saving,    setSaving]    = useState(false);
+
+  function closeAll() { setSvcOpen(false); setGuestOpen(false); setMatOpen(false); setActiveCat(null); }
+
+  // Build flat service list
+  const allSvcs: SelSvc[] = [];
+  categories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
+    allSvcs.push({ id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: c.name })
+  ));
+
+  const displayedCatSvcs = activeCat
+    ? allSvcs.filter(s => s.categoryName === activeCat)
+    : svcSearch.trim()
+      ? allSvcs.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(svcSearch.toLowerCase()))
+      : [];
+
+  const filtGuests = guestSearch.trim()
+    ? allGuests.filter(g => g.name.toLowerCase().includes(guestSearch.toLowerCase()))
+    : allGuests;
+
+  const filtMat = matSearch.trim()
+    ? MAT_OPTIONS.filter(m => m.name.toLowerCase().includes(matSearch.toLowerCase()))
+    : MAT_OPTIONS;
+
+  const autoTotal = selSvcs.reduce((s, x) => s + x.price, 0);
+  const matTotal  = matRows.reduce((s, r) => s + r.lineTotal, 0);
+  const total     = isManual ? (parseFloat(manualAmt) || 0) : autoTotal;
+  const canSave   = total > 0;
+
+  function updateMat(i: number, field: keyof MatRow, val: string | number) {
+    setMatRows(prev => {
+      const rows = [...prev];
+      const row = { ...rows[i]! };
+      (row as Record<string, string | number>)[field] = val;
+      if (field === "grams" || field === "unitPrice") {
+        const g = parseFloat(field === "grams" ? String(val) : row.grams);
+        const p = field === "unitPrice" ? Number(val) : row.unitPrice;
+        row.lineTotal = isNaN(g) ? 0 : g * p;
+      }
+      rows[i] = row;
+      return rows;
+    });
+  }
+
+  function reset() {
+    setActiveCat(null); setSelSvcs([]); setSvcSearch(""); setSvcOpen(false);
+    setGuestSearch(""); setGuestId(""); setShowNewGuest(false); setNewGuestName("");
+    setShowMats(false); setMatRows([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
+    setManualAmt(""); setIsManual(false);
+    setDate(new Date().toISOString().slice(0, 10));
+  }
+
+  async function handleSave() {
+    if (!canSave || saving) return;
+    setSaving(true);
+    try {
+      // 1. Guest card first (so we can link it)
+      const validMats = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0);
+      let finalGuestId = guestId;
+      if (showNewGuest && newGuestName.trim()) {
+        const g = await createGuest.mutateAsync({ name: newGuestName.trim() });
+        finalGuestId = g.id;
+      }
+      let cardId: string | undefined;
+      if (finalGuestId) {
+        const card = await createCard.mutateAsync({
+          guestId: finalGuestId,
+          workerId: userId,
+          date,
+          services: selSvcs.map(s => ({ name: s.name, price: s.price, duration: s.duration, gender: s.gender })),
+          materials: validMats.map(r => ({
+            name: r.name, brand: r.brand || undefined, colorCode: r.colorCode || undefined,
+            grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
+          })),
+        });
+        cardId = card.id;
+      }
+
+      // 2. Revenue entry — linked to guest card if any
+      const desc = selSvcs.length > 0 ? selSvcs.map(s => s.name).join(", ") : "Bevétel";
+      await createFinance.mutateAsync({ type: "revenue", description: desc, amount: total, date, guestCardId: cardId });
+
+      // 3. Material entry if any
+      if (showMats && validMats.length > 0) {
+        const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
+        await createFinance.mutateAsync({ type: "material", description: matDesc, amount: matTotal, date });
+      }
+
+      onSaved();
+      reset();
+    } finally {
+      setSaving(false);
     }
   }
 
-  const filteredSvc = description.trim()
-    ? allServices.filter(s => s.name.toLowerCase().includes(description.toLowerCase()) || s.categoryName.toLowerCase().includes(description.toLowerCase()))
-    : allServices;
+  const lbl: React.CSSProperties = { fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: "0.3rem" };
+
+  const anyOpen = svcOpen || guestOpen || matOpen;
+
+  return (
+    <>
+      {anyOpen && <div onClick={closeAll} style={{ position: "fixed", inset: 0, zIndex: 150 }} />}
+    <div style={{ background: "var(--bg-panel)", border: "1px solid rgba(122,158,140,0.28)", borderRadius: 18, padding: "1.5rem 1.75rem", marginBottom: "2rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(122,158,140,0.65)", textTransform: "uppercase", marginBottom: "1.25rem" }}>◈ Látogatás rögzítése</div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+        {/* ── Category tabs ── */}
+        <div>
+          <span style={lbl}>Részleg</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+            {categories.map(c => {
+              const sel = activeCat === c.name;
+              return (
+                <button key={c.id} type="button" onClick={() => { setActiveCat(sel ? null : c.name); setSvcSearch(""); setSvcOpen(true); }}
+                  style={{ padding: "0.38rem 0.85rem", borderRadius: 8, border: sel ? "1px solid rgba(122,158,140,0.6)" : "1px solid var(--border)", background: sel ? "rgba(122,158,140,0.15)" : "var(--bg-card)", color: sel ? "#7a9e8c" : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: "pointer", transition: "all 0.18s" }}>
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Service picker ── */}
+        <div>
+          <span style={lbl}>Elvégzett szolgáltatás</span>
+          {selSvcs.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.5rem" }}>
+              {selSvcs.map(s => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.65rem", background: "rgba(122,158,140,0.1)", border: "1px solid rgba(122,158,140,0.3)", borderRadius: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#7a9e8c", flex: 1, minWidth: 120 }}>{s.name}</span>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(122,158,140,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
+                  {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>{s.duration} perc</span>}
+                  {/* Női / Férfi toggle */}
+                  {(["nő", "férfi"] as const).map(g => (
+                    <button key={g} type="button"
+                      onClick={() => setSelSvcs(p => p.map(x => x.id === s.id ? { ...x, gender: x.gender === g ? undefined : g } : x))}
+                      style={{ padding: "0.18rem 0.55rem", borderRadius: 5, border: `1px solid ${s.gender === g ? (g === "nő" ? "rgba(232,180,200,0.7)" : "rgba(122,158,200,0.7)") : "var(--border)"}`, background: s.gender === g ? (g === "nő" ? "rgba(232,180,200,0.15)" : "rgba(122,158,200,0.12)") : "transparent", color: s.gender === g ? (g === "nő" ? "#e8b4c8" : "#7a9ec8") : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.15s" }}>
+                      {g === "nő" ? "Női" : "Férfi"}
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => setSelSvcs(p => p.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: "rgba(122,158,140,0.4)", cursor: "pointer", fontSize: "0.75rem", marginLeft: "0.2rem" }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ position: "relative" }}>
+            <input value={svcSearch}
+              onChange={e => { setSvcSearch(e.target.value); setSvcOpen(true); setActiveCat(null); }}
+              onFocus={() => setSvcOpen(true)}
+              onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
+              placeholder={activeCat ? `Keress a ${activeCat} kategóriában…` : "Keress szolgáltatást, vagy válassz részleget fentebb…"}
+              style={{ ...inputStyle, borderColor: "rgba(122,158,140,0.25)" }} />
+            {(svcOpen && displayedCatSvcs.length > 0) && (
+              <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(122,158,140,0.3)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                {displayedCatSvcs.map(s => {
+                  const already = !!selSvcs.find(x => x.id === s.id);
+                  return (
+                    <div key={s.id} onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, s]); setSvcSearch(""); } }}
+                      style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
+                      onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(122,158,140,0.1)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                      {already && <span style={{ color: "#7a9e8c", fontSize: "0.65rem" }}>✓</span>}
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(s.price)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Guest ── */}
+        <div>
+          <span style={lbl}>Vendég (opcionális — receptkönyvbe kerül)</span>
+          {!showNewGuest ? (
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div style={{ flex: 1, position: "relative" }}>
+                <input value={guestSearch}
+                  onChange={e => { setGuestSearch(e.target.value); setGuestOpen(true); setGuestId(""); }}
+                  onFocus={() => setGuestOpen(true)}
+                  onBlur={() => setTimeout(() => setGuestOpen(false), 150)}
+                  placeholder="Vendég keresése…"
+                  style={{ ...inputStyle, borderColor: guestId ? "rgba(167,139,250,0.5)" : "var(--border)" }} />
+                {guestId && <span style={{ position: "absolute", right: "0.85rem", top: "50%", transform: "translateY(-50%)", color: "#a78bfa", fontSize: "0.8rem" }}>✓</span>}
+                {guestOpen && filtGuests.length > 0 && (
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 160, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                    {filtGuests.map(g => (
+                      <div key={g.id} onMouseDown={() => { setGuestId(g.id); setGuestSearch(g.name); setGuestOpen(false); }}
+                        style={{ padding: "0.5rem 0.9rem", cursor: "pointer", fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", transition: "background 0.15s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(167,139,250,0.08)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                        {g.name}{g.phone && <span style={{ color: "var(--text-soft)", fontSize: "0.82rem", marginLeft: "0.5rem" }}>{g.phone}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button type="button" onClick={() => { setShowNewGuest(true); setGuestSearch(""); setGuestId(""); }}
+                style={{ padding: "0 1rem", borderRadius: 10, border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)", color: "#a78bfa", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.1em", cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(167,139,250,0.15)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(167,139,250,0.08)"; }}>
+                ＋ Új vendég
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input value={newGuestName} onChange={e => setNewGuestName(e.target.value)} placeholder="Új vendég neve…" autoFocus style={{ ...inputStyle, flex: 1, borderColor: "rgba(167,139,250,0.4)" }} />
+              <button type="button" onClick={() => { setShowNewGuest(false); setNewGuestName(""); }} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-soft)", cursor: "pointer", padding: "0 0.75rem" }}>✕</button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Szín recept toggle ── */}
+        <div>
+          <button type="button" onClick={() => setShowMats(p => !p)}
+            style={{ background: showMats ? "rgba(251,191,36,0.1)" : "transparent", border: `1px solid ${showMats ? "rgba(251,191,36,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "#fbbf24" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
+            ✦ {showMats ? "Szín recept ▾" : "Szín recept hozzáadása"}
+          </button>
+
+          {showMats && (
+            <div style={{ marginTop: "0.65rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+              {matRows.map((row, i) => (
+                <div key={i} style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.18)", borderRadius: 10, padding: "0.65rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                  <div style={{ display: "flex", gap: "0.45rem" }}>
+                    <div style={{ flex: 2, position: "relative" }}>
+                      <input value={row.name}
+                        onChange={e => { updateMat(i, "name", e.target.value); setActiveMat(i); setMatSearch(e.target.value); setMatOpen(true); }}
+                        onFocus={() => { setActiveMat(i); setMatSearch(row.name); setMatOpen(true); }}
+                        onBlur={() => setTimeout(() => setMatOpen(false), 150)}
+                        placeholder="Anyag neve…"
+                        style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "rgba(251,191,36,0.2)" }} />
+                      {matOpen && activeMat === i && filtMat.length > 0 && (
+                        <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                          {filtMat.map(m => (
+                            <div key={m.name} onMouseDown={() => { updateMat(i, "name", m.name); updateMat(i, "unitPrice", m.unitPrice); setMatSearch(""); setMatOpen(false); }}
+                              style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.45rem 0.85rem", cursor: "pointer", transition: "background 0.12s" }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#fbbf24", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <input value={row.brand} onChange={e => updateMat(i, "brand", e.target.value)} placeholder="Márka" style={{ ...inputStyle, flex: 1, fontSize: "0.92rem" }} />
+                    <input value={row.colorCode} onChange={e => updateMat(i, "colorCode", e.target.value)} placeholder="Színkód" style={{ ...inputStyle, flex: 0.8, fontSize: "0.92rem" }} />
+                    <button type="button" onClick={() => setMatRows(p => p.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", alignSelf: "center" }}>✕</button>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                    <input type="number" value={row.grams} onChange={e => updateMat(i, "grams", e.target.value)} placeholder="Gramm" min="0" step="any"
+                      style={{ ...inputStyle, flex: 1, fontSize: "0.9rem", textAlign: "center" }} />
+                    <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-soft)", fontSize: "0.9rem" }}>g ×</span>
+                    <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(251,191,36,0.7)", fontSize: "0.9rem", minWidth: 50 }}>{fmt(row.unitPrice)}</span>
+                    <span style={{ color: "var(--text-soft)", fontSize: "0.85rem" }}>=</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", color: "#fbbf24", fontWeight: 700, fontSize: "0.92rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => setMatRows(p => [...p, { name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }])}
+                style={{ alignSelf: "flex-start", background: "none", border: "1px solid rgba(251,191,36,0.22)", borderRadius: 6, color: "rgba(251,191,36,0.7)", cursor: "pointer", fontSize: "0.68rem", padding: "0.2rem 0.65rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em" }}>
+                ＋ Sor
+              </button>
+              {matTotal > 0 && (
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0.5rem 0", borderTop: "1px solid rgba(251,191,36,0.1)" }}>
+                  <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.45)" }}>ANYAG ÖSSZESEN</span>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#c49060", fontWeight: 700 }}>{fmt(matTotal)}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Date + amount + save ── */}
+        <div style={{ display: "flex", gap: "0.65rem", alignItems: "flex-end", flexWrap: "wrap", paddingTop: "0.25rem", borderTop: "1px solid var(--bg-active)" }}>
+          <div style={{ flex: "0 0 auto" }}>
+            <span style={lbl}>Dátum</span>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inputStyle, width: 160, colorScheme: "dark" }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <span style={{ ...lbl, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              Összeg (Ft) {!isManual && autoTotal > 0 && <span style={{ color: "rgba(122,158,140,0.7)", fontFamily: "var(--font-cinzel)", fontSize: "0.45rem" }}>AUTO</span>}
+            </span>
+            <input type="number" min="0"
+              value={isManual ? manualAmt : autoTotal > 0 ? String(autoTotal) : ""}
+              onChange={e => { setManualAmt(e.target.value); setIsManual(true); }}
+              placeholder="0"
+              style={{ ...inputStyle, borderColor: total > 0 ? "rgba(122,158,140,0.4)" : "var(--border)" }} />
+          </div>
+          <button onClick={handleSave} disabled={saving || !canSave}
+            style={{ flex: "0 0 auto", padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: canSave ? "linear-gradient(120deg,#4a7a6a 0%,#7a9e8c 50%,#4a7a6a 100%)" : "var(--bg-card)", backgroundSize: "200% auto", color: canSave ? "#fff" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.15em", cursor: canSave ? "pointer" : "not-allowed", animation: canSave ? "shimmer 3s linear infinite" : "none", opacity: saving ? 0.7 : 1, transition: "all 0.2s", alignSelf: "flex-end" }}>
+            {saving ? "Mentés..." : "Rögzítés ◈"}
+          </button>
+        </div>
+      </div>
+    </div>
+    </>
+  );
+}
+
+// ── Other expense modal ───────────────────────────────────────────────────────
+function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; year: number; month: number; isAdmin: boolean }) {
+  const utils = api.useUtils();
+  const [type, setType] = useState<"material" | "wage">("material");
+  const [date, setDate] = useState(() => new Date(year, month - 1, new Date().getDate()).toISOString().slice(0, 10));
+
+  type SelMat = { id: string; name: string; unitPrice: number; qty: string };
+  const [matSearch,    setMatSearch]    = useState("");
+  const [matOpen,      setMatOpen]      = useState(false);
+  const [selectedMats, setSelectedMats] = useState<SelMat[]>([]);
+  const [wageDesc,     setWageDesc]     = useState("");
+  const [wageAmt,      setWageAmt]      = useState("");
+
+  const { data: categories = [] } = api.services.listCategories.useQuery();
+  const allServices: { id: string; name: string; price: number; categoryName: string }[] = [];
+  for (const c of categories) {
+    for (const s of (c.services ?? [])) allServices.push({ id: s.id, name: s.name, price: s.price, categoryName: c.name });
+  }
 
   const filteredMat = matSearch.trim()
     ? allServices.filter(s => s.name.toLowerCase().includes(matSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(matSearch.toLowerCase()))
     : allServices;
 
-  function lineTotal(m: SelMat) {
-    const q = parseFloat(m.qty);
-    return isNaN(q) || q <= 0 ? 0 : q * m.unitPrice;
-  }
+  function lineTotal(m: SelMat) { const q = parseFloat(m.qty); return isNaN(q) || q <= 0 ? 0 : q * m.unitPrice; }
   const matTotal = selectedMats.reduce((s, m) => s + lineTotal(m), 0);
 
   const create = api.finance.create.useMutation({
@@ -104,130 +419,86 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (type === "material") {
-      if (selectedMats.length === 0) return;
-      const desc = selectedMats
-        .map(m => { const q = parseFloat(m.qty); return isNaN(q) ? m.name : `${m.name} (${q}×)`; })
-        .join(", ");
+      if (!selectedMats.length) return;
+      const desc = selectedMats.map(m => { const q = parseFloat(m.qty); return isNaN(q) ? m.name : `${m.name} (${q}×)`; }).join(", ");
       create.mutate({ type, description: desc, amount: matTotal, date });
     } else {
-      create.mutate({ type, description, amount: parseFloat(amount), date });
+      create.mutate({ type, description: wageDesc, amount: parseFloat(wageAmt), date });
     }
   }
-
-  function addMat(s: { id: string; name: string; price: number; description: string | null }) {
-    if (!selectedMats.find(m => m.id === s.id))
-      setSelectedMats(prev => [...prev, { id: s.id, name: s.name, unitPrice: s.price, description: s.description, qty: "1" }]);
-    setMatSearch(""); setMatOpen(false);
-  }
-
-  function removeMat(id: string) { setSelectedMats(prev => prev.filter(m => m.id !== id)); }
-  function updateQty(id: string, qty: string) { setSelectedMats(prev => prev.map(m => m.id === id ? { ...m, qty } : m)); }
 
   const cfg = TYPE_CONFIG[type];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", animation: "fadeIn 0.2s ease" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        style={{
-          background: "var(--bg-modal)",
-          border: "1px solid var(--border)",
-          borderRadius: "20px",
-          padding: "2.25rem 2.5rem",
-          width: "100%",
-          maxWidth: 480,
-          boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
-          animation: "fadeInUp 0.3s ease",
-        }}
-      >
-        <h2 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1rem", letterSpacing: "0.16em", color: "var(--color-teal)", marginBottom: "1.75rem" }}>
-          ✦ Új tétel hozzáadása
-        </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 20, padding: "2.25rem 2.5rem", width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
+        <h2 style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.9rem", letterSpacing: "0.16em", color: "var(--color-teal)", marginBottom: "1.75rem" }}>Egyéb kiadás rögzítése</h2>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Type selector */}
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            {(Object.entries(TYPE_CONFIG) as [EntryType, typeof TYPE_CONFIG[EntryType]][]).map(([key, c]) => (
-              <button key={key} type="button" onClick={() => setType(key)}
-                style={{ flex: 1, padding: "0.6rem 0.5rem", borderRadius: "8px", border: type === key ? `1px solid ${c.color}88` : "1px solid var(--bg-active)", background: type === key ? c.dim : "transparent", color: type === key ? c.color : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
-                {c.icon} {c.label}
-              </button>
-            ))}
-          </div>
+          {/* Type — staff csak anyagköltséget rögzíthet */}
+          {isAdmin && (
+            <div style={{ display: "flex", gap: "0.6rem" }}>
+              {(["material","wage"] as const).map(key => {
+                const c = TYPE_CONFIG[key];
+                return (
+                  <button key={key} type="button" onClick={() => setType(key)}
+                    style={{ flex: 1, padding: "0.6rem 0.5rem", borderRadius: 8, border: type === key ? `1px solid ${c.color}88` : "1px solid var(--bg-active)", background: type === key ? c.dim : "transparent", color: type === key ? c.color : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
+                    {c.icon} {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-          {/* ── MATERIAL type: multi-picker ── */}
+          {/* Material multi-picker */}
           {type === "material" && (
             <div>
-              <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(74,124,126,0.6)", display: "block", marginBottom: "0.5rem" }}>
-                Felhasznált anyagok
-              </label>
-
-              {/* Selected materials */}
               {selectedMats.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.65rem" }}>
-                  {selectedMats.map(m => {
-                    const total = lineTotal(m);
-                    return (
-                      <div key={m.id} style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.22)", borderRadius: "10px", padding: "0.6rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                          {m.description && <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.45)", fontStyle: "italic" }}>{m.description}</span>}
-                          <button type="button" onClick={() => removeMat(m.id)} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <input
-                            type="number" value={m.qty} min="0" step="any"
-                            onChange={e => updateQty(m.id, e.target.value)}
-                            style={{ ...inputStyle, width: 72, padding: "0.35rem 0.5rem", fontSize: "0.9rem", textAlign: "center" }}
-                          />
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--text-soft)" }}>×</span>
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(251,191,36,0.7)" }}>{fmt(m.unitPrice)}</span>
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(44,36,32,0.35)" }}>=</span>
-                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#c49060", fontWeight: 700, marginLeft: "auto" }}>{fmt(total)}</span>
-                        </div>
+                  {selectedMats.map(m => (
+                    <div key={m.id} style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.22)", borderRadius: 10, padding: "0.55rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
+                        <button type="button" onClick={() => setSelectedMats(p => p.filter(x => x.id !== m.id))} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
                       </div>
-                    );
-                  })}
-                  {/* Total row */}
-                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.6rem", padding: "0.3rem 0.5rem 0", borderTop: "1px solid rgba(196,144,96,0.15)" }}>
-                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.5)" }}>ÖSSZESEN</span>
-                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", color: "#c49060", fontWeight: 700 }}>{fmt(matTotal)}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <input type="number" value={m.qty} min="0" step="any"
+                          onChange={e => setSelectedMats(p => p.map(x => x.id === m.id ? { ...x, qty: e.target.value } : x))}
+                          style={{ ...inputStyle, width: 72, padding: "0.35rem 0.5rem", fontSize: "0.9rem", textAlign: "center" }} />
+                        <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-soft)", fontSize: "0.9rem" }}>×</span>
+                        <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(251,191,36,0.7)", fontSize: "0.9rem" }}>{fmt(m.unitPrice)}</span>
+                        <span style={{ fontFamily: "var(--font-playfair)", color: "#c49060", fontWeight: 700, fontSize: "0.95rem", marginLeft: "auto" }}>{fmt(lineTotal(m))}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0.5rem 0", borderTop: "1px solid rgba(196,144,96,0.15)" }}>
+                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.5)" }}>ÖSSZESEN</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#c49060", fontWeight: 700 }}>{fmt(matTotal)}</span>
                   </div>
                 </div>
               )}
-
-              {/* Search + dropdown */}
               <div style={{ position: "relative" }}>
-                <input
-                  value={matSearch}
+                <input value={matSearch}
                   onChange={e => { setMatSearch(e.target.value); setMatOpen(true); }}
                   onFocus={() => setMatOpen(true)}
                   onBlur={() => setTimeout(() => setMatOpen(false), 150)}
-                  placeholder={allServices.length === 0 ? "Előbb add fel az árlistát a Szolgáltatások oldalon" : "Keress az árlistán: pl. Szőkítő, festék…"}
-                  style={{ ...inputStyle, borderColor: "rgba(251,191,36,0.2)" }}
-                />
-                {matSearch && <button type="button" onClick={() => { setMatSearch(""); setMatOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-soft)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
-
+                  placeholder="Keress az árlistán…"
+                  style={{ ...inputStyle, borderColor: "rgba(251,191,36,0.2)" }} />
                 {matOpen && filteredMat.length > 0 && (
-                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
                     {filteredMat.map((m, i) => {
                       const already = !!selectedMats.find(s => s.id === m.id);
-                      const showCat = i === 0 || filteredMat[i - 1]?.categoryName !== m.categoryName;
+                      const showCat = i === 0 || filteredMat[i-1]?.categoryName !== m.categoryName;
                       return (
                         <div key={m.id}>
-                          {showCat && (
-                            <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(251,191,36,0.4)", textTransform: "uppercase" }}>
-                              {m.categoryName}
-                            </div>
-                          )}
-                          <div onMouseDown={() => { if (!already) addMat(m); }}
+                          {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(251,191,36,0.4)", textTransform: "uppercase" }}>{m.categoryName}</div>}
+                          <div onMouseDown={() => { if (!already) setSelectedMats(p => [...p, { id: m.id, name: m.name, unitPrice: m.price, qty: "1" }]); setMatSearch(""); setMatOpen(false); }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                            {already && <span style={{ fontSize: "0.7rem", color: "#c49060" }}>✓</span>}
+                            {already && <span style={{ color: "#c49060", fontSize: "0.7rem" }}>✓</span>}
                             <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#c49060", fontWeight: 700 }}>{fmt(m.price)}</span>
                           </div>
@@ -240,96 +511,30 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
             </div>
           )}
 
-          {/* ── Non-material: description + amount ── */}
-          {type !== "material" && (
+          {/* Wage */}
+          {type === "wage" && (
             <>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", position: "relative" }}>
-                <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(74,124,126,0.6)" }}>Leírás</label>
-                <div style={{ position: "relative" }}>
-                  <input value={description} onChange={e => { setDesc(e.target.value); setSvcOpen(true); }}
-                    onFocus={e => { setSvcOpen(true); e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-                    onBlur={e => { setTimeout(() => setSvcOpen(false), 150); e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
-                    placeholder={type === "revenue" ? "pl. Balayage, Hajvágás…" : "pl. Bér – október"}
-                    required style={inputStyle} />
-                  {description && <button type="button" onClick={() => { setDesc(""); setSvcOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-soft)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
-                </div>
-                {svcOpen && filteredSvc.length > 0 && type === "revenue" && (
-                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "var(--bg-modal)", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
-                    {filteredSvc.map((svc, i) => {
-                      const showCat = i === 0 || filteredSvc[i - 1]?.categoryName !== svc.categoryName;
-                      return (
-                        <div key={svc.id}>
-                          {showCat && <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: `${cfg.color}66`, textTransform: "uppercase" }}>{svc.categoryName}</div>}
-                          <div onMouseDown={() => { setDesc(svc.name); if (!amountManual) setAmount(String(svc.price)); setSvcOpen(false); }}
-                            style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: "pointer", transition: "background 0.15s" }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.color}12`; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{svc.name}</span>
-                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: cfg.color, fontWeight: 700 }}>{fmt(svc.price)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+              <div>
+                <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>Leírás</label>
+                <input value={wageDesc} onChange={e => setWageDesc(e.target.value)} placeholder="pl. Bér — október" required style={inputStyle} />
               </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(74,124,126,0.6)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  Összeg (Ft)
-                  {!amountManual && amount && <span style={{ color: "rgba(110,231,183,0.7)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>}
-                </label>
-                <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setAmountManual(true); }} placeholder="0" required min="1" style={inputStyle}
-                  onFocus={e => { e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-                  onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }} />
+              <div>
+                <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>Összeg (Ft)</label>
+                <input type="number" value={wageAmt} onChange={e => setWageAmt(e.target.value)} placeholder="0" required min="1" style={inputStyle} />
               </div>
             </>
           )}
 
           {/* Date */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(74,124,126,0.6)" }}>
-              Dátum
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              required
-              style={{ ...inputStyle, colorScheme: "light" }}
-              onFocus={e => { e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-              onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
-            />
+          <div>
+            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>Dátum</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{ ...inputStyle, colorScheme: "dark" }} />
           </div>
 
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ flex: 1, padding: "0.8rem", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.15em", cursor: "pointer" }}
-            >
-              Mégse
-            </button>
-            <button
-              type="submit"
-              disabled={create.isPending || (type === "material" && selectedMats.length === 0)}
-              style={{
-                flex: 2,
-                padding: "0.8rem",
-                borderRadius: "10px",
-                border: "none",
-                background: `linear-gradient(120deg, ${cfg.color}88 0%, ${cfg.color} 50%, ${cfg.color}88 100%)`,
-                backgroundSize: "200% auto",
-                color: "#fff",
-                fontFamily: "var(--font-cinzel)",
-                fontSize: "0.65rem",
-                fontWeight: 600,
-                letterSpacing: "0.18em",
-                cursor: create.isPending ? "not-allowed" : "pointer",
-                animation: "shimmer 3s linear infinite",
-                opacity: create.isPending ? 0.7 : 1,
-              }}
-            >
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: "0.8rem", borderRadius: 10, background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.14em", cursor: "pointer" }}>Mégse</button>
+            <button type="submit" disabled={create.isPending || (type === "material" && !selectedMats.length)} className="btn-gold"
+              style={{ flex: 2, padding: "0.8rem", borderRadius: 10, fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.18em" }}>
               {create.isPending ? "Mentés..." : "Mentés ✦"}
             </button>
           </div>
@@ -339,46 +544,60 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  background: "var(--bg-card)",
-  border: "1px solid var(--border)",
-  borderRadius: "10px",
-  padding: "0.75rem 1rem",
-  color: "var(--text-primary)",
-  fontFamily: "var(--font-cormorant)",
-  fontSize: "1rem",
-  outline: "none",
-  transition: "border-color 0.3s, box-shadow 0.3s",
-  width: "100%",
-};
-
-export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }) {
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmin?: boolean; userId?: string }) {
   const now = new Date();
-  const [year, setYear]   = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [showAdd, setShowAdd] = useState(false);
+  const [year,     setYear]     = useState(now.getFullYear());
+  const [month,    setMonth]    = useState(now.getMonth() + 1);
+  const [showOther,   setShowOther]   = useState(false);
+  const [expandedId,  setExpandedId]  = useState<string | null>(null);
+  const [filterUserId, setFilterUserId] = useState<string | undefined>(undefined);
 
-  const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month });
+  const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
+
+  const { data: entries = [], isLoading, refetch } = api.finance.list.useQuery({ year, month, filterUserId });
   const utils = api.useUtils();
-  const del = api.finance.delete.useMutation({ onSuccess: () => utils.finance.list.invalidate() });
+  const del   = api.finance.delete.useMutation({ onSuccess: () => utils.finance.list.invalidate() });
 
+  const STAFF_RATE = 0.6; // staff a bevétel 60%-át kapja
+
+  // Totals
   const revenue  = entries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
   const material = entries.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
   const wage     = entries.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
   const profit   = revenue - material - wage;
+  const staffNet = Math.round(revenue * STAFF_RATE);
 
-  function prevMonth() {
-    if (month === 1) { setMonth(12); setYear(y => y - 1); }
-    else setMonth(m => m - 1);
-  }
-  function nextMonth() {
-    if (month === 12) { setMonth(1); setYear(y => y + 1); }
-    else setMonth(m => m + 1);
-  }
+  // Daily & weekly (only meaningful for current month)
+  const todayStr = toDateStr(now);
+  const { mon: weekMon, sun: weekSun } = weekBounds(now);
+  const todayRevenue = entries.filter(e => e.type === "revenue" && toDateStr(new Date(e.date)) === todayStr).reduce((s, e) => s + e.amount, 0);
+  const weekRevenue  = entries.filter(e => {
+    const d = new Date(e.date);
+    return e.type === "revenue" && d >= weekMon && d <= weekSun;
+  }).reduce((s, e) => s + e.amount, 0);
+
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+
+  function prevMonth() { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); }
+  function nextMonth() { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }
+
+  // Staff only sees their revenue entries
+  const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue");
+
+  // Group entries by date descending
+  const byDate: Record<string, typeof entries> = {};
+  visibleEntries.forEach(e => {
+    const k = toDateStr(new Date(e.date));
+    (byDate[k] ??= []).push(e);
+  });
+  const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+  const isThisMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
   return (
-    <div style={{ animation: "fadeInUp 0.5s ease" }}>
-      {showAdd && <AddModal onClose={() => setShowAdd(false)} year={year} month={month} />}
+    <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 800 }}>
+      {showOther && <OtherModal onClose={() => setShowOther(false)} year={year} month={month} isAdmin={isAdmin} />}
 
       {/* Title */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
@@ -387,34 +606,42 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
             Pénzügyek ✦
           </h1>
           <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem" }}>
-            {isAdmin ? "Bevételek, kiadások és nyereség áttekintése" : "Saját bevételeid és anyagköltségeid"}
+            {isAdmin
+              ? filterUserId
+                ? `${allUsers.find(u => u.id === filterUserId)?.name ?? "?"} pénzügyei`
+                : "Bevételek, kiadások és nyereség áttekintése"
+              : "Saját bevételeid és anyagköltségeid"}
           </p>
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          style={{
-            padding: "0.75rem 1.5rem",
-            borderRadius: "10px",
-            border: "none",
-            background: "linear-gradient(120deg, var(--color-teal) 0%, var(--color-teal-light) 50%, var(--color-teal) 100%)",
-            backgroundSize: "200% auto",
-            color: "#fff",
-            fontFamily: "var(--font-cinzel)",
-            fontSize: "0.7rem",
-            fontWeight: 600,
-            letterSpacing: "0.18em",
-            cursor: "pointer",
-            animation: "shimmer 3s linear infinite",
-            boxShadow: "0 4px 20px var(--border)",
-            flexShrink: 0,
-          }}
-        >
-          + Új tétel
-        </button>
+        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+          {/* Admin: user filter pills */}
+          {isAdmin && allUsers.length > 0 && (
+            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+              <button onClick={() => setFilterUserId(undefined)}
+                style={{ padding: "0.42rem 0.85rem", borderRadius: 8, border: !filterUserId ? "1px solid var(--border-strong)" : "1px solid var(--border)", background: !filterUserId ? "var(--bg-active)" : "transparent", color: !filterUserId ? "var(--color-teal)" : "var(--text-muted)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}>
+                Mindenki
+              </button>
+              {allUsers.map(u => (
+                <button key={u.id} onClick={() => setFilterUserId(filterUserId === u.id ? undefined : u.id)}
+                  style={{ padding: "0.42rem 0.85rem", borderRadius: 8, border: filterUserId === u.id ? "1px solid var(--border-strong)" : "1px solid var(--border)", background: filterUserId === u.id ? "var(--bg-active)" : "transparent", color: filterUserId === u.id ? "var(--color-teal)" : "var(--text-muted)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: "pointer", transition: "all 0.2s" }}>
+                  {u.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setShowOther(true)} style={{ padding: "0.7rem 1.25rem", borderRadius: 10, border: "1px solid rgba(196,144,96,0.35)", background: "rgba(196,144,96,0.08)", color: "#c49060", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.15em", cursor: "pointer", flexShrink: 0, transition: "all 0.2s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(196,144,96,0.15)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(196,144,96,0.08)"; }}>
+            {isAdmin ? "✦ Anyag / Bér" : "✦ Anyagköltség rögzítése"}
+          </button>
+        </div>
       </div>
 
+      {/* Visit entry */}
+      {isThisMonth && <VisitEntry userId={userId} onSaved={() => void utils.finance.list.invalidate()} />}
+
       {/* Month navigator */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
         <button onClick={prevMonth} style={navBtn}>‹</button>
         <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", letterSpacing: "0.14em", color: "var(--color-teal)", minWidth: 160, textAlign: "center" }}>
           {MONTHS[month - 1]} {year}
@@ -422,102 +649,151 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
         <button onClick={nextMonth} style={navBtn}>›</button>
       </div>
 
-      {/* Summary cards */}
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
-        <SummaryCard label="Bevétel"      value={revenue}  color="#7a9e8c" icon="◈" />
-        <SummaryCard label="Anyagköltség" value={material} color="#c49060" icon="✦" />
-        {isAdmin && <SummaryCard label="Bérek" value={wage} color="#9278b0" icon="♦" />}
-        {isAdmin && (
-          <SummaryCard
-            label="Nyereség"
-            value={profit}
-            color={profit >= 0 ? "#7a9e8c" : "#c47878"}
-            icon="✧"
-            sub={revenue > 0 ? `Árrés: ${Math.round((profit / revenue) * 100)}%` : undefined}
-          />
+      {/* Summary row */}
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
+        {isCurrentMonth && (
+          <>
+            <StatBox label="Ma" value={todayRevenue} color="#7a9e8c" sub="bevétel" />
+            <StatBox label="Ez a hét" value={weekRevenue} color="#7a9e8c" sub="bevétel" />
+          </>
+        )}
+        <StatBox label={isCurrentMonth ? "Ez a hónap" : (MONTHS[month-1] ?? "")} value={revenue} color="#7a9e8c" sub="bevétel" large={!isCurrentMonth} />
+        {isAdmin ? (
+          <>
+            <StatBox label="Anyagköltség" value={material} color="#c49060" sub="kiadás" />
+            <StatBox label="Bérek" value={wage} color="#9278b0" sub="kiadás" />
+            <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#7a9e8c" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
+          </>
+        ) : (
+          <StatBox label="Neked jár (60%)" value={staffNet} color="#a78bfa" sub="nettó bér" large />
         )}
       </div>
 
-      {/* Entries list */}
+      {/* Entries by day */}
       {isLoading ? (
-        <div style={{ textAlign: "center", color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", padding: "3rem" }}>
-          Betöltés...
-        </div>
+        <div style={{ textAlign: "center", color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", padding: "3rem" }}>Betöltés...</div>
       ) : entries.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "4rem 2rem",
-            background: "var(--bg-panel)",
-            border: "1px dashed var(--border)",
-            borderRadius: "16px",
-            color: "rgba(44,36,32,0.35)",
-            fontStyle: "italic",
-            fontFamily: "var(--font-cormorant)",
-            fontSize: "1.1rem",
-          }}
-        >
+        <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>
           Ebben a hónapban még nincsenek tételek. ✦
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-          {(["revenue", "material", "wage"] as EntryType[]).map(type => {
-            const group = entries.filter(e => e.type === type);
-            if (!group.length) return null;
-            const cfg = TYPE_CONFIG[type];
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {sortedDates.map(ds => {
+            const dayEntries = byDate[ds]!;
+            const dayRev  = dayEntries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
+            const dayCost = dayEntries.filter(e => e.type !== "revenue").reduce((s, e) => s + e.amount, 0);
+            const isToday = ds === todayStr;
+
             return (
-              <div key={type}>
-                <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase", color: `${cfg.color}bb`, marginBottom: "0.5rem", marginTop: "0.5rem" }}>
-                  {cfg.icon} {cfg.label}
-                </div>
-                {group.map(entry => (
-                  <div
-                    key={entry.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "1rem",
-                      padding: "0.9rem 1.25rem",
-                      background: "var(--bg-panel)",
-                      border: `1px solid ${cfg.color}22`,
-                      borderRadius: "12px",
-                      marginBottom: "0.4rem",
-                      transition: "background 0.2s",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.dim}`; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-panel)"; }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)" }}>
-                        {entry.description}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)", fontStyle: "italic" }}>
-                        {new Date(entry.date).toLocaleDateString("hu-HU")}
-                        {entry.createdBy?.name && ` · ${entry.createdBy.name}`}
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", color: cfg.color, fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {fmt(entry.amount)}
-                    </div>
-                    <button
-                      onClick={() => del.mutate({ id: entry.id })}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--text-dim)",
-                        cursor: "pointer",
-                        fontSize: "1rem",
-                        padding: "0.25rem 0.4rem",
-                        borderRadius: "6px",
-                        transition: "color 0.2s, background 0.2s",
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = "none"; }}
-                    >
-                      ✕
-                    </button>
+              <div key={ds}>
+                {/* Day header */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+                  <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.18em", color: isToday ? "var(--color-teal)" : "var(--text-muted)", textTransform: "uppercase" }}>
+                    {isToday ? "Ma — " : ""}{new Date(ds + "T12:00:00").toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" })}
                   </div>
-                ))}
+                  <div style={{ flex: 1, height: 1, background: "var(--bg-active)" }} />
+                  {dayRev > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(dayRev)}</span>}
+                  {dayCost > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#c49060" }}>−{fmt(dayCost)}</span>}
+                </div>
+
+                {/* Entries for this day */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  {dayEntries.map(entry => {
+                    const cfg        = TYPE_CONFIG[entry.type as EntryType];
+                    const card       = (entry as { guestCard?: { guest: { name: string }; services: { name: string; price: number; duration: number; gender?: string | null }[]; materials: { name: string; brand?: string | null; colorCode?: string | null; grams: number }[] } }).guestCard;
+                    const isExpanded = expandedId === entry.id;
+                    return (
+                      <div key={entry.id} style={{ background: "var(--bg-panel)", border: `1px solid ${isExpanded ? cfg.color + "44" : cfg.color + "22"}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
+                        {/* Main row */}
+                        <div
+                          onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                          style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.75rem 1.1rem", cursor: "pointer", transition: "background 0.2s" }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = cfg.dim; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                          <span style={{ color: cfg.color, fontSize: "0.85rem", flexShrink: 0, opacity: 0.7 }}>{cfg.icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {card && <span style={{ color: "#a78bfa", marginRight: "0.4rem", fontSize: "0.75rem" }}>♦</span>}
+                              {card ? card.guest.name : entry.description}
+                            </div>
+                            {entry.createdBy?.name && (
+                              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)", fontStyle: "italic" }}>
+                                {entry.createdBy.name}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: cfg.color, fontWeight: 600, whiteSpace: "nowrap" }}>
+                            {entry.type !== "revenue" && "−"}{fmt(entry.amount)}
+                          </div>
+                          <span style={{ color: cfg.color, fontSize: "0.65rem", opacity: 0.5, transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>
+                          {!entry.workDayId && (
+                            <button onClick={e => { e.stopPropagation(); del.mutate({ id: entry.id }); }}
+                              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s, background 0.2s", flexShrink: 0 }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>
+                              ✕
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Expanded detail */}
+                        {isExpanded && (
+                          <div style={{ padding: "0 1.1rem 0.85rem 2.5rem", borderTop: `1px solid ${cfg.color}18` }}>
+                            {card ? (
+                              <>
+                                {/* Guest card: services */}
+                                {card.services.length > 0 && (
+                                  <div style={{ marginTop: "0.65rem" }}>
+                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>Elvégzett szolgáltatások</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                                      {card.services.map((s, i) => {
+                                        const hourlyRate = s.duration > 0 ? Math.round((s.price / s.duration) * 60) : null;
+                                        return (
+                                          <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(122,158,140,0.08)", border: "1px solid rgba(122,158,140,0.2)", borderRadius: 7, flexWrap: "wrap" }}>
+                                            {s.gender && (
+                                              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", padding: "0.12rem 0.4rem", borderRadius: 4, background: s.gender === "nő" ? "rgba(232,180,200,0.15)" : "rgba(122,158,200,0.12)", color: s.gender === "nő" ? "#e8b4c8" : "#7a9ec8", border: `1px solid ${s.gender === "nő" ? "rgba(232,180,200,0.3)" : "rgba(122,158,200,0.3)"}` }}>
+                                                {s.gender === "nő" ? "Női" : "Férfi"}
+                                              </span>
+                                            )}
+                                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#7a9e8c", flex: 1 }}>{s.name}</span>
+                                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "rgba(122,158,140,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
+                                            {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
+                                            {hourlyRate && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-muted)" }}>{fmt(hourlyRate)}/óra</span>}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Guest card: color recipe */}
+                                {card.materials.length > 0 && (
+                                  <div style={{ marginTop: "0.65rem" }}>
+                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>✦ Szín recept</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                                      {card.materials.map((m, i) => (
+                                        <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem" }}>
+                                          <span style={{ color: "var(--text-primary)", minWidth: 120 }}>{m.name}</span>
+                                          {m.brand     && <span style={{ color: "var(--text-soft)" }}>{m.brand}</span>}
+                                          {m.colorCode && <span style={{ color: "#fbbf24", fontWeight: 600 }}>{m.colorCode}</span>}
+                                          <span style={{ color: "var(--text-muted)", marginLeft: "auto" }}>{m.grams}g</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              /* No guest card — show description */
+                              <div style={{ marginTop: "0.5rem", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic" }}>
+                                {entry.description}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
@@ -527,14 +803,15 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
   );
 }
 
-const navBtn: React.CSSProperties = {
-  background: "var(--bg-card)",
-  border: "1px solid var(--border)",
-  borderRadius: "8px",
-  color: "var(--color-teal)",
-  fontSize: "1.2rem",
-  width: 36, height: 36,
-  cursor: "pointer",
-  display: "flex", alignItems: "center", justifyContent: "center",
-  transition: "background 0.2s",
-};
+// ── Stat box ──────────────────────────────────────────────────────────────────
+function StatBox({ label, value, color, sub, large }: { label: string; value: number; color: string; sub?: string; large?: boolean }) {
+  return (
+    <div style={{ background: "var(--bg-card)", border: `1px solid ${color}33`, borderRadius: 14, padding: large ? "1.25rem 1.5rem" : "1rem 1.25rem", flex: large ? "1 1 180px" : "1 1 130px", minWidth: large ? 160 : 120, transition: "transform 0.2s, box-shadow 0.2s" }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 24px ${color}18`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.18em", textTransform: "uppercase", color: `${color}99`, marginBottom: "0.5rem" }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-playfair)", fontSize: large ? "1.45rem" : "1.15rem", color, fontWeight: 700, lineHeight: 1 }}>{fmt(value)}</div>
+      {sub && <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)", marginTop: "0.25rem", fontStyle: "italic" }}>{sub}</div>}
+    </div>
+  );
+}
