@@ -101,4 +101,13 @@ export const servicesRouter = createTRPCRouter({
       requireAdmin(ctx.session.user.role);
       return ctx.db.service.delete({ where: { id: input.id } });
     }),
+
+  reorderServices: protectedProcedure
+    .input(z.array(z.object({ id: z.string(), order: z.number().int() })))
+    .mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      await ctx.db.$transaction(
+        input.map(({ id, order }) => ctx.db.service.update({ where: { id }, data: { order } }))
+      );
+    }),
 });

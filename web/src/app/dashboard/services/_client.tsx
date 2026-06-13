@@ -161,7 +161,15 @@ function CategoryModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Service row ────────────────────────────────────────────────────────────
-function ServiceRow({ svc, onEdit, isAdmin }: { svc: Service; onEdit: () => void; isAdmin: boolean }) {
+function ServiceRow({
+  svc, onEdit, isAdmin,
+  dragHandleProps,
+  isDragging,
+}: {
+  svc: Service; onEdit: () => void; isAdmin: boolean;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+  isDragging?: boolean;
+}) {
   const utils = api.useUtils();
   const del    = api.services.deleteService.useMutation({ onSuccess: () => void utils.services.listCategories.invalidate() });
   const toggle = api.services.updateService.useMutation({ onSuccess: () => void utils.services.listCategories.invalidate() });
@@ -172,11 +180,21 @@ function ServiceRow({ svc, onEdit, isAdmin }: { svc: Service; onEdit: () => void
         display: "flex", alignItems: "center", gap: "1rem",
         padding: "0.7rem 1rem", borderRadius: 8,
         background: svc.active ? "var(--bg-today)" : "var(--bg-panel)",
-        border: "1px solid var(--bg-highlight)",
-        opacity: svc.active ? 1 : 0.5,
-        transition: "opacity 0.2s",
+        border: `1px solid ${isDragging ? "var(--color-teal)" : "var(--bg-highlight)"}`,
+        opacity: isDragging ? 0.5 : svc.active ? 1 : 0.5,
+        transition: "opacity 0.15s, border-color 0.15s",
+        boxShadow: isDragging ? "0 4px 20px rgba(74,124,126,0.25)" : "none",
       }}
     >
+      {isAdmin && (
+        <div
+          {...dragHandleProps}
+          style={{ cursor: "grab", color: dimmed, fontSize: "1rem", lineHeight: 1, userSelect: "none", touchAction: "none", paddingRight: "0.1rem" }}
+          title="Húzd a sorrendhez"
+        >
+          ⠿
+        </div>
+      )}
       <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: svc.active ? cream : dimmed, fontSize: "1rem" }}>
         {svc.name}
         {svc.description && <span style={{ marginLeft: "0.5rem", fontSize: "0.82rem", color: dimmed }}>{svc.description}</span>}
@@ -203,10 +221,42 @@ function ServiceRow({ svc, onEdit, isAdmin }: { svc: Service; onEdit: () => void
 // ── Category block ─────────────────────────────────────────────────────────
 function CategoryBlock({ cat, isAdmin }: { cat: Category; isAdmin: boolean }) {
   const utils = api.useUtils();
-  const [addSvc, setAddSvc]   = useState(false);
-  const [editSvc, setEditSvc] = useState<Service | null>(null);
+  const [addSvc, setAddSvc]     = useState(false);
+  const [editSvc, setEditSvc]   = useState<Service | null>(null);
   const [editName, setEditName] = useState(false);
   const [nameVal, setNameVal]   = useState(cat.name);
+  const [items, setItems]       = useState<Service[]>(cat.services);
+  const [dragIdx, setDragIdx]   = useState<number | null>(null);
+  const [overIdx, setOverIdx]   = useState<number | null>(null);
+
+  // keep local list in sync when server data changes
+  useEffect(() => { setItems(cat.services); }, [cat.services]);
+
+  const reorder = api.services.reorderServices.useMutation({
+    onSuccess: () => void utils.services.listCategories.invalidate(),
+  });
+
+  const handleDragStart = (idx: number) => setDragIdx(idx);
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    setOverIdx(idx);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === targetIdx) { setDragIdx(null); setOverIdx(null); return; }
+    const next = [...items];
+    const moved = next.splice(dragIdx, 1)[0];
+    if (!moved) { setDragIdx(null); setOverIdx(null); return; }
+    next.splice(targetIdx, 0, moved);
+    setItems(next);
+    setDragIdx(null);
+    setOverIdx(null);
+    reorder.mutate(next.map((s, i) => ({ id: s.id, order: i })));
+  };
+
+  const handleDragEnd = () => { setDragIdx(null); setOverIdx(null); };
 
   const delCat    = api.services.deleteCategory.useMutation({ onSuccess: () => void utils.services.listCategories.invalidate() });
   const updateCat = api.services.updateCategory.useMutation({ onSuccess: () => { void utils.services.listCategories.invalidate(); setEditName(false); } });
@@ -244,14 +294,32 @@ function CategoryBlock({ cat, isAdmin }: { cat: Category; isAdmin: boolean }) {
       </div>
 
       {/* Services */}
-      {cat.services.length === 0 ? (
+      {items.length === 0 ? (
         <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", fontStyle: "italic", paddingLeft: "0.5rem" }}>
           Még nincs szolgáltatás ebben a kategóriában.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          {cat.services.map(svc => (
-            <ServiceRow key={svc.id} svc={svc} onEdit={() => setEditSvc(svc)} isAdmin={isAdmin} />
+          {items.map((svc, idx) => (
+            <div
+              key={svc.id}
+              draggable={isAdmin}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={e => handleDragOver(e, idx)}
+              onDrop={e => handleDrop(e, idx)}
+              onDragEnd={handleDragEnd}
+              style={{
+                outline: overIdx === idx && dragIdx !== idx ? `2px dashed var(--color-teal)` : "none",
+                borderRadius: 8,
+              }}
+            >
+              <ServiceRow
+                svc={svc}
+                onEdit={() => setEditSvc(svc)}
+                isAdmin={isAdmin}
+                isDragging={dragIdx === idx}
+              />
+            </div>
           ))}
         </div>
       )}
