@@ -3,10 +3,11 @@
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ThemeToggle } from "~/app/_theme-toggle";
 
 const USERS = [
-  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "#4a7c7e", glowRgb: "74,124,126" },
-  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "#c45c7a", glowRgb: "196,92,122" },
+  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "var(--color-teal)", glowRgb: "74,124,126" },
+  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "var(--color-pink)", glowRgb: "196,92,122" },
   { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "#7a8c5a", glowRgb: "122,140,90" },
 ] as const;
 
@@ -32,7 +33,7 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
   return (
     <div
       style={{
-        background: "rgba(220,210,195,0.85)",
+        background: "var(--bg-card)",
         border: `1px solid ${color}44`,
         borderRadius: "24px",
         padding: "2.5rem 2rem",
@@ -98,11 +99,11 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
             placeholder="· · · · · · · ·"
             required
             style={{
-              background: "rgba(215,205,190,0.55)",
+              background: "var(--bg-input)",
               border: `1px solid ${color}33`,
               borderRadius: "10px",
               padding: "0.8rem 1rem",
-              color: "#2c2420",
+              color: "var(--text-primary)",
               fontFamily: "var(--font-cormorant)",
               fontSize: "1.1rem",
               outline: "none",
@@ -186,7 +187,7 @@ export default function LoginPage() {
       <div className="pointer-events-none fixed inset-0 z-0">
         {[
           { w: 520, h: 520, top: -120, left: -120, c: "rgba(196,92,122,0.08)", d: "0s" },
-          { w: 420, h: 420, bottom: -80, right: -80, c: "rgba(74,124,126,0.08)", d: "-5s" },
+          { w: 420, h: 420, bottom: -80, right: -80, c: "var(--bg-highlight)", d: "-5s" },
           { w: 360, h: 360, top: "40%", left: "55%", c: "rgba(122,140,90,0.07)", d: "-9s" },
         ].map((o, i) => (
           <div
@@ -208,6 +209,11 @@ export default function LoginPage() {
         ))}
       </div>
 
+      {/* Theme toggle top right */}
+      <div style={{ position: "fixed", top: "1.25rem", right: "1.5rem", zIndex: 50 }}>
+        <ThemeToggle />
+      </div>
+
       <main
         className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-10 p-8"
         style={{ animation: "fadeIn 0.6s ease" }}
@@ -217,14 +223,14 @@ export default function LoginPage() {
             className="mx-auto mb-4 flex items-center justify-center rounded-full"
             style={{
               width: 72, height: 72,
-              border: "1px solid rgba(74,124,126,0.35)",
+              border: "1px solid var(--border-strong)",
               animation: "rotateSlow 22s linear infinite",
             }}
           >
             <span
               style={{
                 fontSize: "2rem",
-                color: "#4a7c7e",
+                color: "var(--color-teal)",
                 display: "block",
                 animation: "rotateSlow 22s linear infinite reverse",
                 filter: "drop-shadow(0 0 10px rgba(74,124,126,0.5))",
@@ -239,7 +245,7 @@ export default function LoginPage() {
               fontSize: "1.9rem",
               fontWeight: 600,
               letterSpacing: "0.14em",
-              color: "#4a7c7e",
+              color: "var(--color-teal)",
             }}
           >
             Salon Spellbook
@@ -249,7 +255,7 @@ export default function LoginPage() {
               fontFamily: "var(--font-cormorant)",
               fontStyle: "italic",
               fontSize: "1rem",
-              color: "#c45c7a",
+              color: "var(--color-pink)",
               marginTop: "0.4rem",
               letterSpacing: "0.06em",
               opacity: 0.85,

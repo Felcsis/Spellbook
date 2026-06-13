@@ -21,7 +21,7 @@ function SummaryCard({ label, value, color, icon, sub }: { label: string; value:
   return (
     <div
       style={{
-        background: "rgba(218,208,193,0.8)",
+        background: "var(--bg-card)",
         border: `1px solid ${color}44`,
         borderRadius: "16px",
         padding: "1.5rem 1.75rem",
@@ -49,7 +49,7 @@ function SummaryCard({ label, value, color, icon, sub }: { label: string; value:
         {fmt(value)}
       </div>
       {sub && (
-        <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "rgba(44,36,32,0.45)", marginTop: "0.3rem", fontStyle: "italic" }}>
+        <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginTop: "0.3rem", fontStyle: "italic" }}>
           {sub}
         </div>
       )}
@@ -133,7 +133,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
     >
       <div
         style={{
-          background: "#e6ddd0",
+          background: "var(--bg-modal)",
           border: "1px solid rgba(74,124,126,0.25)",
           borderRadius: "20px",
           padding: "2.25rem 2.5rem",
@@ -143,7 +143,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
           animation: "fadeInUp 0.3s ease",
         }}
       >
-        <h2 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1rem", letterSpacing: "0.16em", color: "#4a7c7e", marginBottom: "1.75rem" }}>
+        <h2 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1rem", letterSpacing: "0.16em", color: "var(--color-teal)", marginBottom: "1.75rem" }}>
           ✦ Új tétel hozzáadása
         </h2>
 
@@ -152,7 +152,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
           <div style={{ display: "flex", gap: "0.6rem" }}>
             {(Object.entries(TYPE_CONFIG) as [EntryType, typeof TYPE_CONFIG[EntryType]][]).map(([key, c]) => (
               <button key={key} type="button" onClick={() => setType(key)}
-                style={{ flex: 1, padding: "0.6rem 0.5rem", borderRadius: "8px", border: type === key ? `1px solid ${c.color}88` : "1px solid rgba(74,124,126,0.1)", background: type === key ? c.dim : "transparent", color: type === key ? c.color : "rgba(44,36,32,0.45)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
+                style={{ flex: 1, padding: "0.6rem 0.5rem", borderRadius: "8px", border: type === key ? `1px solid ${c.color}88` : "1px solid var(--bg-active)", background: type === key ? c.dim : "transparent", color: type === key ? c.color : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
                 {c.icon} {c.label}
               </button>
             ))}
@@ -173,9 +173,9 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                     return (
                       <div key={m.id} style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.22)", borderRadius: "10px", padding: "0.6rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "#2c2420", flex: 1 }}>{m.name}</span>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                           {m.description && <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.45)", fontStyle: "italic" }}>{m.description}</span>}
-                          <button type="button" onClick={() => removeMat(m.id)} style={{ background: "none", border: "none", color: "rgba(44,36,32,0.25)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
+                          <button type="button" onClick={() => removeMat(m.id)} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                           <input
@@ -183,7 +183,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                             onChange={e => updateQty(m.id, e.target.value)}
                             style={{ ...inputStyle, width: 72, padding: "0.35rem 0.5rem", fontSize: "0.9rem", textAlign: "center" }}
                           />
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(44,36,32,0.45)" }}>×</span>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--text-soft)" }}>×</span>
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(251,191,36,0.7)" }}>{fmt(m.unitPrice)}</span>
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(44,36,32,0.35)" }}>=</span>
                           <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#fbbf24", fontWeight: 700, marginLeft: "auto" }}>{fmt(total)}</span>
@@ -209,10 +209,10 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                   placeholder={allServices.length === 0 ? "Előbb add fel az árlistát a Szolgáltatások oldalon" : "Keress az árlistán: pl. Szőkítő, festék…"}
                   style={{ ...inputStyle, borderColor: "rgba(251,191,36,0.2)" }}
                 />
-                {matSearch && <button type="button" onClick={() => { setMatSearch(""); setMatOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(44,36,32,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
+                {matSearch && <button type="button" onClick={() => { setMatSearch(""); setMatOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-soft)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
 
                 {matOpen && filteredMat.length > 0 && (
-                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#e6ddd0", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
                     {filteredMat.map((m, i) => {
                       const already = !!selectedMats.find(s => s.id === m.id);
                       const showCat = i === 0 || filteredMat[i - 1]?.categoryName !== m.categoryName;
@@ -228,7 +228,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                             {already && <span style={{ fontSize: "0.7rem", color: "#fbbf24" }}>✓</span>}
-                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "#2c2420", flex: 1 }}>{m.name}</span>
+                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
                           </div>
                         </div>
@@ -248,13 +248,13 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                 <div style={{ position: "relative" }}>
                   <input value={description} onChange={e => { setDesc(e.target.value); setSvcOpen(true); }}
                     onFocus={e => { setSvcOpen(true); e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-                    onBlur={e => { setTimeout(() => setSvcOpen(false), 150); e.target.style.borderColor = "rgba(74,124,126,0.15)"; e.target.style.boxShadow = "none"; }}
+                    onBlur={e => { setTimeout(() => setSvcOpen(false), 150); e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                     placeholder={type === "revenue" ? "pl. Balayage, Hajvágás…" : "pl. Bér – október"}
                     required style={inputStyle} />
-                  {description && <button type="button" onClick={() => { setDesc(""); setSvcOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(44,36,32,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
+                  {description && <button type="button" onClick={() => { setDesc(""); setSvcOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-soft)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
                 </div>
                 {svcOpen && filteredSvc.length > 0 && type === "revenue" && (
-                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#e6ddd0", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "var(--bg-modal)", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
                     {filteredSvc.map((svc, i) => {
                       const showCat = i === 0 || filteredSvc[i - 1]?.categoryName !== svc.categoryName;
                       return (
@@ -264,7 +264,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: "pointer", transition: "background 0.15s" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.color}12`; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "#2c2420", flex: 1 }}>{svc.name}</span>
+                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{svc.name}</span>
                             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: cfg.color, fontWeight: 700 }}>{fmt(svc.price)}</span>
                           </div>
                         </div>
@@ -281,7 +281,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                 </label>
                 <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setAmountManual(true); }} placeholder="0" required min="1" style={inputStyle}
                   onFocus={e => { e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-                  onBlur={e => { e.target.style.borderColor = "rgba(74,124,126,0.15)"; e.target.style.boxShadow = "none"; }} />
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }} />
               </div>
             </>
           )}
@@ -298,7 +298,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
               required
               style={{ ...inputStyle, colorScheme: "light" }}
               onFocus={e => { e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-              onBlur={e => { e.target.style.borderColor = "rgba(74,124,126,0.15)"; e.target.style.boxShadow = "none"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
             />
           </div>
 
@@ -306,7 +306,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
             <button
               type="button"
               onClick={onClose}
-              style={{ flex: 1, padding: "0.8rem", borderRadius: "10px", background: "transparent", border: "1px solid rgba(74,124,126,0.15)", color: "rgba(44,36,32,0.5)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.15em", cursor: "pointer" }}
+              style={{ flex: 1, padding: "0.8rem", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.15em", cursor: "pointer" }}
             >
               Mégse
             </button>
@@ -340,11 +340,11 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(215,205,190,0.7)",
-  border: "1px solid rgba(74,124,126,0.15)",
+  background: "var(--bg-card)",
+  border: "1px solid var(--border)",
   borderRadius: "10px",
   padding: "0.75rem 1rem",
-  color: "#2c2420",
+  color: "var(--text-primary)",
   fontFamily: "var(--font-cormorant)",
   fontSize: "1rem",
   outline: "none",
@@ -383,10 +383,10 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
       {/* Title */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "#4a7c7e", textShadow: "0 0 24px rgba(74,124,126,0.2)", animation: "float 4s ease-in-out infinite" }}>
+          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", textShadow: "0 0 24px rgba(74,124,126,0.2)", animation: "float 4s ease-in-out infinite" }}>
             Pénzügyek ✦
           </h1>
-          <p style={{ fontStyle: "italic", color: "#c45c7a", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem" }}>
+          <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem" }}>
             {isAdmin ? "Bevételek, kiadások és nyereség áttekintése" : "Saját bevételeid és anyagköltségeid"}
           </p>
         </div>
@@ -416,7 +416,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
       {/* Month navigator */}
       <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
         <button onClick={prevMonth} style={navBtn}>‹</button>
-        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", letterSpacing: "0.14em", color: "#4a7c7e", minWidth: 160, textAlign: "center" }}>
+        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", letterSpacing: "0.14em", color: "var(--color-teal)", minWidth: 160, textAlign: "center" }}>
           {MONTHS[month - 1]} {year}
         </span>
         <button onClick={nextMonth} style={navBtn}>›</button>
@@ -440,7 +440,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
 
       {/* Entries list */}
       {isLoading ? (
-        <div style={{ textAlign: "center", color: "rgba(44,36,32,0.4)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", padding: "3rem" }}>
+        <div style={{ textAlign: "center", color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", padding: "3rem" }}>
           Betöltés...
         </div>
       ) : entries.length === 0 ? (
@@ -448,8 +448,8 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
           style={{
             textAlign: "center",
             padding: "4rem 2rem",
-            background: "rgba(208,198,182,0.5)",
-            border: "1px dashed rgba(74,124,126,0.15)",
+            background: "var(--bg-panel)",
+            border: "1px dashed var(--border)",
             borderRadius: "16px",
             color: "rgba(44,36,32,0.35)",
             fontStyle: "italic",
@@ -478,20 +478,20 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
                       alignItems: "center",
                       gap: "1rem",
                       padding: "0.9rem 1.25rem",
-                      background: "rgba(210,200,185,0.6)",
+                      background: "var(--bg-panel)",
                       border: `1px solid ${cfg.color}22`,
                       borderRadius: "12px",
                       marginBottom: "0.4rem",
                       transition: "background 0.2s",
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.dim}`; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(210,200,185,0.6)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-panel)"; }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "#2c2420" }}>
+                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)" }}>
                         {entry.description}
                       </div>
-                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "rgba(44,36,32,0.4)", fontStyle: "italic" }}>
+                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)", fontStyle: "italic" }}>
                         {new Date(entry.date).toLocaleDateString("hu-HU")}
                         {entry.createdBy?.name && ` · ${entry.createdBy.name}`}
                       </div>
@@ -504,7 +504,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
                       style={{
                         background: "none",
                         border: "none",
-                        color: "rgba(44,36,32,0.2)",
+                        color: "var(--text-dim)",
                         cursor: "pointer",
                         fontSize: "1rem",
                         padding: "0.25rem 0.4rem",
@@ -512,7 +512,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
                         transition: "color 0.2s, background 0.2s",
                       }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(44,36,32,0.2)"; (e.currentTarget as HTMLElement).style.background = "none"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = "none"; }}
                     >
                       ✕
                     </button>
@@ -528,10 +528,10 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
 }
 
 const navBtn: React.CSSProperties = {
-  background: "rgba(215,205,190,0.7)",
-  border: "1px solid rgba(74,124,126,0.15)",
+  background: "var(--bg-card)",
+  border: "1px solid var(--border)",
   borderRadius: "8px",
-  color: "#4a7c7e",
+  color: "var(--color-teal)",
   fontSize: "1.2rem",
   width: 36, height: 36,
   cursor: "pointer",

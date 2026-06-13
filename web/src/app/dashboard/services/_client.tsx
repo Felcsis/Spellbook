@@ -14,10 +14,10 @@ type Category = {
 
 // ── Style helpers ──────────────────────────────────────────────────────────
 const gold   = "#4a7c7e";
-const cream  = "#2c2420";
-const dimmed = "rgba(44,36,32,0.45)";
+const cream  = "var(--text-primary)";
+const dimmed = "var(--text-soft)";
 const panelBg = "rgba(20,12,40,0.6)";
-const border  = "1px solid rgba(74,124,126,0.15)";
+const border  = "1px solid var(--border)";
 
 // ── Inline modal ───────────────────────────────────────────────────────────
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -48,7 +48,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "0.55rem 0.75rem", borderRadius: 8,
-  background: "rgba(215,205,190,0.7)", border: "1px solid rgba(74,124,126,0.18)",
+  background: "var(--bg-card)", border: "1px solid var(--border)",
   color: cream, fontFamily: "var(--font-cormorant)", fontSize: "1rem",
   outline: "none", boxSizing: "border-box",
 };
@@ -56,7 +56,7 @@ const inputStyle: React.CSSProperties = {
 function Btn({ onClick, children, variant = "primary", disabled }: { onClick: () => void; children: React.ReactNode; variant?: "primary" | "ghost" | "danger"; disabled?: boolean }) {
   const bg: Record<string, string> = {
     primary: "linear-gradient(135deg, rgba(196,92,122,0.5), rgba(74,124,126,0.4))",
-    ghost:   "rgba(255,255,255,0.05)",
+    ghost:   "var(--bg-today)",
     danger:  "rgba(220,50,50,0.15)",
   };
   const col: Record<string, string> = { primary: cream, ghost: dimmed, danger: "rgba(255,100,100,0.85)" };
@@ -144,8 +144,8 @@ function ServiceRow({ svc, onEdit, isAdmin }: { svc: Service; onEdit: () => void
       style={{
         display: "flex", alignItems: "center", gap: "1rem",
         padding: "0.7rem 1rem", borderRadius: 8,
-        background: svc.active ? "rgba(74,124,126,0.04)" : "rgba(208,198,182,0.5)",
-        border: "1px solid rgba(74,124,126,0.08)",
+        background: svc.active ? "var(--bg-today)" : "var(--bg-panel)",
+        border: "1px solid var(--bg-highlight)",
         opacity: svc.active ? 1 : 0.5,
         transition: "opacity 0.2s",
       }}
@@ -259,7 +259,7 @@ function MaterialRow({ mat }: { mat: Material }) {
 
   if (editing) {
     return (
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", padding: "0.6rem 0.9rem", background: "rgba(74,124,126,0.06)", border: "1px solid rgba(74,124,126,0.18)", borderRadius: 8 }}>
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", padding: "0.6rem 0.9rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 8 }}>
         <input value={name} onChange={e => setName(e.target.value)} placeholder="Anyag neve" autoFocus style={{ ...inputStyle, flex: 2 }} />
         <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="Ár" style={{ ...inputStyle, flex: 1 }} />
         <input value={unit} onChange={e => setUnit(e.target.value)} placeholder="egység (pl. adag)" style={{ ...inputStyle, flex: 1 }} />
@@ -270,7 +270,7 @@ function MaterialRow({ mat }: { mat: Material }) {
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.65rem 1rem", background: mat.active ? "rgba(251,191,36,0.04)" : "rgba(208,198,182,0.5)", border: "1px solid rgba(251,191,36,0.12)", borderRadius: 8, opacity: mat.active ? 1 : 0.45, transition: "opacity 0.2s" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.65rem 1rem", background: mat.active ? "rgba(251,191,36,0.04)" : "var(--bg-panel)", border: "1px solid rgba(251,191,36,0.12)", borderRadius: 8, opacity: mat.active ? 1 : 0.45, transition: "opacity 0.2s" }}>
       <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: mat.active ? cream : dimmed, fontSize: "1rem" }}>{mat.name}</div>
       {mat.unit && <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.82rem" }}>{mat.unit}</div>}
       <div style={{ fontFamily: "var(--font-cormorant)", color: "#fbbf24", fontSize: "1rem", minWidth: 80, textAlign: "right" }}>
@@ -365,10 +365,10 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {/* Tab switcher */}
-      <div style={{ display: "flex", background: "rgba(212,202,187,0.65)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: 10, padding: 3, gap: 3, marginBottom: "2rem", width: "fit-content" }}>
+      <div style={{ display: "flex", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 10, padding: 3, gap: 3, marginBottom: "2rem", width: "fit-content" }}>
         {([["services", "✂ Szolgáltatások"], ["materials", "✦ Anyagtár"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
-            style={{ padding: "0.5rem 1.25rem", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.12em", background: tab === key ? "rgba(74,124,126,0.12)" : "transparent", color: tab === key ? gold : dimmed, transition: "all 0.2s" }}>
+            style={{ padding: "0.5rem 1.25rem", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.12em", background: tab === key ? "var(--border)" : "transparent", color: tab === key ? gold : dimmed, transition: "all 0.2s" }}>
             {label}
           </button>
         ))}

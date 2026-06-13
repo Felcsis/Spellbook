@@ -18,7 +18,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
       <h1 style={{
         fontFamily: "var(--font-playfair)",
         fontSize: "2.1rem",
-        color: "#4a7c7e",
+        color: "var(--color-teal)",
         marginBottom: "0.4rem",
         animation: "float 4s ease-in-out infinite",
       }}>
@@ -26,7 +26,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
       </h1>
       <p style={{
         fontStyle: "italic",
-        color: "#c45c7a",
+        color: "var(--color-pink)",
         opacity: 0.8,
         marginBottom: "2.5rem",
         fontFamily: "var(--font-cormorant)",
@@ -45,7 +45,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
             key={title}
             onClick={() => href && router.push(href)}
             style={{
-              background: "rgba(215,205,190,0.75)",
+              background: "var(--bg-card)",
               border: "1px solid rgba(74,124,126,0.2)",
               borderRadius: "16px",
               padding: "1.75rem 1.5rem",
@@ -55,7 +55,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
               transition: "border-color 0.3s, box-shadow 0.3s, transform 0.3s",
               color: "inherit",
               opacity: href ? 1 : 0.4,
-              boxShadow: "0 2px 12px rgba(74,124,126,0.06)",
+              boxShadow: "0 2px 12px var(--bg-today)",
             }}
             onMouseEnter={e => {
               if (!href) return;
@@ -67,15 +67,15 @@ export default function DashboardClient({ name }: { name?: string | null }) {
             onMouseLeave={e => {
               const el = e.currentTarget;
               el.style.borderColor = "rgba(74,124,126,0.2)";
-              el.style.boxShadow = "0 2px 12px rgba(74,124,126,0.06)";
+              el.style.boxShadow = "0 2px 12px var(--bg-today)";
               el.style.transform = "translateY(0)";
             }}
           >
-            <div style={{ fontSize: "2rem", marginBottom: "0.75rem", color: "#4a7c7e" }}>{icon}</div>
-            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.75rem", letterSpacing: "0.16em", color: "#4a7c7e", marginBottom: "0.35rem" }}>
+            <div style={{ fontSize: "2rem", marginBottom: "0.75rem", color: "var(--color-teal)" }}>{icon}</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.75rem", letterSpacing: "0.16em", color: "var(--color-teal)", marginBottom: "0.35rem" }}>
               {title}
             </div>
-            <div style={{ fontStyle: "italic", fontSize: "0.9rem", color: "rgba(44,36,32,0.5)", fontFamily: "var(--font-cormorant)" }}>
+            <div style={{ fontStyle: "italic", fontSize: "0.9rem", color: "var(--text-muted)", fontFamily: "var(--font-cormorant)" }}>
               {desc}
             </div>
           </button>

@@ -2,6 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "~/app/_theme-toggle";
 
 const NAV_ADMIN = [
   { key: "dashboard",    icon: "◈", label: "Főoldal",        href: "/dashboard" },
@@ -36,7 +37,7 @@ export default function SidebarLayout({
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--color-bg)", animation: "fadeIn 0.5s ease" }}>
-      {/* Subtle background orbs — light pastel tones */}
+      {/* Subtle background orbs */}
       <div className="pointer-events-none fixed inset-0 z-0">
         {[
           { w: 500, h: 500, top: -120, left: -120, c: "rgba(196,92,122,0.07)", d: "0s" },
@@ -65,21 +66,21 @@ export default function SidebarLayout({
         className="relative z-10 flex flex-col"
         style={{
           width: 260, flexShrink: 0,
-          background: "rgba(220,210,195,0.92)",
-          borderRight: "1px solid rgba(74,124,126,0.18)",
+          background: "var(--bg-sidebar)",
+          borderRight: "1px solid var(--border)",
           backdropFilter: "blur(20px)",
           padding: "2rem 1.25rem",
-          boxShadow: "2px 0 24px rgba(74,124,126,0.07)",
+          boxShadow: "2px 0 24px rgba(74,124,126,0.06)",
         }}
       >
         <div
           style={{
             fontFamily: "var(--font-cinzel)",
             fontSize: "0.95rem",
-            color: "#4a7c7e",
+            color: "var(--color-teal)",
             letterSpacing: "0.14em",
             paddingBottom: "1.5rem",
-            borderBottom: "1px solid rgba(74,124,126,0.15)",
+            borderBottom: "1px solid var(--border)",
             marginBottom: "1rem",
             cursor: "pointer",
           }}
@@ -100,24 +101,24 @@ export default function SidebarLayout({
                   padding: "0.7rem 1rem", borderRadius: "10px",
                   cursor: href ? "pointer" : "default",
                   fontFamily: "var(--font-cormorant)", fontSize: "1.05rem", letterSpacing: "0.04em",
-                  border: isActive ? "1px solid rgba(74,124,126,0.35)" : "1px solid transparent",
-                  background: isActive ? "rgba(74,124,126,0.1)" : "transparent",
-                  color: isActive ? "#4a7c7e" : href ? "rgba(44,36,32,0.6)" : "rgba(44,36,32,0.28)",
+                  border: isActive ? "1px solid var(--border-strong)" : "1px solid transparent",
+                  background: isActive ? "var(--bg-active)" : "transparent",
+                  color: isActive ? "var(--color-teal)" : href ? "var(--text-muted)" : "var(--text-dim)",
                   fontWeight: isActive ? 600 : 400,
-                  boxShadow: isActive ? "0 2px 12px rgba(74,124,126,0.1)" : "none",
+                  boxShadow: isActive ? "var(--shadow-card)" : "none",
                   transition: "all 0.22s",
                   textAlign: "left",
                 }}
                 onMouseEnter={e => {
                   if (!isActive && href) {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.07)";
-                    (e.currentTarget as HTMLElement).style.color = "#4a7c7e";
+                    (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)";
+                    (e.currentTarget as HTMLElement).style.color = "var(--color-teal)";
                   }
                 }}
                 onMouseLeave={e => {
                   if (!isActive) {
                     (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.color = href ? "rgba(44,36,32,0.6)" : "rgba(44,36,32,0.28)";
+                    (e.currentTarget as HTMLElement).style.color = href ? "var(--text-muted)" : "var(--text-dim)";
                   }
                 }}
               >
@@ -133,32 +134,32 @@ export default function SidebarLayout({
           style={{
             display: "flex", alignItems: "center", gap: "0.75rem",
             padding: "0.9rem 1rem",
-            borderTop: "1px solid rgba(74,124,126,0.15)",
+            borderTop: "1px solid var(--border)",
             marginTop: "1rem",
           }}
         >
           <div
             style={{
               width: 40, height: 40, borderRadius: "50%",
-              background: "linear-gradient(135deg, #4a7c7e, #c45c7a)",
+              background: "linear-gradient(135deg, var(--color-teal), var(--color-pink))",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontFamily: "var(--font-cinzel)", fontSize: "0.85rem",
               color: "#fff",
-              border: "1px solid rgba(74,124,126,0.3)",
+              border: "1px solid var(--border-strong)",
               flexShrink: 0,
             }}
           >
             {initials(user.name)}
           </div>
           <div>
-            <div style={{ fontSize: "0.9rem", color: "#2c2420", fontFamily: "var(--font-cormorant)" }}>
+            <div style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)" }}>
               {user.name}
             </div>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              style={{ fontSize: "0.75rem", color: "rgba(44,36,32,0.45)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-cormorant)", padding: 0, transition: "color 0.2s" }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = "#c45c7a"; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = "rgba(44,36,32,0.45)"; }}
+              style={{ fontSize: "0.75rem", color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-cormorant)", padding: 0, transition: "color 0.2s" }}
+              onMouseEnter={e => { (e.target as HTMLElement).style.color = "var(--color-pink)"; }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.color = "var(--text-soft)"; }}
             >
               Kilépés
             </button>
@@ -168,6 +169,10 @@ export default function SidebarLayout({
 
       {/* Main content */}
       <main className="relative z-10 flex-1 overflow-y-auto p-12">
+        {/* Theme toggle — top right */}
+        <div style={{ position: "absolute", top: "1.5rem", right: "2rem", zIndex: 20 }}>
+          <ThemeToggle />
+        </div>
         {children}
       </main>
     </div>

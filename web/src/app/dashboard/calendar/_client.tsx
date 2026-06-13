@@ -45,12 +45,12 @@ const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function weekStart(d: Date) { const r = new Date(d); r.setDate(r.getDate() - ((r.getDay() + 6) % 7)); return r; }
 
-const dim = "rgba(44,36,32,0.45)";
+const dim = "var(--text-soft)";
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", background: "rgba(215,205,190,0.7)",
-  border: "1px solid rgba(74,124,126,0.15)", borderRadius: "10px",
-  padding: "0.7rem 0.9rem", color: "#2c2420",
+  width: "100%", background: "var(--bg-card)",
+  border: "1px solid var(--border)", borderRadius: "10px",
+  padding: "0.7rem 0.9rem", color: "var(--text-primary)",
   fontFamily: "var(--font-cormorant)", fontSize: "1rem",
   outline: "none", transition: "border-color 0.3s, box-shadow 0.3s",
 };
@@ -60,8 +60,8 @@ const labelStyle: React.CSSProperties = {
   color: "rgba(74,124,126,0.6)", marginBottom: "0.4rem",
 };
 const navBtnStyle: React.CSSProperties = {
-  background: "rgba(215,205,190,0.7)", border: "1px solid rgba(74,124,126,0.15)",
-  borderRadius: "8px", color: "#4a7c7e", fontSize: "1.2rem",
+  background: "var(--bg-card)", border: "1px solid var(--border)",
+  borderRadius: "8px", color: "var(--color-teal)", fontSize: "1.2rem",
   width: 36, height: 36, cursor: "pointer",
   display: "flex", alignItems: "center", justifyContent: "center",
 };
@@ -162,30 +162,30 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 pt-12"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", animation: "fadeIn 0.2s ease" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.2)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
+      <div style={{ background: "var(--bg-modal)", border: "1px solid rgba(74,124,126,0.2)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
           <div>
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", color: "rgba(74,124,126,0.6)", marginBottom: "0.3rem", textTransform: "uppercase" }}>Napi bejegyzések</div>
-            <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: "#4a7c7e", textTransform: "capitalize" }}>{displayDate}</div>
+            <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: "var(--color-teal)", textTransform: "capitalize" }}>{displayDate}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(44,36,32,0.3)", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-soft)", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
         </div>
 
         {/* Daily summary bar */}
         {(dayRevenue > 0 || dayCosts > 0) && (
-          <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "rgba(212,202,187,0.65)", borderRadius: "12px", border: "1px solid rgba(74,124,126,0.1)" }}>
+          <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "var(--bg-panel)", borderRadius: "12px", border: "1px solid var(--bg-active)" }}>
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#6ee7b7aa", marginBottom: "0.2rem" }}>BEVÉTEL</div>
               <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(dayRevenue)}</div>
             </div>
-            <div style={{ width: 1, background: "rgba(74,124,126,0.12)" }} />
+            <div style={{ width: 1, background: "var(--border)" }} />
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#fbbf24aa", marginBottom: "0.2rem" }}>KIADÁS</div>
               <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(dayCosts)}</div>
             </div>
-            <div style={{ width: 1, background: "rgba(74,124,126,0.12)" }} />
+            <div style={{ width: 1, background: "var(--border)" }} />
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: dayProfit >= 0 ? "#6ee7b7aa" : "#f87171aa", marginBottom: "0.2rem" }}>PROFIT</div>
               <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#6ee7b7" : "#f87171", fontWeight: 700 }}>{fmt(dayProfit)}</div>
@@ -209,7 +209,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                   <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(e.earnings)}</div>
                   <button onClick={() => delW.mutate({ id: e.id })} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
-                    onMouseLeave={el => { (el.target as HTMLElement).style.color = "rgba(44,36,32,0.2)"; }}>✕</button>
+                    onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}>✕</button>
                 </div>
               );
             })}
@@ -227,7 +227,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#e8b4c8", flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: "#2c2420" }}>{card.guest.name}</div>
+                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: "var(--text-primary)" }}>{card.guest.name}</div>
                       <div style={{ fontSize: "0.75rem", color: dim, fontStyle: "italic" }}>
                         {card.worker.name}{card.services.length > 0 && ` · ${card.services.map(s => s.name).join(", ")}`}
                       </div>
@@ -256,7 +256,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                   <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(e.amount)}</div>
                   <button onClick={() => delC.mutate({ id: e.id })} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
-                    onMouseLeave={el => { (el.target as HTMLElement).style.color = "rgba(44,36,32,0.2)"; }}>✕</button>
+                    onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}>✕</button>
                 </div>
               );
             })}
@@ -264,13 +264,13 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
         )}
 
         {/* Divider */}
-        <div style={{ borderTop: "1px solid rgba(74,124,126,0.1)", margin: "1rem 0" }} />
+        <div style={{ borderTop: "1px solid var(--bg-active)", margin: "1rem 0" }} />
 
         {/* Tab switcher */}
-        <div style={{ display: "flex", background: "rgba(212,202,187,0.65)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "10px", padding: "3px", gap: "3px", marginBottom: "1.1rem" }}>
+        <div style={{ display: "flex", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "10px", padding: "3px", gap: "3px", marginBottom: "1.1rem" }}>
           {([["work", "◈ Munkadíj"], ["cost", "✦ Kiadás"]] as const).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setTab(key)}
-              style={{ flex: 1, padding: "0.5rem", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.12em", background: tab === key ? "rgba(74,124,126,0.12)" : "transparent", color: tab === key ? "#4a7c7e" : "rgba(44,36,32,0.4)", transition: "all 0.2s" }}>
+              style={{ flex: 1, padding: "0.5rem", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.12em", background: tab === key ? "var(--border)" : "transparent", color: tab === key ? "#4a7c7e" : "var(--text-soft)", transition: "all 0.2s" }}>
               {label}
             </button>
           ))}
@@ -300,7 +300,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                   const col = userColors[u.id] ?? "#c9a84c";
                   return (
                     <button key={u.id} type="button" onClick={() => setUserId(u.id)}
-                      style={{ padding: "0.45rem 0.9rem", borderRadius: "8px", cursor: "pointer", border: userId === u.id ? `1px solid ${col}88` : "1px solid rgba(74,124,126,0.1)", background: userId === u.id ? `${col}18` : "transparent", color: userId === u.id ? col : "rgba(44,36,32,0.45)", fontFamily: "var(--font-cormorant)", fontSize: "1rem", transition: "all 0.2s" }}>
+                      style={{ padding: "0.45rem 0.9rem", borderRadius: "8px", cursor: "pointer", border: userId === u.id ? `1px solid ${col}88` : "1px solid var(--bg-active)", background: userId === u.id ? `${col}18` : "transparent", color: userId === u.id ? col : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "1rem", transition: "all 0.2s" }}>
                       {u.name}
                     </button>
                   );
@@ -342,13 +342,13 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                 />
                 {svcSearch && (
                   <button type="button" onClick={() => { setSvcSearch(""); setSvcOpen(false); }}
-                    style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(44,36,32,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>
+                    style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-soft)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>
                 )}
               </div>
 
               {/* Dropdown list */}
               {svcOpen && filteredSvcs.length > 0 && (
-                <div style={{ position: "absolute", left: 0, right: 0, zIndex: 100, background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.18)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                <div style={{ position: "absolute", left: 0, right: 0, zIndex: 100, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
                   {filteredSvcs.map((svc, i) => {
                     const already = selectedSvc.has(svc.id);
                     const col = userColors[userId] ?? "#c9a84c";
@@ -356,17 +356,17 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     return (
                       <div key={svc.id}>
                         {showCat && (
-                          <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(74,124,126,0.3)", textTransform: "uppercase" }}>
+                          <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "var(--border-strong)", textTransform: "uppercase" }}>
                             {svc.categoryName}
                           </div>
                         )}
                         <div
                           onMouseDown={() => { if (!already) addService(svc.id); }}
-                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: already ? "default" : "pointer", background: already ? "rgba(208,198,182,0.5)" : "transparent", transition: "background 0.15s", opacity: already ? 0.45 : 1 }}
+                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: already ? "default" : "pointer", background: already ? "var(--bg-panel)" : "transparent", transition: "background 0.15s", opacity: already ? 0.45 : 1 }}
                           onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = `${col}12`; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(208,198,182,0.5)" : "transparent"; }}>
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "var(--bg-panel)" : "transparent"; }}>
                           {already && <span style={{ fontSize: "0.65rem", color: col }}>✓</span>}
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "rgba(44,36,32,0.4)" : "#2c2420", flex: 1 }}>{svc.name}</span>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "var(--text-soft)" : "var(--text-primary)", flex: 1 }}>{svc.name}</span>
                           <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: col, fontWeight: 700 }}>{fmt(svc.price)}</span>
                         </div>
                       </div>
@@ -387,10 +387,10 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
               <input type="number" value={earnings} onChange={e => handleEarningsChange(e.target.value)}
                 placeholder="0" min="0" required style={{
                   ...inputStyle,
-                  borderColor: selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "rgba(74,124,126,0.15)",
+                  borderColor: selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "var(--border)",
                 }}
                 onFocus={e => { e.target.style.borderColor = userColors[userId] ?? "#4a7c7e"; }}
-                onBlur={e => { e.target.style.borderColor = selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "rgba(74,124,126,0.15)"; }} />
+                onBlur={e => { e.target.style.borderColor = selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "var(--border)"; }} />
             </div>
 
             {/* Inline material cost */}
@@ -405,13 +405,13 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     placeholder={matCatalog.length === 0 ? "pl. Szőkítő…" : "Keress az anyagtárban…"}
                     style={{ ...inputStyle, width: "100%" }}
                     onFocusCapture={e => { (e.target as HTMLInputElement).style.borderColor = "#fbbf24"; }}
-                    onBlurCapture={e => { (e.target as HTMLInputElement).style.borderColor = "rgba(74,124,126,0.15)"; }} />
+                    onBlurCapture={e => { (e.target as HTMLInputElement).style.borderColor = "var(--border)"; }} />
                   {matDesc && (
                     <button type="button" onClick={() => { setMatDesc(""); setMatAmt(""); setMatManual(false); setMatOpen(false); }}
-                      style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(44,36,32,0.3)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
+                      style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-soft)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
                   )}
                   {matOpen && filteredMat.length > 0 && (
-                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.18)", borderRadius: "10px", marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "10px", marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                       {filteredMat.map(m => (
                         <div key={m.id}
                           onMouseDown={() => {
@@ -422,7 +422,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                           style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.85rem", cursor: "pointer", transition: "background 0.15s" }}
                           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#2c2420", flex: 1 }}>{m.name}</span>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                           {m.unit && <span style={{ fontSize: "0.72rem", color: "rgba(74,124,126,0.5)" }}>{m.unit}</span>}
                           <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
                         </div>
@@ -432,9 +432,9 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                 </div>
                 <input type="number" value={matAmt} onChange={e => { setMatAmt(e.target.value); setMatManual(true); }}
                   placeholder="0 Ft" min="0"
-                  style={{ ...inputStyle, flex: 1, borderColor: matAmt && !matManual ? "rgba(251,191,36,0.4)" : "rgba(74,124,126,0.15)" }}
+                  style={{ ...inputStyle, flex: 1, borderColor: matAmt && !matManual ? "rgba(251,191,36,0.4)" : "var(--border)" }}
                   onFocus={e => { e.target.style.borderColor = "#fbbf24"; }}
-                  onBlur={e => { e.target.style.borderColor = matAmt && !matManual ? "rgba(251,191,36,0.4)" : "rgba(74,124,126,0.15)"; }} />
+                  onBlur={e => { e.target.style.borderColor = matAmt && !matManual ? "rgba(251,191,36,0.4)" : "var(--border)"; }} />
               </div>
             </div>
 
@@ -443,7 +443,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
               <label style={labelStyle}>Megjegyzés</label>
               <input value={wNotes} onChange={e => setWNotes(e.target.value)} placeholder="pl. Extra kezelés…" style={inputStyle}
                 onFocus={e => { e.target.style.borderColor = "#4a7c7e"; }}
-                onBlur={e => { e.target.style.borderColor = "rgba(74,124,126,0.15)"; }} />
+                onBlur={e => { e.target.style.borderColor = "var(--border)"; }} />
             </div>
 
             <SaveBtn loading={upsert.isPending || addC.isPending} />
@@ -457,7 +457,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
             <div style={{ display: "flex", gap: "0.5rem" }}>
               {(Object.entries(COST_CONFIG) as [CostType, typeof COST_CONFIG[CostType]][]).map(([key, cfg]) => (
                 <button key={key} type="button" onClick={() => setCostType(key)}
-                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", cursor: "pointer", border: costType === key ? `1px solid ${cfg.color}88` : "1px solid rgba(74,124,126,0.1)", background: costType === key ? `${cfg.color}18` : "transparent", color: costType === key ? cfg.color : "rgba(44,36,32,0.45)", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", transition: "all 0.2s" }}>
+                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", cursor: "pointer", border: costType === key ? `1px solid ${cfg.color}88` : "1px solid var(--bg-active)", background: costType === key ? `${cfg.color}18` : "transparent", color: costType === key ? cfg.color : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", transition: "all 0.2s" }}>
                   {cfg.icon} {cfg.label}
                 </button>
               ))}
@@ -467,13 +467,13 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                 <label style={labelStyle}>Leírás</label>
                 <input value={costDesc} onChange={e => setCostDesc(e.target.value)} placeholder="pl. L'Oréal festék..." required style={inputStyle}
                   onFocus={e => { e.target.style.borderColor = COST_CONFIG[costType].color; }}
-                  onBlur={e => { e.target.style.borderColor = "rgba(74,124,126,0.15)"; }} />
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; }} />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>Összeg (Ft)</label>
                 <input type="number" value={costAmt} onChange={e => setCostAmt(e.target.value)} placeholder="0" min="1" required style={inputStyle}
                   onFocus={e => { e.target.style.borderColor = COST_CONFIG[costType].color; }}
-                  onBlur={e => { e.target.style.borderColor = "rgba(74,124,126,0.15)"; }} />
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; }} />
               </div>
             </div>
             <SaveBtn loading={addC.isPending} />
@@ -484,12 +484,12 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
   );
 }
 
-const delBtnStyle: React.CSSProperties = { background: "none", border: "none", color: "rgba(44,36,32,0.2)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.35rem", borderRadius: "5px", transition: "color 0.2s" };
+const delBtnStyle: React.CSSProperties = { background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.35rem", borderRadius: "5px", transition: "color 0.2s" };
 
 function SaveBtn({ loading }: { loading: boolean }) {
   return (
     <button type="submit" disabled={loading}
-      style={{ padding: "0.8rem", border: "none", borderRadius: "10px", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.18em", color: "#fff", background: "linear-gradient(120deg, #7a6229 0%, #c9a84c 50%, #7a6229 100%)", backgroundSize: "200% auto", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 16px rgba(74,124,126,0.18)", opacity: loading ? 0.7 : 1 }}>
+      style={{ padding: "0.8rem", border: "none", borderRadius: "10px", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.18em", color: "#fff", background: "linear-gradient(120deg, #7a6229 0%, #c9a84c 50%, #7a6229 100%)", backgroundSize: "200% auto", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 16px var(--border)", opacity: loading ? 0.7 : 1 }}>
       {loading ? "Mentés..." : "Mentés ✦"}
     </button>
   );
@@ -523,15 +523,15 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
   const dow        = (date.getDay() + 6) % 7;
 
   return (
-    <div style={{ flex: 1, minWidth: 0, background: isToday ? "rgba(74,124,126,0.04)" : "transparent", border: isToday ? "1px solid rgba(74,124,126,0.18)" : "1px solid rgba(74,124,126,0.08)", borderRadius: "14px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, minWidth: 0, background: isToday ? "var(--bg-today)" : "transparent", border: isToday ? "1px solid var(--border)" : "1px solid var(--bg-highlight)", borderRadius: "14px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Header */}
       <div onClick={() => onOpen(dateStr)}
-        style={{ padding: compact ? "0.55rem 0.7rem" : "0.85rem 1rem", borderBottom: "1px solid rgba(74,124,126,0.09)", cursor: "pointer", background: isToday ? "rgba(74,124,126,0.09)" : "rgba(208,198,182,0.5)", transition: "background 0.2s" }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.08)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "rgba(74,124,126,0.09)" : "rgba(208,198,182,0.5)"; }}>
+        style={{ padding: compact ? "0.55rem 0.7rem" : "0.85rem 1rem", borderBottom: "1px solid var(--bg-highlight)", cursor: "pointer", background: isToday ? "var(--bg-highlight)" : "var(--bg-panel)", transition: "background 0.2s" }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "var(--bg-highlight)" : "var(--bg-panel)"; }}>
         <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.1em", color: isToday ? "#4a7c7e" : "rgba(74,124,126,0.6)", textTransform: "uppercase" }}>{DAYS_L[dow]}</div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "var(--font-playfair)", fontSize: compact ? "1.05rem" : "1.35rem", color: isToday ? "#4a7c7e" : "#2c2420", lineHeight: 1.1 }}>
+          <div style={{ fontFamily: "var(--font-playfair)", fontSize: compact ? "1.05rem" : "1.35rem", color: isToday ? "#4a7c7e" : "var(--text-primary)", lineHeight: 1.1 }}>
             {date.getDate()}
             {!compact && <span style={{ fontSize: "0.78rem", color: "rgba(44,36,32,0.35)", marginLeft: "0.35rem" }}>{MONTHS[date.getMonth()]}</span>}
           </div>
@@ -568,9 +568,9 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
           </div>
         ))}
         <div onClick={() => onOpen(dateStr)}
-          style={{ marginTop: "auto", padding: "0.22rem", borderRadius: "6px", border: "1px dashed rgba(74,124,126,0.12)", color: "rgba(74,124,126,0.25)", fontSize: "0.72rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", transition: "all 0.2s" }}
+          style={{ marginTop: "auto", padding: "0.22rem", borderRadius: "6px", border: "1px dashed var(--border)", color: "rgba(74,124,126,0.25)", fontSize: "0.72rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", transition: "all 0.2s" }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.4)"; (e.currentTarget as HTMLElement).style.color = "#4a7c7e"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.12)"; (e.currentTarget as HTMLElement).style.color = "rgba(74,124,126,0.25)"; }}>
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "rgba(74,124,126,0.25)"; }}>
           + bejegyzés
         </div>
       </div>
@@ -593,13 +593,13 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div style={{ background: "rgba(208,198,182,0.5)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "20px", overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid rgba(74,124,126,0.09)" }}>
+    <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--bg-highlight)" }}>
         {DAYS_S.map(d => <div key={d} style={{ padding: "0.6rem 0", textAlign: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.15em", color: "rgba(74,124,126,0.6)", textTransform: "uppercase" }}>{d}</div>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
         {cells.map((day, idx) => {
-          if (!day) return <div key={`e${idx}`} style={{ minHeight: 88, borderRight: "1px solid rgba(74,124,126,0.06)", borderBottom: "1px solid rgba(74,124,126,0.06)", background: "rgba(74,124,126,0.03)" }} />;
+          if (!day) return <div key={`e${idx}`} style={{ minHeight: 88, borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: "rgba(74,124,126,0.03)" }} />;
           const ds       = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
           const wEntries = byDate[ds] ?? [];
           const cEntries = byCostDate[ds] ?? [];
@@ -611,11 +611,11 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
           return (
             <div key={ds}
-              style={{ minHeight: 88, padding: "0.38rem", borderRight: "1px solid rgba(74,124,126,0.06)", borderBottom: "1px solid rgba(74,124,126,0.06)", background: isToday ? "rgba(74,124,126,0.05)" : "transparent", cursor: "pointer", transition: "background 0.18s", position: "relative" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.06)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "rgba(74,124,126,0.05)" : "transparent"; }}>
+              style={{ minHeight: 88, padding: "0.38rem", borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: isToday ? "var(--bg-today)" : "transparent", cursor: "pointer", transition: "background 0.18s", position: "relative" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-today)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "var(--bg-today)" : "transparent"; }}>
               {/* Day number */}
-              <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", color: isToday ? "#fff" : "rgba(44,36,32,0.45)", background: isToday ? "#4a7c7e" : "transparent", marginBottom: "0.25rem" }}>{day}</div>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", color: isToday ? "#fff" : "var(--text-soft)", background: isToday ? "#4a7c7e" : "transparent", marginBottom: "0.25rem" }}>{day}</div>
 
               {/* Work entries */}
               {wEntries.map(e => {
@@ -650,9 +650,9 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
               ))}
 
               {/* Add */}
-              <div onClick={() => onOpen(ds)} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", border: "1px dashed rgba(74,124,126,0.1)", color: "rgba(74,124,126,0.18)", fontSize: "0.6rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", transition: "all 0.18s" }}
+              <div onClick={() => onOpen(ds)} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", border: "1px dashed var(--bg-active)", color: "var(--border)", fontSize: "0.6rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", transition: "all 0.18s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#4a7c7e"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.38)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(74,124,126,0.18)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.1)"; }}>+</div>
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--border)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--bg-active)"; }}>+</div>
 
               {/* Profit badge */}
               {(revenue > 0 || costs > 0) && (
@@ -748,17 +748,17 @@ export default function CalendarClient() {
       )}
 
       <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "#4a7c7e", animation: "float 4s ease-in-out infinite" }}>Munkanaptár ✦</h1>
-        <p style={{ fontStyle: "italic", color: "#c45c7a", opacity: 0.75, fontFamily: "var(--font-cormorant)" }}>Ki mikor dolgozott, mennyit keresett, és mi a napi profit</p>
+        <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite" }}>Munkanaptár ✦</h1>
+        <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)" }}>Ki mikor dolgozott, mennyit keresett, és mi a napi profit</p>
       </div>
 
       {/* Toolbar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
         {/* View switcher */}
-        <div style={{ display: "flex", background: "rgba(215,205,190,0.7)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "10px", padding: "3px", gap: "3px" }}>
+        <div style={{ display: "flex", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "10px", padding: "3px", gap: "3px" }}>
           {VIEW_BTNS.map(({ key, label }) => (
             <button key={key} onClick={() => setView(key)}
-              style={{ padding: "0.42rem 0.85rem", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.1em", background: view === key ? "rgba(74,124,126,0.15)" : "transparent", color: view === key ? "#4a7c7e" : "rgba(44,36,32,0.45)", transition: "all 0.2s" }}>
+              style={{ padding: "0.42rem 0.85rem", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.1em", background: view === key ? "var(--border)" : "transparent", color: view === key ? "#4a7c7e" : "var(--text-soft)", transition: "all 0.2s" }}>
               {label}
             </button>
           ))}
@@ -769,7 +769,7 @@ export default function CalendarClient() {
           <button onClick={() => navigate(-1)} style={navBtnStyle}>‹</button>
           <button onClick={() => setAnchor(new Date(now.getFullYear(), now.getMonth(), now.getDate()))}
             style={{ ...navBtnStyle, width: "auto", padding: "0 0.7rem", fontSize: "0.6rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em" }}>Ma</button>
-          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.78rem", letterSpacing: "0.1em", color: "#4a7c7e", minWidth: 190, textAlign: "center", textTransform: "capitalize" }}>{navLabel()}</span>
+          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.78rem", letterSpacing: "0.1em", color: "var(--color-teal)", minWidth: 190, textAlign: "center", textTransform: "capitalize" }}>{navLabel()}</span>
           <button onClick={() => navigate(1)} style={navBtnStyle}>›</button>
         </div>
 

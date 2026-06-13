@@ -8,12 +8,12 @@ const fmt = (n: number) =>
   new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 
 const gold  = "#4a7c7e";
-const cream = "#2c2420";
-const dim   = "rgba(44,36,32,0.45)";
+const cream = "var(--text-primary)";
+const dim   = "var(--text-soft)";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "0.6rem 0.85rem", borderRadius: 9,
-  background: "rgba(215,205,190,0.7)", border: "1px solid rgba(74,124,126,0.18)",
+  background: "var(--bg-card)", border: "1px solid var(--border)",
   color: cream, fontFamily: "var(--font-cormorant)", fontSize: "1rem",
   outline: "none", boxSizing: "border-box",
 };
@@ -54,9 +54,9 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
   const date = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
 
   return (
-    <div style={{ background: "rgba(208,198,182,0.5)", border: "1px solid rgba(74,124,126,0.1)", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}
+    <div style={{ background: "var(--bg-panel)", border: "1px solid var(--bg-active)", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.25)"; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.1)"; }}>
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--bg-active)"; }}>
 
       <div style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
         onClick={() => setOpen(o => !o)}>
@@ -75,13 +75,13 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
       </div>
 
       {open && (
-        <div style={{ borderTop: "1px solid rgba(74,124,126,0.08)", padding: "0.85rem 1rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+        <div style={{ borderTop: "1px solid var(--bg-highlight)", padding: "0.85rem 1rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
 
           {card.services.length > 0 && (
             <div>
               <div style={{ ...labelStyle, color: "rgba(110,231,183,0.5)", marginBottom: "0.4rem" }}>◈ Elvégzett szolgáltatások</div>
               {card.services.map(s => (
-                <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid rgba(212,202,187,0.65)" }}>
+                <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid var(--bg-panel)" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream }}>{s.name}</span>
                   <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(s.price)}</span>
                 </div>
@@ -94,7 +94,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
               <div style={{ ...labelStyle, color: "rgba(251,191,36,0.55)", marginBottom: "0.4rem" }}>✦ Szín recept</div>
               <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 0.9fr 0.7fr 0.9fr", gap: "0.25rem 0.6rem", alignItems: "center" }}>
                 {["Anyag","Márka","Kód","Gramm","Ár"].map(h => (
-                  <div key={h} style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.12em", color: "rgba(74,124,126,0.25)", textTransform: "uppercase", paddingBottom: "0.2rem", borderBottom: "1px solid rgba(74,124,126,0.08)" }}>{h}</div>
+                  <div key={h} style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.12em", color: "rgba(74,124,126,0.25)", textTransform: "uppercase", paddingBottom: "0.2rem", borderBottom: "1px solid var(--bg-highlight)" }}>{h}</div>
                 ))}
                 {card.materials.map(m => (
                   <>
@@ -110,12 +110,12 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
           )}
 
           {card.notes && (
-            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: dim, fontStyle: "italic", padding: "0.4rem 0.7rem", background: "rgba(208,198,182,0.5)", borderRadius: 7, borderLeft: "2px solid rgba(74,124,126,0.18)" }}>
+            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: dim, fontStyle: "italic", padding: "0.4rem 0.7rem", background: "var(--bg-panel)", borderRadius: 7, borderLeft: "2px solid var(--border)" }}>
               {card.notes}
             </div>
           )}
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.4rem", borderTop: "1px solid rgba(74,124,126,0.08)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.4rem", borderTop: "1px solid var(--bg-highlight)" }}>
             <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
@@ -141,13 +141,13 @@ function GuestRow({ guest, onDeleteCard, onNewCard }: {
   const totalSpent = guest.cards.reduce((s, c) => s + c.total, 0);
 
   return (
-    <div style={{ background: "rgba(20,12,40,0.65)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: 16, overflow: "hidden", backdropFilter: "blur(12px)", transition: "box-shadow 0.2s" }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(74,124,126,0.08)"; }}
+    <div style={{ background: "rgba(20,12,40,0.65)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden", backdropFilter: "blur(12px)", transition: "box-shadow 0.2s" }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px var(--bg-highlight)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
 
       <div style={{ padding: "1.1rem 1.4rem", display: "flex", alignItems: "center", gap: "1rem", cursor: "pointer" }}
         onClick={() => setOpen(o => !o)}>
-        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg,rgba(124,58,237,0.55),rgba(74,124,126,0.25))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "1rem", color: cream, flexShrink: 0, border: "1px solid rgba(74,124,126,0.15)" }}>
+        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg,rgba(124,58,237,0.55),rgba(74,124,126,0.25))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "1rem", color: cream, flexShrink: 0, border: "1px solid var(--border)" }}>
           {(guest.name[0] ?? "?").toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -162,16 +162,16 @@ function GuestRow({ guest, onDeleteCard, onNewCard }: {
         )}
         <button type="button"
           onClick={e => { e.stopPropagation(); onNewCard(guest.id, guest.name); }}
-          style={{ background: "rgba(74,124,126,0.08)", border: "1px solid rgba(74,124,126,0.18)", borderRadius: 7, color: gold, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", padding: "0.3rem 0.65rem", flexShrink: 0, transition: "all 0.2s" }}
+          style={{ background: "var(--bg-highlight)", border: "1px solid var(--border)", borderRadius: 7, color: gold, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", padding: "0.3rem 0.65rem", flexShrink: 0, transition: "all 0.2s" }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.14)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.08)"; }}>
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}>
           ＋ Kártya
         </button>
         <span style={{ color: dim, fontSize: "0.85rem", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>
       </div>
 
       {open && (
-        <div style={{ borderTop: "1px solid rgba(74,124,126,0.08)", padding: "0.85rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ borderTop: "1px solid var(--bg-highlight)", padding: "0.85rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {guest.cards.length === 0 ? (
             <div style={{ fontFamily: "var(--font-cormorant)", color: dim, textAlign: "center", padding: "1rem", fontStyle: "italic" }}>Még nincs mentett kártya</div>
           ) : (
@@ -287,7 +287,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "3rem 1rem" }}>
-        <div style={{ background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.2)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
+        <div style={{ background: "var(--bg-modal)", border: "1px solid rgba(74,124,126,0.2)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
           onClick={e => e.stopPropagation()}>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.75rem" }}>
@@ -308,21 +308,21 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                     onBlur={() => setTimeout(() => setGuestOpen(false), 150)}
                     placeholder="Keress vendéget…"
                     readOnly={!!prefillGuestId}
-                    style={{ ...inputStyle, borderColor: guestId ? "rgba(74,124,126,0.4)" : "rgba(74,124,126,0.18)", opacity: prefillGuestId ? 0.75 : 1 }} />
+                    style={{ ...inputStyle, borderColor: guestId ? "rgba(74,124,126,0.4)" : "var(--border)", opacity: prefillGuestId ? 0.75 : 1 }} />
                   {guestId && <div style={{ position: "absolute", right: "0.85rem", top: "50%", transform: "translateY(-50%)", color: gold, fontSize: "0.8rem" }}>✓</div>}
                   {guestOpen && !prefillGuestId && (
-                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.18)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                       {filtGuests.map(g => (
                         <div key={g.id} onMouseDown={() => { setGuestId(g.id); setGuestSearch(g.name); setGuestOpen(false); }}
                           style={{ padding: "0.55rem 0.9rem", cursor: "pointer", fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: cream, transition: "background 0.15s" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.08)"; }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                           {g.name}{g.phone && <span style={{ color: dim, fontSize: "0.8rem", marginLeft: "0.5rem" }}>{g.phone}</span>}
                         </div>
                       ))}
                       <div onMouseDown={() => setNewGuest(true)}
-                        style={{ padding: "0.55rem 0.9rem", cursor: "pointer", borderTop: "1px solid rgba(74,124,126,0.08)", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", color: gold, transition: "background 0.15s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.08)"; }}
+                        style={{ padding: "0.55rem 0.9rem", cursor: "pointer", borderTop: "1px solid var(--bg-highlight)", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", color: gold, transition: "background 0.15s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                         ＋ Új vendég hozzáadása
                       </div>
@@ -332,7 +332,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
               ) : (
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <input value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="Vendég teljes neve" autoFocus style={{ ...inputStyle, flex: 1 }} />
-                  <button type="button" onClick={() => setNewGuest(false)} style={{ background: "none", border: "1px solid rgba(74,124,126,0.15)", borderRadius: 8, color: dim, cursor: "pointer", padding: "0 0.75rem", fontSize: "0.8rem" }}>✕</button>
+                  <button type="button" onClick={() => setNewGuest(false)} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, color: dim, cursor: "pointer", padding: "0 0.75rem", fontSize: "0.8rem" }}>✕</button>
                 </div>
               )}
             </div>
@@ -347,7 +347,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                     const sel = workerId === u.id;
                     return (
                       <button key={u.id} type="button" onClick={() => setWorkerId(u.id)}
-                        style={{ padding: "0.4rem 0.8rem", borderRadius: 7, cursor: "pointer", border: sel ? `1px solid ${col}88` : "1px solid rgba(74,124,126,0.1)", background: sel ? `${col}18` : "transparent", color: sel ? col : dim, fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", transition: "all 0.2s" }}>
+                        style={{ padding: "0.4rem 0.8rem", borderRadius: 7, cursor: "pointer", border: sel ? `1px solid ${col}88` : "1px solid var(--bg-active)", background: sel ? `${col}18` : "transparent", color: sel ? col : dim, fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", transition: "all 0.2s" }}>
                         {u.name}
                       </button>
                     );
@@ -379,7 +379,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                   onFocus={() => setSvcOpen(true)} onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
                   placeholder="Keress szolgáltatást…" style={inputStyle} />
                 {svcOpen && filtSvcs.length > 0 && (
-                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#e6ddd0", border: "1px solid rgba(110,231,183,0.2)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(110,231,183,0.2)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                     {filtSvcs.map((s, i) => {
                       const already = !!selSvcs.find(x => x.name === s.name);
                       const showCat = i === 0 || filtSvcs[i-1]?.categoryName !== s.categoryName;
@@ -424,7 +424,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                           placeholder="Anyag neve…"
                           style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "rgba(251,191,36,0.2)" }} />
                         {matOpen && activeMat === i && filtMat.length > 0 && (
-                          <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "#e6ddd0", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                          <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                             {filtMat.map(m => (
                               <div key={m.name}
                                 onMouseDown={() => { updateMat(i, "name", m.name); updateMat(i, "unitPrice", m.unitPrice); setMatSearch(""); setMatOpen(false); }}
@@ -440,7 +440,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                       </div>
                       <input value={row.brand} onChange={e => updateMat(i, "brand", e.target.value)} placeholder="Márka" style={{ ...inputStyle, flex: 1.2, fontSize: "0.92rem" }} />
                       <input value={row.colorCode} onChange={e => updateMat(i, "colorCode", e.target.value)} placeholder="Színkód" style={{ ...inputStyle, flex: 1, fontSize: "0.92rem" }} />
-                      <button type="button" onClick={() => setMatRows(p => p.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "rgba(44,36,32,0.2)", cursor: "pointer", fontSize: "0.85rem", padding: "0 0.2rem", alignSelf: "center" }}>✕</button>
+                      <button type="button" onClick={() => setMatRows(p => p.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", padding: "0 0.2rem", alignSelf: "center" }}>✕</button>
                     </div>
                     <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                       <input type="number" value={row.grams} onChange={e => updateMat(i, "grams", e.target.value)} placeholder="Gramm" min="0" step="any"
@@ -462,7 +462,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
             </div>
 
             {/* Grand total + submit */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "rgba(74,124,126,0.06)", border: "1px solid rgba(74,124,126,0.15)", borderRadius: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
                 {svcTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "#6ee7b7" }}>Szolgáltatás: {fmt(svcTotal)}</span>}
                 {matTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "#fbbf24" }}>Anyag: {fmt(matTotal)}</span>}
@@ -473,7 +473,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
             </div>
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button type="button" onClick={onClose} style={{ flex: 1, padding: "0.8rem", borderRadius: 10, background: "transparent", border: "1px solid rgba(74,124,126,0.15)", color: dim, fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.14em", cursor: "pointer" }}>Mégse</button>
+              <button type="button" onClick={onClose} style={{ flex: 1, padding: "0.8rem", borderRadius: 10, background: "transparent", border: "1px solid var(--border)", color: dim, fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.14em", cursor: "pointer" }}>Mégse</button>
               <button type="submit" disabled={createCard.isPending || (!guestId && !guestName.trim())}
                 style={{ flex: 2, padding: "0.8rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg,#7a6229 0%,#c9a84c 50%,#7a6229 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", opacity: createCard.isPending ? 0.7 : 1 }}>
                 {createCard.isPending ? "Mentés..." : "Mentés a receptkönyvbe ✦"}
@@ -519,8 +519,8 @@ export default function GuestsClient() {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "#4a7c7e", animation: "float 4s ease-in-out infinite", margin: 0 }}>Vendég receptkönyv ♦</h1>
-          <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "#c45c7a", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>Minden vendég szín receptje és látogatási előzménye</p>
+          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: 0 }}>Vendég receptkönyv ♦</h1>
+          <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-pink)", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>Minden vendég szín receptje és látogatási előzménye</p>
         </div>
         <button onClick={() => openNewCard()}
           style={{ padding: "0.75rem 1.5rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg,#7a6229 0%,#c9a84c 50%,#7a6229 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 20px rgba(74,124,126,0.2)", flexShrink: 0 }}>
@@ -536,7 +536,7 @@ export default function GuestsClient() {
       {isLoading ? (
         <div style={{ color: dim, fontFamily: "var(--font-cormorant)", textAlign: "center", padding: "3rem" }}>Betöltés...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "4rem 2rem", background: "rgba(208,198,182,0.5)", border: "1px dashed rgba(74,124,126,0.15)", borderRadius: 16 }}>
+        <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16 }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>♦</div>
           <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "0.85rem", letterSpacing: "0.12em", marginBottom: "0.5rem" }}>Még nincs vendég a receptkönyvben</div>
           <div style={{ fontFamily: "var(--font-cormorant)", color: dim }}>Hozd létre az első kártyát az "＋ Új kártya" gombbal.</div>
