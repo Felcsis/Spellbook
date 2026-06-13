@@ -162,7 +162,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 pt-12"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", animation: "fadeIn 0.2s ease" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "var(--bg-modal)", border: "1px solid rgba(122,124,58,0.2)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
+      <div style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
@@ -423,7 +423,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                          {m.unit && <span style={{ fontSize: "0.72rem", color: "rgba(122,124,58,0.5)" }}>{m.unit}</span>}
+                          {m.unit && <span style={{ fontSize: "0.72rem", color: "var(--border)" }}>{m.unit}</span>}
                           <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
                         </div>
                       ))}
@@ -568,9 +568,9 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
           </div>
         ))}
         <div onClick={() => onOpen(dateStr)}
-          style={{ marginTop: "auto", padding: "0.22rem", borderRadius: "6px", border: "1px dashed var(--border)", color: "rgba(122,124,58,0.25)", fontSize: "0.72rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", transition: "all 0.2s" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(122,124,58,0.4)"; (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "rgba(122,124,58,0.25)"; }}>
+          style={{ marginTop: "auto", padding: "0.22rem", borderRadius: "6px", border: "1px dashed var(--border)", color: "var(--border)", fontSize: "0.72rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", transition: "all 0.2s" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--border)"; }}>
           + bejegyzés
         </div>
       </div>
@@ -651,7 +651,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
               {/* Add */}
               <div onClick={() => onOpen(ds)} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", border: "1px dashed var(--bg-active)", color: "var(--border)", fontSize: "0.6rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", transition: "all 0.18s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(122,124,58,0.38)"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--border)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--bg-active)"; }}>+</div>
 
               {/* Profit badge */}

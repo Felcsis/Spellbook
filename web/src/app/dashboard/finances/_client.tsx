@@ -134,7 +134,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
       <div
         style={{
           background: "var(--bg-modal)",
-          border: "1px solid rgba(122,124,58,0.25)",
+          border: "1px solid var(--border)",
           borderRadius: "20px",
           padding: "2.25rem 2.5rem",
           width: "100%",
@@ -383,7 +383,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
       {/* Title */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", textShadow: "0 0 24px rgba(122,124,58,0.2)", animation: "float 4s ease-in-out infinite" }}>
+          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", textShadow: "0 0 24px var(--border)", animation: "float 4s ease-in-out infinite" }}>
             Pénzügyek ✦
           </h1>
           <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem" }}>
@@ -405,7 +405,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
             letterSpacing: "0.18em",
             cursor: "pointer",
             animation: "shimmer 3s linear infinite",
-            boxShadow: "0 4px 20px rgba(122,124,58,0.2)",
+            boxShadow: "0 4px 20px var(--border)",
             flexShrink: 0,
           }}
         >

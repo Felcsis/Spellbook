@@ -6,9 +6,9 @@ import { useState } from "react";
 import { ThemeToggle } from "~/app/_theme-toggle";
 
 const USERS = [
-  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "var(--color-teal)",  glowRgb: "122,124,58" },
-  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "var(--color-pink)",  glowRgb: "161,106,132" },
-  { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "var(--color-orange)", glowRgb: "252,156,81" },
+  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "var(--color-teal)", glowRgb: "160,120,120" },
+  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "var(--color-teal)", glowRgb: "160,120,120" },
+  { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "var(--color-teal)", glowRgb: "160,120,120" },
 ] as const;
 
 function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) {
@@ -126,8 +126,8 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
             style={{
               borderRadius: "8px",
               padding: "0.6rem 0.9rem",
-              background: "rgba(161,106,132,0.08)",
-              border: "1px solid rgba(161,106,132,0.3)",
+              background: "var(--bg-highlight)",
+              border: "1px solid var(--bg-highlight)",
               color: "#a03050",
               fontSize: "0.88rem",
               fontStyle: "italic",
@@ -186,9 +186,9 @@ export default function LoginPage() {
       {/* Soft background orbs */}
       <div className="pointer-events-none fixed inset-0 z-0">
         {[
-          { w: 520, h: 520, top: -120, left: -120,   c: "rgba(161,106,132,0.1)",  d: "0s" },
-          { w: 420, h: 420, bottom: -80, right: -80,  c: "rgba(252,156,81,0.08)",  d: "-5s" },
-          { w: 360, h: 360, top: "40%", left: "55%",  c: "rgba(153,154,87,0.09)",  d: "-9s" },
+          { w: 520, h: 520, top: -120, left: -120,   c: "var(--bg-highlight)",  d: "0s" },
+          { w: 420, h: 420, bottom: -80, right: -80,  c: "var(--bg-highlight)",  d: "-5s" },
+          { w: 360, h: 360, top: "40%", left: "55%",  c: "var(--bg-highlight)",  d: "-9s" },
         ].map((o, i) => (
           <div
             key={i}
@@ -233,7 +233,7 @@ export default function LoginPage() {
                 color: "var(--color-teal)",
                 display: "block",
                 animation: "rotateSlow 22s linear infinite reverse",
-                filter: "drop-shadow(0 0 10px rgba(122,124,58,0.5))",
+                filter: "drop-shadow(0 0 10px var(--border))",
               }}
             >
               ✦
