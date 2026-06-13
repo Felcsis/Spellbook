@@ -68,18 +68,18 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
   const [amountManual, setAmountManual] = useState(false);
   const [svcOpen, setSvcOpen]         = useState(false);
 
-  // Material multi-select
+  // Material multi-select — qty × unitPrice = lineTotal
+  type SelMat = { id: string; name: string; unitPrice: number; description: string | null; qty: string };
   const [matSearch, setMatSearch]     = useState("");
   const [matOpen, setMatOpen]         = useState(false);
-  const [selectedMats, setSelectedMats] = useState<{ id: string; name: string; price: number; unit: string | null }[]>([]);
+  const [selectedMats, setSelectedMats] = useState<SelMat[]>([]);
 
   const { data: categories = [] } = api.services.listCategories.useQuery();
-  const { data: matCatalog = [] } = api.materials.list.useQuery();
 
-  const allServices: { id: string; name: string; price: number; categoryName: string }[] = [];
+  const allServices: { id: string; name: string; price: number; description: string | null; categoryName: string }[] = [];
   for (const c of categories) {
     for (const s of (c.services ?? [])) {
-      allServices.push({ id: s.id, name: s.name, price: s.price, categoryName: c.name });
+      allServices.push({ id: s.id, name: s.name, price: s.price, description: s.description ?? null, categoryName: c.name });
     }
   }
 
@@ -91,7 +91,11 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
     ? allServices.filter(s => s.name.toLowerCase().includes(matSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(matSearch.toLowerCase()))
     : allServices;
 
-  const matTotal = selectedMats.reduce((s, m) => s + m.price, 0);
+  function lineTotal(m: SelMat) {
+    const q = parseFloat(m.qty);
+    return isNaN(q) || q <= 0 ? 0 : q * m.unitPrice;
+  }
+  const matTotal = selectedMats.reduce((s, m) => s + lineTotal(m), 0);
 
   const create = api.finance.create.useMutation({
     onSuccess: async () => { await utils.finance.list.invalidate(); onClose(); },
@@ -101,19 +105,23 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
     e.preventDefault();
     if (type === "material") {
       if (selectedMats.length === 0) return;
-      const desc = selectedMats.map(m => m.name).join(", ");
+      const desc = selectedMats
+        .map(m => { const q = parseFloat(m.qty); return isNaN(q) ? m.name : `${m.name} (${q}×)`; })
+        .join(", ");
       create.mutate({ type, description: desc, amount: matTotal, date });
     } else {
       create.mutate({ type, description, amount: parseFloat(amount), date });
     }
   }
 
-  function addMat(m: { id: string; name: string; price: number; unit: string | null }) {
-    if (!selectedMats.find(s => s.id === m.id)) setSelectedMats(prev => [...prev, m]);
+  function addMat(s: { id: string; name: string; price: number; description: string | null }) {
+    if (!selectedMats.find(m => m.id === s.id))
+      setSelectedMats(prev => [...prev, { id: s.id, name: s.name, unitPrice: s.price, description: s.description, qty: "1" }]);
     setMatSearch(""); setMatOpen(false);
   }
 
   function removeMat(id: string) { setSelectedMats(prev => prev.filter(m => m.id !== id)); }
+  function updateQty(id: string, qty: string) { setSelectedMats(prev => prev.map(m => m.id === id ? { ...m, qty } : m)); }
 
   const cfg = TYPE_CONFIG[type];
 
@@ -159,21 +167,34 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
 
               {/* Selected materials */}
               {selectedMats.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginBottom: "0.6rem" }}>
-                  {selectedMats.map(m => (
-                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.55rem 0.85rem", background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: "9px" }}>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)" }}>{m.name}</span>
-                        {m.unit && <span style={{ marginLeft: "0.4rem", fontSize: "0.75rem", color: "rgba(251,191,36,0.5)" }}>{m.unit}</span>}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.65rem" }}>
+                  {selectedMats.map(m => {
+                    const total = lineTotal(m);
+                    return (
+                      <div key={m.id} style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.22)", borderRadius: "10px", padding: "0.6rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{m.name}</span>
+                          {m.description && <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.45)", fontStyle: "italic" }}>{m.description}</span>}
+                          <button type="button" onClick={() => removeMat(m.id)} style={{ background: "none", border: "none", color: "rgba(245,230,211,0.25)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <input
+                            type="number" value={m.qty} min="0" step="any"
+                            onChange={e => updateQty(m.id, e.target.value)}
+                            style={{ ...inputStyle, width: 72, padding: "0.35rem 0.5rem", fontSize: "0.9rem", textAlign: "center" }}
+                          />
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(245,230,211,0.45)" }}>×</span>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(251,191,36,0.7)" }}>{fmt(m.unitPrice)}</span>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(245,230,211,0.35)" }}>=</span>
+                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#fbbf24", fontWeight: 700, marginLeft: "auto" }}>{fmt(total)}</span>
+                        </div>
                       </div>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.92rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
-                      <button type="button" onClick={() => removeMat(m.id)} style={{ background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem", padding: "0 0.15rem" }}>✕</button>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {/* Total row */}
-                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.85rem 0", borderTop: "1px solid rgba(251,191,36,0.15)", marginTop: "0.1rem" }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.6rem", padding: "0.3rem 0.5rem 0", borderTop: "1px solid rgba(251,191,36,0.15)" }}>
                     <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.5)" }}>ÖSSZESEN</span>
-                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(matTotal)}</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(matTotal)}</span>
                   </div>
                 </div>
               )}
@@ -202,7 +223,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                               {m.categoryName}
                             </div>
                           )}
-                          <div onMouseDown={() => { if (!already) addMat({ id: m.id, name: m.name, price: m.price, unit: null }); }}
+                          <div onMouseDown={() => { if (!already) addMat(m); }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
