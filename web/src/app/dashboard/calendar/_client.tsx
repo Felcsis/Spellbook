@@ -489,7 +489,7 @@ const delBtnStyle: React.CSSProperties = { background: "none", border: "none", c
 function SaveBtn({ loading }: { loading: boolean }) {
   return (
     <button type="submit" disabled={loading}
-      style={{ padding: "0.8rem", border: "none", borderRadius: "10px", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.18em", color: "#fff", background: "linear-gradient(120deg, #7a6229 0%, #c9a84c 50%, #7a6229 100%)", backgroundSize: "200% auto", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 16px var(--border)", opacity: loading ? 0.7 : 1 }}>
+      className="btn-gold" style={{ padding: "0.8rem", borderRadius: "10px", fontFamily: "var(--font-cinzel)", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.18em" }}>
       {loading ? "Mentés..." : "Mentés ✦"}
     </button>
   );

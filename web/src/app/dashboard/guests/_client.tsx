@@ -474,8 +474,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button type="button" onClick={onClose} style={{ flex: 1, padding: "0.8rem", borderRadius: 10, background: "transparent", border: "1px solid var(--border)", color: dim, fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.14em", cursor: "pointer" }}>Mégse</button>
-              <button type="submit" disabled={createCard.isPending || (!guestId && !guestName.trim())}
-                style={{ flex: 2, padding: "0.8rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg, var(--color-teal) 0%, var(--color-teal-light) 50%, var(--color-teal) 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", opacity: createCard.isPending ? 0.7 : 1 }}>
+              <button type="submit" disabled={createCard.isPending || (!guestId && !guestName.trim())} className="btn-gold" style={{ flex: 2, padding: "0.8rem", borderRadius: 10, fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.18em" }}>
                 {createCard.isPending ? "Mentés..." : "Mentés a receptkönyvbe ✦"}
               </button>
             </div>
@@ -523,7 +522,7 @@ export default function GuestsClient() {
           <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-pink)", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>Minden vendég szín receptje és látogatási előzménye</p>
         </div>
         <button onClick={() => openNewCard()}
-          style={{ padding: "0.75rem 1.5rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg, var(--color-teal) 0%, var(--color-teal-light) 50%, var(--color-teal) 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 20px var(--border)", flexShrink: 0 }}>
+          className="btn-gold" style={{ padding: "0.75rem 1.5rem", borderRadius: 10, fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", flexShrink: 0 }}>
           ＋ Új kártya
         </button>
       </div>

@@ -55,16 +55,17 @@ const inputStyle: React.CSSProperties = {
 
 function Btn({ onClick, children, variant = "primary", disabled }: { onClick: () => void; children: React.ReactNode; variant?: "primary" | "ghost" | "danger"; disabled?: boolean }) {
   const bg: Record<string, string> = {
-    primary: "linear-gradient(135deg, var(--bg-active), var(--bg-highlight))",
+    primary: "",
     ghost:   "var(--bg-today)",
     danger:  "rgba(220,50,50,0.15)",
   };
-  const col: Record<string, string> = { primary: cream, ghost: dimmed, danger: "rgba(255,100,100,0.85)" };
+  const col: Record<string, string> = { primary: "#fff", ghost: dimmed, danger: "rgba(255,100,100,0.85)" };
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      style={{ padding: "0.5rem 1.1rem", borderRadius: 8, border, background: bg[variant], color: col[variant], fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, transition: "opacity 0.2s" }}
+      className={variant === "primary" ? "btn-gold" : undefined}
+      style={{ padding: "0.5rem 1.1rem", borderRadius: 8, border: variant === "primary" ? "none" : border, background: variant === "primary" ? undefined : bg[variant], color: col[variant], fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, transition: "opacity 0.2s" }}
     >
       {children}
     </button>
