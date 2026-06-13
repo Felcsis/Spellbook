@@ -26,7 +26,7 @@ const labelStyle: React.CSSProperties = {
 
 // ── types ─────────────────────────────────────────────────────────────────────
 type MatRow = { name: string; brand: string; colorCode: string; grams: string; unitPrice: number; lineTotal: number };
-type SvcRow = { name: string; price: number };
+type SvcRow = { id: string; name: string; price: number; duration: number; categoryName: string; gender?: string };
 
 type GuestCardData = {
   id: string; date: string | Date; total: number; notes: string | null;
@@ -51,8 +51,42 @@ const MAT_OPTIONS = [
 
 // ── Single visit card ─────────────────────────────────────────────────────────
 function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => void }) {
-  const [open, setOpen] = useState(false);
-  const date = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+  const utils = api.useUtils();
+  const [open,    setOpen]    = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editDate, setEditDate] = useState(() => new Date(card.date).toISOString().slice(0, 10));
+  const [svcSearch, setSvcSearch] = useState("");
+  const [svcOpen,   setSvcOpen]   = useState(false);
+  const [addSvcs,   setAddSvcs]   = useState<SvcRow[]>([]);
+
+  const { data: categories = [] } = api.services.listCategories.useQuery();
+  const updateCard = api.guests.updateCard.useMutation({
+    onSuccess: () => { void utils.guests.guestBook.invalidate(); setEditing(false); setAddSvcs([]); setSvcSearch(""); },
+  });
+
+  const allSvcs: { id: string; name: string; price: number; duration: number; categoryName: string }[] = [];
+  categories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
+    allSvcs.push({ id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: c.name })
+  ));
+  const filtSvcs = svcSearch.trim()
+    ? allSvcs.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()))
+    : allSvcs;
+
+  const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+
+  const gColors: Record<string, { border: string; bg: string; text: string }> = {
+    nő:      { border: "rgba(232,180,200,0.7)", bg: "rgba(232,180,200,0.15)", text: "#e8b4c8" },
+    férfi:   { border: "rgba(122,158,200,0.7)", bg: "rgba(122,158,200,0.12)", text: "#7a9ec8" },
+    gyermek: { border: "rgba(167,139,250,0.7)", bg: "rgba(167,139,250,0.12)", text: "#a78bfa" },
+  };
+
+  function handleSave() {
+    updateCard.mutate({
+      id: card.id,
+      date: editDate,
+      addServices: addSvcs.map(s => ({ name: s.name, price: s.price, duration: s.duration, gender: s.gender, categoryName: s.categoryName })),
+    });
+  }
 
   return (
     <div style={{ background: "var(--bg-panel)", border: "1px solid var(--bg-active)", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}
@@ -60,8 +94,8 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--bg-active)"; }}>
 
       <div style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
-        onClick={() => setOpen(o => !o)}>
-        <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: dim, minWidth: 110 }}>{date}</div>
+        onClick={() => { setOpen(o => !o); setEditing(false); }}>
+        <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: dim, minWidth: 110 }}>{dateLabel}</div>
         <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "rgba(167,139,250,0.7)", flex: 1 }}>
           {card.worker.name}
           {card.services.length > 0 && <span style={{ color: dim }}> · {card.services.map(s => s.name).join(", ")}</span>}
@@ -78,50 +112,134 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
       {open && (
         <div style={{ borderTop: "1px solid var(--bg-highlight)", padding: "0.85rem 1rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
 
-          {card.services.length > 0 && (
-            <div>
-              <div style={{ ...labelStyle, color: "var(--text-muted)", marginBottom: "0.4rem" }}>◈ Elvégzett szolgáltatások</div>
-              {card.services.map(s => (
-                <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid var(--bg-panel)" }}>
-                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream }}>{s.name}</span>
-                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price)}</span>
+          {!editing ? (
+            <>
+              {card.services.length > 0 && (
+                <div>
+                  <div style={{ ...labelStyle, color: "var(--text-muted)", marginBottom: "0.4rem" }}>◈ Elvégzett szolgáltatások</div>
+                  {card.services.map(s => (
+                    <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid var(--bg-panel)" }}>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream }}>{s.name}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {card.materials.length > 0 && (
-            <div>
-              <div style={{ ...labelStyle, color: "var(--text-muted)", marginBottom: "0.4rem" }}>✦ Szín recept</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 0.9fr 0.7fr 0.9fr", gap: "0.25rem 0.6rem", alignItems: "center" }}>
-                {["Anyag","Márka","Kód","Gramm","Ár"].map(h => (
-                  <div key={h} style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.12em", color: "var(--border)", textTransform: "uppercase", paddingBottom: "0.2rem", borderBottom: "1px solid var(--bg-highlight)" }}>{h}</div>
-                ))}
-                {card.materials.map(m => (
-                  <>
-                    <span key={`${m.id}n`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: cream }}>{m.name}</span>
-                    <span key={`${m.id}b`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: dim }}>{m.brand ?? "—"}</span>
-                    <span key={`${m.id}c`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: "rgba(232,180,200,0.8)", letterSpacing: "0.05em" }}>{m.colorCode ?? "—"}</span>
-                    <span key={`${m.id}g`} style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: dim }}>{m.grams}g</span>
-                    <span key={`${m.id}p`} style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(m.lineTotal)}</span>
-                  </>
-                ))}
+              {card.materials.length > 0 && (
+                <div>
+                  <div style={{ ...labelStyle, color: "var(--text-muted)", marginBottom: "0.4rem" }}>✦ Szín recept</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 0.9fr 0.7fr 0.9fr", gap: "0.25rem 0.6rem", alignItems: "center" }}>
+                    {["Anyag","Márka","Kód","Gramm","Ár"].map(h => (
+                      <div key={h} style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.12em", color: "var(--border)", textTransform: "uppercase", paddingBottom: "0.2rem", borderBottom: "1px solid var(--bg-highlight)" }}>{h}</div>
+                    ))}
+                    {card.materials.map(m => (
+                      <>
+                        <span key={`${m.id}n`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: cream }}>{m.name}</span>
+                        <span key={`${m.id}b`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: dim }}>{m.brand ?? "—"}</span>
+                        <span key={`${m.id}c`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: "rgba(232,180,200,0.8)", letterSpacing: "0.05em" }}>{m.colorCode ?? "—"}</span>
+                        <span key={`${m.id}g`} style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: dim }}>{m.grams}g</span>
+                        <span key={`${m.id}p`} style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(m.lineTotal)}</span>
+                      </>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {card.notes && (
+                <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: dim, fontStyle: "italic", padding: "0.4rem 0.7rem", background: "var(--bg-panel)", borderRadius: 7, borderLeft: "2px solid var(--border)" }}>
+                  {card.notes}
+                </div>
+              )}
+            </>
+          ) : (
+            /* ── Edit mode ── */
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div>
+                <label style={labelStyle}>Dátum</label>
+                <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
+                  style={{ ...inputStyle, colorScheme: "light" }} />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Új szolgáltatás hozzáadása</label>
+                {addSvcs.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginBottom: "0.5rem" }}>
+                    {addSvcs.map((s, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.28rem 0.65rem", background: "var(--bg-active)", border: "1px solid var(--border)", borderRadius: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)", flex: 1 }}>{s.name}</span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "var(--color-teal)", opacity: 0.7, fontWeight: 700 }}>{fmt(s.price)}</span>
+                        {(["nő", "férfi", "gyermek"] as const).map(g => {
+                          const c = gColors[g]!;
+                          const active = s.gender === g;
+                          return (
+                            <button key={g} type="button"
+                              onClick={() => setAddSvcs(p => p.map((x, j) => j === i ? { ...x, gender: active ? undefined : g } : x))}
+                              style={{ padding: "0.15rem 0.5rem", borderRadius: 5, border: `1px solid ${active ? c.border : "var(--border)"}`, background: active ? c.bg : "transparent", color: active ? c.text : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.09em", cursor: "pointer" }}>
+                              {g === "nő" ? "Női" : g === "férfi" ? "Férfi" : "Gyermek"}
+                            </button>
+                          );
+                        })}
+                        <button type="button" onClick={() => setAddSvcs(p => p.filter((_, j) => j !== i))}
+                          style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.75rem" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ position: "relative" }}>
+                  <input value={svcSearch} onChange={e => { setSvcSearch(e.target.value); setSvcOpen(true); }}
+                    onFocus={() => setSvcOpen(true)} onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
+                    placeholder="Keress szolgáltatást…" style={inputStyle} />
+                  {svcOpen && filtSvcs.length > 0 && (
+                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 160, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                      {filtSvcs.map((s, i) => {
+                        const already = !!addSvcs.find(x => x.name === s.name);
+                        const showCat = i === 0 || filtSvcs[i-1]?.categoryName !== s.categoryName;
+                        return (
+                          <div key={s.id}>
+                            {showCat && <div style={{ padding: "0.35rem 0.9rem 0.1rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "var(--text-dim)", textTransform: "uppercase" }}>{s.categoryName}</div>}
+                            <div onMouseDown={() => { if (!already) { setAddSvcs(p => [...p, { id: s.id, name: s.name, price: s.price, duration: s.duration, categoryName: s.categoryName }]); setSvcSearch(""); setSvcOpen(false); } }}
+                              style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1 }}
+                              onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: cream, flex: 1 }}>{s.name}</span>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                <button type="button" onClick={() => { setEditing(false); setAddSvcs([]); setSvcSearch(""); setEditDate(new Date(card.date).toISOString().slice(0, 10)); }}
+                  style={{ padding: "0.45rem 1rem", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: dim, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em" }}>
+                  Mégsem
+                </button>
+                <button type="button" onClick={handleSave} disabled={updateCard.isPending}
+                  style={{ padding: "0.45rem 1.2rem", borderRadius: 8, border: "1px solid var(--color-teal)", background: "var(--color-teal)", color: "var(--bg-base)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", fontWeight: 700 }}>
+                  {updateCard.isPending ? "Mentés…" : "Mentés"}
+                </button>
               </div>
             </div>
           )}
 
-          {card.notes && (
-            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: dim, fontStyle: "italic", padding: "0.4rem 0.7rem", background: "var(--bg-panel)", borderRadius: 7, borderLeft: "2px solid var(--border)" }}>
-              {card.notes}
-            </div>
-          )}
-
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.4rem", borderTop: "1px solid var(--bg-highlight)" }}>
-            <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
-              Törlés
-            </button>
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
+                Törlés
+              </button>
+              <button onClick={e => { e.stopPropagation(); setEditing(v => !v); setAddSvcs([]); setSvcSearch(""); }}
+                style={{ background: "none", border: "none", color: editing ? "var(--color-teal)" : "rgba(122,158,140,0.4)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
+                onMouseLeave={e => { if (!editing) (e.currentTarget as HTMLElement).style.color = "rgba(122,158,140,0.4)"; }}>
+                Szerkesztés
+              </button>
+            </div>
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", color: dim }}>
               VÉGÖSSZEG <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", color: gold, fontWeight: 700, marginLeft: "0.4rem" }}>{fmt(card.total)}</span>
             </div>
@@ -217,9 +335,9 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
   const [svcOpen,   setSvcOpen]   = useState(false);
   const [selSvcs,   setSelSvcs]   = useState<SvcRow[]>([]);
 
-  const allSvcs: { id: string; name: string; price: number; categoryName: string }[] = [];
-  categories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number }) =>
-    allSvcs.push({ ...s, categoryName: c.name })
+  const allSvcs: { id: string; name: string; price: number; duration: number; categoryName: string }[] = [];
+  categories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
+    allSvcs.push({ ...s, duration: s.duration ?? 0, categoryName: c.name })
   ));
   const filtSvcs = svcSearch.trim()
     ? allSvcs.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()))
@@ -281,21 +399,22 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
     });
 
     // Revenue entry linked to the card
+    const gLabel = (g?: string) => g === "nő" ? "Női" : g === "férfi" ? "Férfi" : g === "gyermek" ? "Gyermek" : "";
     if (selSvcs.length > 0) {
       const svcTotal = selSvcs.reduce((s, x) => s + x.price, 0);
-      const desc = selSvcs.map(s => s.name).join(", ");
+      const desc = selSvcs.map(s => [gLabel(s.gender), s.name, s.categoryName].filter(Boolean).join(" ")).join(", ");
       await createFinance.mutateAsync({
         type: "revenue", description: desc, amount: svcTotal, date,
         guestCardId: card.id, workerUserId: finalWorkerId,
       });
     }
-    // Material entry
+    // Material entry linked to same card
     if (mats.length > 0) {
       const matTot = mats.reduce((s, r) => s + r.lineTotal, 0);
       const matDesc = mats.map(r => `${r.name} (${r.grams}g)`).join(", ");
       await createFinance.mutateAsync({
         type: "material", description: matDesc, amount: matTot, date,
-        workerUserId: finalWorkerId,
+        guestCardId: card.id, workerUserId: finalWorkerId,
       });
     }
     onClose();
@@ -387,14 +506,32 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
             <div>
               <label style={labelStyle}>Elvégzett szolgáltatások</label>
               {selSvcs.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
-                  {selSvcs.map((s, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.28rem 0.65rem", background: "var(--bg-active)", border: "1px solid var(--border)", borderRadius: 7 }}>
-                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)" }}>{s.name}</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "var(--color-teal)", opacity: 0.7, fontWeight: 700 }}>{fmt(s.price)}</span>
-                      <button type="button" onClick={() => setSelSvcs(prev => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.75rem" }}>✕</button>
-                    </div>
-                  ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                  {selSvcs.map((s, i) => {
+                    const gColors: Record<string, { border: string; bg: string; text: string }> = {
+                      nő:      { border: "rgba(232,180,200,0.7)", bg: "rgba(232,180,200,0.15)", text: "#e8b4c8" },
+                      férfi:   { border: "rgba(122,158,200,0.7)", bg: "rgba(122,158,200,0.12)", text: "#7a9ec8" },
+                      gyermek: { border: "rgba(167,139,250,0.7)", bg: "rgba(167,139,250,0.12)", text: "#a78bfa" },
+                    };
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.3rem 0.65rem", background: "var(--bg-active)", border: "1px solid var(--border)", borderRadius: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)", flex: 1 }}>{s.name}</span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "var(--color-teal)", opacity: 0.7, fontWeight: 700 }}>{fmt(s.price)}</span>
+                        {(["nő", "férfi", "gyermek"] as const).map(g => {
+                          const c = gColors[g]!;
+                          const active = s.gender === g;
+                          return (
+                            <button key={g} type="button"
+                              onClick={() => setSelSvcs(p => p.map((x, j) => j === i ? { ...x, gender: active ? undefined : g } : x))}
+                              style={{ padding: "0.15rem 0.5rem", borderRadius: 5, border: `1px solid ${active ? c.border : "var(--border)"}`, background: active ? c.bg : "transparent", color: active ? c.text : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.09em", cursor: "pointer", transition: "all 0.15s" }}>
+                              {g === "nő" ? "Női" : g === "férfi" ? "Férfi" : "Gyermek"}
+                            </button>
+                          );
+                        })}
+                        <button type="button" onClick={() => setSelSvcs(prev => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.75rem" }}>✕</button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               <div style={{ position: "relative" }}>
@@ -409,7 +546,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                       return (
                         <div key={s.id}>
                           {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "var(--text-dim)", textTransform: "uppercase" }}>{s.categoryName}</div>}
-                          <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { name: s.name, price: s.price }]); setSvcSearch(""); setSvcOpen(false); } }}
+                          <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: s.categoryName }]); setSvcSearch(""); setSvcOpen(false); } }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
@@ -513,7 +650,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
 export default function GuestsClient() {
   const utils = api.useUtils();
   const { data: guests = [], isLoading } = api.guests.guestBook.useQuery();
-  const deleteCard = api.guests.deleteCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
+  const deleteCard = api.guests.deleteCard.useMutation({ onSuccess: () => { void utils.guests.guestBook.invalidate(); void utils.calendar.month.invalidate(); } });
 
   const [showNew,          setShowNew]          = useState(false);
   const [newCardGuestId,   setNewCardGuestId]   = useState<string | undefined>();

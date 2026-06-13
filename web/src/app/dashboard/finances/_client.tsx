@@ -153,7 +153,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
           guestId: finalGuestId,
           workerId: userId,
           date,
-          services: selSvcs.map(s => ({ name: s.name, price: s.price, duration: s.duration, gender: s.gender })),
+          services: selSvcs.map(s => ({ name: s.name, price: s.price, duration: s.duration, gender: s.gender, categoryName: s.categoryName })),
           materials: validMats.map(r => ({
             name: r.name, brand: r.brand || undefined, colorCode: r.colorCode || undefined,
             grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
@@ -163,13 +163,16 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
       }
 
       // 2. Revenue entry — linked to guest card if any
-      const desc = selSvcs.length > 0 ? selSvcs.map(s => s.name).join(", ") : "Bevétel";
+      const genderLabel = (g?: string) => g === "nő" ? "Női" : g === "férfi" ? "Férfi" : g === "gyermek" ? "Gyermek" : "";
+      const desc = selSvcs.length > 0
+        ? selSvcs.map(s => [genderLabel(s.gender), s.name, s.categoryName].filter(Boolean).join(" ")).join(", ")
+        : "Bevétel";
       await createFinance.mutateAsync({ type: "revenue", description: desc, amount: total, date, guestCardId: cardId });
 
       // 3. Material entry if any
       if (showMats && validMats.length > 0) {
         const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
-        await createFinance.mutateAsync({ type: "material", description: matDesc, amount: matTotal, date });
+        await createFinance.mutateAsync({ type: "material", description: matDesc, amount: matTotal, date, guestCardId: cardId });
       }
 
       onSaved();
@@ -217,14 +220,23 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#7a9e8c", flex: 1, minWidth: 120 }}>{s.name}</span>
                   <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(122,158,140,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
                   {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>{s.duration} perc</span>}
-                  {/* Női / Férfi toggle */}
-                  {(["nő", "férfi"] as const).map(g => (
-                    <button key={g} type="button"
-                      onClick={() => setSelSvcs(p => p.map(x => x.id === s.id ? { ...x, gender: x.gender === g ? undefined : g } : x))}
-                      style={{ padding: "0.18rem 0.55rem", borderRadius: 5, border: `1px solid ${s.gender === g ? (g === "nő" ? "rgba(232,180,200,0.7)" : "rgba(122,158,200,0.7)") : "var(--border)"}`, background: s.gender === g ? (g === "nő" ? "rgba(232,180,200,0.15)" : "rgba(122,158,200,0.12)") : "transparent", color: s.gender === g ? (g === "nő" ? "#e8b4c8" : "#7a9ec8") : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.15s" }}>
-                      {g === "nő" ? "Női" : "Férfi"}
-                    </button>
-                  ))}
+                  {/* Női / Férfi / Gyermek toggle */}
+                  {(["nő", "férfi", "gyermek"] as const).map(g => {
+                    const colors: Record<string, { border: string; bg: string; text: string }> = {
+                      nő:      { border: "rgba(232,180,200,0.7)", bg: "rgba(232,180,200,0.15)", text: "#e8b4c8" },
+                      férfi:   { border: "rgba(122,158,200,0.7)", bg: "rgba(122,158,200,0.12)", text: "#7a9ec8" },
+                      gyermek: { border: "rgba(167,139,250,0.7)", bg: "rgba(167,139,250,0.12)", text: "#a78bfa" },
+                    };
+                    const c = colors[g]!;
+                    const active = s.gender === g;
+                    return (
+                      <button key={g} type="button"
+                        onClick={() => setSelSvcs(p => p.map(x => x.id === s.id ? { ...x, gender: active ? undefined : g } : x))}
+                        style={{ padding: "0.18rem 0.55rem", borderRadius: 5, border: `1px solid ${active ? c.border : "var(--border)"}`, background: active ? c.bg : "transparent", color: active ? c.text : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.15s" }}>
+                        {g === "nő" ? "Női" : g === "férfi" ? "Férfi" : "Gyermek"}
+                      </button>
+                    );
+                  })}
                   <button type="button" onClick={() => setSelSvcs(p => p.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: "rgba(122,158,140,0.4)", cursor: "pointer", fontSize: "0.75rem", marginLeft: "0.2rem" }}>✕</button>
                 </div>
               ))}
@@ -559,15 +571,19 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
   const now = new Date();
   const [year,     setYear]     = useState(now.getFullYear());
   const [month,    setMonth]    = useState(now.getMonth() + 1);
-  const [showOther,   setShowOther]   = useState(false);
-  const [expandedId,  setExpandedId]  = useState<string | null>(null);
+  const [showOther,    setShowOther]    = useState(false);
+  const [expandedId,   setExpandedId]   = useState<string | null>(null);
   const [filterUserId, setFilterUserId] = useState<string | undefined>(undefined);
+  const [editDateKey,  setEditDateKey]  = useState<string | null>(null);
+  const [editDateVal,  setEditDateVal]  = useState("");
 
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
 
   const { data: entries = [], isLoading, refetch } = api.finance.list.useQuery({ year, month, filterUserId });
   const utils = api.useUtils();
-  const del   = api.finance.delete.useMutation({ onSuccess: () => utils.finance.list.invalidate() });
+  const inv = () => { void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); };
+  const del        = api.finance.delete.useMutation({ onSuccess: inv });
+  const updateDate = api.finance.updateDate.useMutation({ onSuccess: () => { inv(); setEditDateKey(null); } });
 
   const STAFF_RATE = 0.6; // staff a bevétel 60%-át kapja
 
@@ -610,12 +626,31 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
   // Staff only sees their revenue entries
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue");
 
-  // Group entries by date descending
-  const byDate: Record<string, typeof entries> = {};
+  // Group entries: entries sharing a guestCardId become one "visit group"
+  type EntryItem = typeof entries[number];
+  type VisitGroup = { key: string; date: string; cardId: string | null; entries: EntryItem[]; totalRevenue: number; totalMaterial: number };
+
+  const visitGroups: VisitGroup[] = [];
+  const cardGroupMap: Record<string, VisitGroup> = {};
+
   visibleEntries.forEach(e => {
-    const k = toDateStr(new Date(e.date));
-    (byDate[k] ??= []).push(e);
+    const dateKey = toDateStr(new Date(e.date));
+    const cardId  = (e as { guestCardId?: string | null }).guestCardId ?? null;
+    if (cardId && cardGroupMap[cardId]) {
+      const g = cardGroupMap[cardId]!;
+      g.entries.push(e);
+      if (e.type === "revenue")  g.totalRevenue  += e.amount;
+      if (e.type === "material") g.totalMaterial += e.amount;
+    } else {
+      const g: VisitGroup = { key: cardId ?? e.id, date: dateKey, cardId, entries: [e], totalRevenue: e.type === "revenue" ? e.amount : 0, totalMaterial: e.type === "material" ? e.amount : 0 };
+      visitGroups.push(g);
+      if (cardId) cardGroupMap[cardId] = g;
+    }
   });
+
+  // Group visit-groups by date
+  const byDate: Record<string, VisitGroup[]> = {};
+  visitGroups.forEach(g => { (byDate[g.date] ??= []).push(g); });
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
   const isThisMonth = year === now.getFullYear() && month === now.getMonth() + 1;
@@ -698,36 +733,46 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
       {isAdmin && !filterUserId && Object.keys(staffStats).length > 0 && (
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.75rem" }}>◈ Személyenkénti bontás</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {Object.values(staffStats).sort((a, b) => b.revenue - a.revenue).map(st => {
               const staffWage = st.isOwner ? 0 : Math.round(st.revenue * STAFF_RATE);
-              const myProfit  = st.revenue - st.material - staffWage;
+              const myProfit  = st.revenue - staffWage;
               const uC        = userColor(st.name);
               return (
-                <div key={st.name} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1.1rem", background: "var(--bg-panel)", border: `1px solid ${uC}33`, borderLeft: `4px solid ${uC}`, borderRadius: 12, flexWrap: "wrap" }}>
-                  <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.1rem", color: uC, minWidth: 80, fontWeight: 700 }}>
-                    {st.name}
+                <div key={st.name} style={{ background: "var(--bg-panel)", border: `1px solid ${uC}22`, borderRadius: 14, overflow: "hidden" }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.6rem 1rem", background: `${uC}10`, borderBottom: `1px solid ${uC}22` }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: uC, boxShadow: `0 0 6px ${uC}88` }} />
+                    <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.05rem", color: uC, fontWeight: 700 }}>{st.name}</div>
+                    {st.isOwner && <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.42rem", letterSpacing: "0.12em", color: uC, opacity: 0.6, textTransform: "uppercase" }}>tulajdonos</div>}
                   </div>
-                  <div style={{ flex: 1, display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(st.revenue)}</div>
-                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>bevétel</div>
+                  {/* Rows */}
+                  <div style={{ padding: "0.5rem 1rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                    {/* Bevétel */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0" }}>
+                      <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>◈ Bevétel</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(st.revenue)}</span>
                     </div>
+                    {/* Anyag */}
                     {st.material > 0 && (
-                      <div style={{ textAlign: "center" }}>
-                        <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#c49060", fontWeight: 700 }}>−{fmt(st.material)}</div>
-                        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>anyag</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderTop: "1px solid var(--border)" }}>
+                        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>✦ Anyagköltség <span style={{ opacity: 0.5 }}>(vendég fizette)</span></span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: "#c49060", fontWeight: 700 }}>{fmt(st.material)}</span>
                       </div>
                     )}
+                    {/* Bér */}
                     {!st.isOwner && (
-                      <div style={{ textAlign: "center" }}>
-                        <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: uC, fontWeight: 700 }}>{fmt(staffWage)}</div>
-                        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>bér (60%)</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderTop: "1px solid var(--border)" }}>
+                        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>♦ {st.name} bére <span style={{ opacity: 0.5 }}>(60%)</span></span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: uC, fontWeight: 700 }}>− {fmt(staffWage)}</span>
                       </div>
                     )}
-                    <div style={{ textAlign: "center", borderLeft: "1px solid var(--border)", paddingLeft: "1.25rem" }}>
-                      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: myProfit >= 0 ? "#7a9e8c" : "#c47878", fontWeight: 700 }}><span style={{ color: "#c9a060", textShadow: "0 0 6px #c9a06066", marginRight: "0.3rem", fontSize: "1.1em" }}>●</span>{fmt(myProfit)}</div>
-                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{st.isOwner ? "profit" : "marad a szalonnak"}</div>
+                    {/* Profit */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.45rem 0.65rem", marginTop: "0.2rem", background: `${uC}0d`, borderRadius: 8, border: `1px solid ${uC}22` }}>
+                      <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: uC, textTransform: "uppercase", fontWeight: 700 }}>
+                        {st.isOwner ? "● Neked marad" : "● Szalonnak marad"}
+                      </span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: myProfit >= 0 ? "#7a9e8c" : "#c47878", fontWeight: 700 }}>{fmt(myProfit)}</span>
                     </div>
                   </div>
                 </div>
@@ -740,16 +785,16 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
       {/* Entries by day */}
       {isLoading ? (
         <div style={{ textAlign: "center", color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", padding: "3rem" }}>Betöltés...</div>
-      ) : entries.length === 0 ? (
+      ) : visitGroups.length === 0 ? (
         <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>
           Ebben a hónapban még nincsenek tételek. ✦
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           {sortedDates.map(ds => {
-            const dayEntries = byDate[ds]!;
-            const dayRev  = dayEntries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
-            const dayCost = dayEntries.filter(e => e.type !== "revenue").reduce((s, e) => s + e.amount, 0);
+            const dayGroups = byDate[ds]!;
+            const dayRev  = dayGroups.reduce((s, g) => s + g.totalRevenue, 0);
+            const dayCost = dayGroups.reduce((s, g) => s + g.totalMaterial, 0);
             const isToday = ds === todayStr;
 
             return (
@@ -764,40 +809,59 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                   {dayCost > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#c49060" }}>−{fmt(dayCost)}</span>}
                 </div>
 
-                {/* Entries for this day */}
+                {/* Visit groups for this day */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  {dayEntries.map(entry => {
-                    const cfg        = TYPE_CONFIG[entry.type as EntryType];
-                    const card       = (entry as { guestCard?: { guest: { name: string }; services: { name: string; price: number; duration: number; gender?: string | null }[]; materials: { name: string; brand?: string | null; colorCode?: string | null; grams: number }[] } }).guestCard;
-                    const isExpanded = expandedId === entry.id;
-                    const creatorName = entry.createdBy?.name ?? entry.workDay?.user?.name;
-                    const uCol = !filterUserId ? userColor(creatorName) : cfg.color;
+                  {dayGroups.map(group => {
+                    const revEntry    = group.entries.find(e => e.type === "revenue");
+                    const card        = revEntry ? (revEntry as { guestCard?: { guest: { name: string }; services: { name: string; price: number; duration: number; gender?: string | null; categoryName?: string | null }[]; materials: { name: string; brand?: string | null; colorCode?: string | null; grams: number; lineTotal: number }[] } }).guestCard : undefined;
+                    const isExpanded  = expandedId === group.key;
+                    const creatorName = revEntry?.createdBy?.name ?? revEntry?.workDay?.user?.name;
+                    const uCol        = !filterUserId ? userColor(creatorName) : "#7a9e8c";
+                    const grandTotal  = group.totalRevenue - group.totalMaterial;
+                    const hasMultiple = group.entries.length > 1 || (card && (card.services.length > 1 || card.materials.length > 0));
+                    const canDelete   = group.entries.every(e => !e.workDayId);
+
                     return (
-                      <div key={entry.id} style={{ background: "var(--bg-panel)", border: `1px solid ${isExpanded ? cfg.color + "44" : cfg.color + "22"}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s", borderLeft: !filterUserId ? `3px solid ${uCol}` : undefined }}>
+                      <div key={group.key} style={{ background: "var(--bg-panel)", border: `1px solid ${isExpanded ? uCol + "55" : uCol + "22"}`, borderLeft: `3px solid ${uCol}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
                         {/* Main row */}
-                        <div
-                          onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                        <div onClick={() => setExpandedId(isExpanded ? null : group.key)}
                           style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.75rem 1.1rem", cursor: "pointer", transition: "background 0.2s" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = cfg.dim; }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(122,158,140,0.06)"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                          <span style={{ color: cfg.color, fontSize: "0.85rem", flexShrink: 0, opacity: 0.7 }}>{cfg.icon}</span>
+
+                          <span style={{ color: "#7a9e8c", fontSize: "0.85rem", flexShrink: 0, opacity: 0.7 }}>◈</span>
+
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {card && <span style={{ color: "#a78bfa", marginRight: "0.4rem", fontSize: "0.75rem" }}>♦</span>}
-                              {card ? card.guest.name : entry.description}
+                              {card ? card.guest.name : (revEntry?.description ?? group.entries[0]!.description)}
                             </div>
                             {creatorName && (
-                              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: !filterUserId ? uCol : "var(--text-soft)", fontStyle: "italic", fontWeight: !filterUserId ? 600 : 400 }}>
+                              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: uCol, fontStyle: "italic", fontWeight: 600 }}>
                                 {creatorName}
                               </div>
                             )}
                           </div>
-                          <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: cfg.color, fontWeight: 600, whiteSpace: "nowrap" }}>
-                            {entry.type !== "revenue" && "−"}{fmt(entry.amount)}
+
+                          {/* Amounts */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
+                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(group.totalRevenue)}</span>
+                            {group.totalMaterial > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "#c49060" }}>−{fmt(group.totalMaterial)} anyag</span>}
                           </div>
-                          <span style={{ color: cfg.color, fontSize: "0.65rem", opacity: 0.5, transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>
-                          {!entry.workDayId && (
-                            <button onClick={e => { e.stopPropagation(); del.mutate({ id: entry.id }); }}
+
+                          {hasMultiple && <span style={{ color: "rgba(122,158,140,0.5)", fontSize: "0.65rem", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>}
+
+                          {/* Dátum szerkesztés */}
+                          <button onClick={e => { e.stopPropagation(); const d = group.entries[0]!.date; setEditDateVal(new Date(d).toISOString().slice(0,10)); setEditDateKey(editDateKey === group.key ? null : group.key); }}
+                            style={{ background: "none", border: "none", color: editDateKey === group.key ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s", flexShrink: 0 }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
+                            onMouseLeave={e => { if (editDateKey !== group.key) (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; }}
+                            title="Dátum szerkesztése">
+                            ✎
+                          </button>
+
+                          {canDelete && (
+                            <button onClick={e => { e.stopPropagation(); group.entries.forEach(en => del.mutate({ id: en.id })); }}
                               style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s, background 0.2s", flexShrink: 0 }}
                               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
                               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>
@@ -806,26 +870,46 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                           )}
                         </div>
 
+                        {/* Date editor */}
+                        {editDateKey === group.key && (
+                          <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 1.1rem", borderTop: "1px solid rgba(122,158,140,0.12)", background: "rgba(122,158,140,0.04)" }}>
+                            <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.12em", color: "var(--text-muted)", textTransform: "uppercase" }}>Új dátum</span>
+                            <input type="date" value={editDateVal} onChange={e => setEditDateVal(e.target.value)}
+                              style={{ ...inputStyle, width: "auto", padding: "0.3rem 0.65rem", fontSize: "0.9rem", colorScheme: "light" }} />
+                            <button onClick={() => updateDate.mutate({ entryIds: group.entries.map(e => e.id), date: editDateVal, guestCardId: group.cardId ?? undefined })}
+                              disabled={updateDate.isPending}
+                              style={{ padding: "0.3rem 0.9rem", borderRadius: 7, border: "1px solid var(--color-teal)", background: "var(--color-teal)", color: "var(--bg-base)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", fontWeight: 700 }}>
+                              {updateDate.isPending ? "…" : "Mentés"}
+                            </button>
+                            <button onClick={() => setEditDateKey(null)}
+                              style={{ padding: "0.3rem 0.7rem", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem" }}>
+                              Mégsem
+                            </button>
+                          </div>
+                        )}
+
                         {/* Expanded detail */}
                         {isExpanded && (
-                          <div style={{ padding: "0 1.1rem 0.85rem 2.5rem", borderTop: `1px solid ${cfg.color}18` }}>
+                          <div style={{ padding: "0 1.1rem 0.9rem 2.5rem", borderTop: "1px solid rgba(122,158,140,0.1)" }}>
                             {card ? (
                               <>
-                                {/* Guest card: services */}
                                 {card.services.length > 0 && (
                                   <div style={{ marginTop: "0.65rem" }}>
                                     <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>Elvégzett szolgáltatások</div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                                       {card.services.map((s, i) => {
                                         const hourlyRate = s.duration > 0 ? Math.round((s.price / s.duration) * 60) : null;
+                                        const gBadge = s.gender === "nő"
+                                          ? { label: "Női",    bg: "rgba(232,180,200,0.15)", color: "#e8b4c8", border: "rgba(232,180,200,0.3)" }
+                                          : s.gender === "férfi"
+                                          ? { label: "Férfi",  bg: "rgba(122,158,200,0.12)", color: "#7a9ec8", border: "rgba(122,158,200,0.3)" }
+                                          : s.gender === "gyermek"
+                                          ? { label: "Gyermek",bg: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "rgba(167,139,250,0.3)" }
+                                          : null;
                                         return (
-                                          <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(122,158,140,0.08)", border: "1px solid rgba(122,158,140,0.2)", borderRadius: 7, flexWrap: "wrap" }}>
-                                            {s.gender && (
-                                              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", padding: "0.12rem 0.4rem", borderRadius: 4, background: s.gender === "nő" ? "rgba(232,180,200,0.15)" : "rgba(122,158,200,0.12)", color: s.gender === "nő" ? "#e8b4c8" : "#7a9ec8", border: `1px solid ${s.gender === "nő" ? "rgba(232,180,200,0.3)" : "rgba(122,158,200,0.3)"}` }}>
-                                                {s.gender === "nő" ? "Női" : "Férfi"}
-                                              </span>
-                                            )}
-                                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#7a9e8c", flex: 1 }}>{s.name}</span>
+                                          <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(122,158,140,0.08)", border: "1px solid rgba(122,158,140,0.15)", borderRadius: 7, flexWrap: "wrap" }}>
+                                            {gBadge && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", padding: "0.12rem 0.4rem", borderRadius: 4, background: gBadge.bg, color: gBadge.color, border: `1px solid ${gBadge.border}` }}>{gBadge.label}</span>}
+                                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#7a9e8c", flex: 1 }}>{s.name}{s.categoryName ? ` ${s.categoryName}` : ""}</span>
                                             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "rgba(122,158,140,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
                                             {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
                                             {hourlyRate && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-muted)" }}>{fmt(hourlyRate)}/óra</span>}
@@ -835,17 +919,22 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                                     </div>
                                   </div>
                                 )}
-                                {/* Guest card: color recipe */}
-                                {card.materials.length > 0 && (
+                                {(card.materials.length > 0 || group.totalMaterial > 0) && (
                                   <div style={{ marginTop: "0.65rem" }}>
-                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>✦ Szín recept</div>
+                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>✦ Anyagköltség: {fmt(group.totalMaterial)}</div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-                                      {card.materials.map((m, i) => (
-                                        <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem" }}>
-                                          <span style={{ color: "var(--text-primary)", minWidth: 120 }}>{m.name}</span>
-                                          {m.brand     && <span style={{ color: "var(--text-soft)" }}>{m.brand}</span>}
-                                          {m.colorCode && <span style={{ color: "#fbbf24", fontWeight: 600 }}>{m.colorCode}</span>}
-                                          <span style={{ color: "var(--text-muted)", marginLeft: "auto" }}>{m.grams}g</span>
+                                      {card.materials.length > 0 ? card.materials.map((m, i) => (
+                                        <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", padding: "0.2rem 0.65rem", background: "rgba(251,191,36,0.05)", borderRadius: 6 }}>
+                                          <span style={{ color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
+                                          {m.brand     && <span style={{ color: "var(--text-soft)", fontSize: "0.82rem" }}>{m.brand}</span>}
+                                          {m.colorCode && <span style={{ color: "#fbbf24", fontWeight: 600, fontSize: "0.82rem" }}>{m.colorCode}</span>}
+                                          <span style={{ color: "var(--text-muted)" }}>{m.grams}g</span>
+                                          <span style={{ color: "#c49060", fontWeight: 700, fontSize: "0.82rem", marginLeft: "0.5rem" }}>{fmt(m.lineTotal)}</span>
+                                        </div>
+                                      )) : group.entries.filter(e => e.type === "material").map(e => (
+                                        <div key={e.id} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", padding: "0.2rem 0.65rem", background: "rgba(251,191,36,0.05)", borderRadius: 6 }}>
+                                          <span style={{ color: "var(--text-primary)", flex: 1 }}>{e.description}</span>
+                                          <span style={{ color: "#c49060", fontWeight: 700, fontSize: "0.82rem" }}>{fmt(e.amount)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -853,9 +942,13 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                                 )}
                               </>
                             ) : (
-                              /* No guest card — show description */
-                              <div style={{ marginTop: "0.5rem", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic" }}>
-                                {entry.description}
+                              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", marginTop: "0.5rem" }}>
+                                {group.entries.map(e => (
+                                  <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", padding: "0.2rem 0.4rem" }}>
+                                    <span style={{ fontStyle: "italic" }}>{e.description}</span>
+                                    <span style={{ color: e.type === "revenue" ? "#7a9e8c" : "#c49060", fontWeight: 600 }}>{e.type !== "revenue" && "−"}{fmt(e.amount)}</span>
+                                  </div>
+                                ))}
                               </div>
                             )}
                           </div>

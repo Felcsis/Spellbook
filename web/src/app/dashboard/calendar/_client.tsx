@@ -73,7 +73,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
   guestCards: GuestCard[]; users: User[]; userColors: Record<string, string>; onClose: () => void;
 }) {
   const utils  = api.useUtils();
-  const inv    = () => void utils.calendar.month.invalidate();
+  const inv    = () => { void utils.calendar.month.invalidate(); void utils.finance.list.invalidate(); };
   const upsert = api.calendar.upsert.useMutation({ onSuccess: inv });
   const delW   = api.calendar.delete.useMutation({ onSuccess: inv });
   const addC   = api.calendar.addCost.useMutation({ onSuccess: inv });
