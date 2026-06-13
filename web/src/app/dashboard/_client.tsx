@@ -18,8 +18,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
       <h1 style={{
         fontFamily: "var(--font-playfair)",
         fontSize: "2.1rem",
-        color: "var(--color-gold-light)",
-        textShadow: "0 0 24px rgba(201,168,76,0.3)",
+        color: "#4a7c7e",
         marginBottom: "0.4rem",
         animation: "float 4s ease-in-out infinite",
       }}>
@@ -27,8 +26,8 @@ export default function DashboardClient({ name }: { name?: string | null }) {
       </h1>
       <p style={{
         fontStyle: "italic",
-        color: "var(--color-rose)",
-        opacity: 0.75,
+        color: "#c45c7a",
+        opacity: 0.8,
         marginBottom: "2.5rem",
         fontFamily: "var(--font-cormorant)",
         fontSize: "1.05rem",
@@ -46,36 +45,37 @@ export default function DashboardClient({ name }: { name?: string | null }) {
             key={title}
             onClick={() => href && router.push(href)}
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(201,168,76,0.22)",
+              background: "rgba(255,252,247,0.75)",
+              border: "1px solid rgba(74,124,126,0.2)",
               borderRadius: "16px",
               padding: "1.75rem 1.5rem",
               textAlign: "left",
               cursor: href ? "pointer" : "default",
-              backdropFilter: "blur(16px)",
+              backdropFilter: "blur(12px)",
               transition: "border-color 0.3s, box-shadow 0.3s, transform 0.3s",
               color: "inherit",
-              opacity: href ? 1 : 0.45,
+              opacity: href ? 1 : 0.4,
+              boxShadow: "0 2px 12px rgba(74,124,126,0.06)",
             }}
             onMouseEnter={e => {
               if (!href) return;
               const el = e.currentTarget;
-              el.style.borderColor = "rgba(201,168,76,0.45)";
-              el.style.boxShadow = "0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(201,168,76,0.12)";
+              el.style.borderColor = "rgba(74,124,126,0.42)";
+              el.style.boxShadow = "0 8px 28px rgba(74,124,126,0.13)";
               el.style.transform = "translateY(-3px)";
             }}
             onMouseLeave={e => {
               const el = e.currentTarget;
-              el.style.borderColor = "rgba(201,168,76,0.22)";
-              el.style.boxShadow = "none";
+              el.style.borderColor = "rgba(74,124,126,0.2)";
+              el.style.boxShadow = "0 2px 12px rgba(74,124,126,0.06)";
               el.style.transform = "translateY(0)";
             }}
           >
-            <div style={{ fontSize: "2rem", marginBottom: "0.75rem", color: "var(--color-gold)" }}>{icon}</div>
-            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.75rem", letterSpacing: "0.16em", color: "var(--color-gold-light)", marginBottom: "0.35rem" }}>
+            <div style={{ fontSize: "2rem", marginBottom: "0.75rem", color: "#4a7c7e" }}>{icon}</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.75rem", letterSpacing: "0.16em", color: "#4a7c7e", marginBottom: "0.35rem" }}>
               {title}
             </div>
-            <div style={{ fontStyle: "italic", fontSize: "0.9rem", color: "rgba(245,230,211,0.5)", fontFamily: "var(--font-cormorant)" }}>
+            <div style={{ fontStyle: "italic", fontSize: "0.9rem", color: "rgba(44,36,32,0.5)", fontFamily: "var(--font-cormorant)" }}>
               {desc}
             </div>
           </button>

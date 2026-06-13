@@ -2,48 +2,15 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
-
-function Particles() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const container = ref.current;
-    if (!container) return;
-    const rand = (a: number, b: number) => a + Math.random() * (b - a);
-    for (let i = 0; i < 70; i++) {
-      const el = document.createElement("div");
-      const size = rand(1, 3);
-      Object.assign(el.style, {
-        position: "absolute", width: size + "px", height: size + "px",
-        borderRadius: "50%", background: "#e8cc7a",
-        left: rand(0, 100) + "vw", top: rand(0, 100) + "vh",
-        animation: `twinkle ${rand(2, 6)}s ease-in-out ${rand(0, 6)}s infinite`,
-      });
-      container.appendChild(el);
-    }
-    const colors = ["rgba(201,168,76,0.7)", "rgba(167,139,250,0.7)", "rgba(232,180,200,0.7)"];
-    for (let i = 0; i < 22; i++) {
-      const el = document.createElement("div");
-      const size = rand(3, 9);
-      Object.assign(el.style, {
-        position: "absolute", width: size + "px", height: size + "px",
-        borderRadius: "50%", background: colors[Math.floor(Math.random() * colors.length)],
-        left: rand(0, 100) + "vw", bottom: "-10px",
-        animation: `drift ${rand(9, 20)}s linear ${rand(0, 12)}s infinite`,
-      });
-      container.appendChild(el);
-    }
-  }, []);
-  return <div ref={ref} className="pointer-events-none fixed inset-0 z-0 overflow-hidden" />;
-}
+import { useState } from "react";
 
 const USERS = [
-  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "#c9a84c" },
-  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "#a78bfa" },
-  { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "#e8b4c8" },
+  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "#4a7c7e", glowRgb: "74,124,126" },
+  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "#c45c7a", glowRgb: "196,92,122" },
+  { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "#7a8c5a", glowRgb: "122,140,90" },
 ] as const;
 
-function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
+function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
@@ -62,43 +29,27 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
     }
   }
 
-  const isGold   = color === "#c9a84c";
-  const isPurple = color === "#a78bfa";
-
-  const glowColor = isGold
-    ? "rgba(201,168,76,0.35)"
-    : isPurple
-    ? "rgba(167,139,250,0.35)"
-    : "rgba(232,180,200,0.35)";
-
-  const glowAnim = isGold
-    ? `0 0 20px rgba(201,168,76,0.3), 0 0 60px rgba(201,168,76,0.1)`
-    : isPurple
-    ? `0 0 20px rgba(167,139,250,0.3), 0 0 60px rgba(167,139,250,0.1)`
-    : `0 0 20px rgba(232,180,200,0.3), 0 0 60px rgba(232,180,200,0.1)`;
-
   return (
     <div
       style={{
-        background: "rgba(255,255,255,0.04)",
+        background: "rgba(255,252,247,0.82)",
         border: `1px solid ${color}44`,
         borderRadius: "24px",
         padding: "2.5rem 2rem",
         backdropFilter: "blur(24px) saturate(160%)",
-        boxShadow: `0 8px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05), ${glowAnim}`,
+        boxShadow: `0 4px 32px rgba(${glowRgb},0.1), 0 1px 0 rgba(255,255,255,0.8) inset`,
         animation: "fadeInUp 0.75s cubic-bezier(0.16,1,0.3,1)",
         flex: "1 1 280px",
         maxWidth: 360,
         minWidth: 260,
       }}
     >
-      {/* Sigil */}
       <div className="mb-6 text-center">
         <div
           className="mx-auto mb-4 flex items-center justify-center rounded-full"
           style={{
             width: 64, height: 64,
-            border: `1px solid ${color}66`,
+            border: `1px solid ${color}55`,
             animation: "rotateSlow 22s linear infinite",
           }}
         >
@@ -107,7 +58,7 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
               fontSize: "1.8rem",
               color,
               animation: "rotateSlow 22s linear infinite reverse",
-              filter: `drop-shadow(0 0 10px ${color}99)`,
+              filter: `drop-shadow(0 0 8px ${color}88)`,
               display: "block",
             }}
           >
@@ -121,14 +72,12 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
             fontWeight: 600,
             letterSpacing: "0.16em",
             color,
-            textShadow: `0 0 24px ${color}66`,
           }}
         >
           {name}
         </h2>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <label
@@ -149,11 +98,11 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
             placeholder="· · · · · · · ·"
             required
             style={{
-              background: "rgba(255,255,255,0.04)",
+              background: "rgba(255,255,255,0.7)",
               border: `1px solid ${color}33`,
               borderRadius: "10px",
               padding: "0.8rem 1rem",
-              color: "var(--color-cream)",
+              color: "#2c2420",
               fontFamily: "var(--font-cormorant)",
               fontSize: "1.1rem",
               outline: "none",
@@ -162,7 +111,7 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
             }}
             onFocus={e => {
               e.target.style.borderColor = color;
-              e.target.style.boxShadow = `0 0 0 3px ${color}22, 0 0 20px ${color}22`;
+              e.target.style.boxShadow = `0 0 0 3px ${color}22`;
             }}
             onBlur={e => {
               e.target.style.borderColor = `${color}33`;
@@ -176,9 +125,9 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
             style={{
               borderRadius: "8px",
               padding: "0.6rem 0.9rem",
-              background: "rgba(220,80,80,0.1)",
-              border: "1px solid rgba(220,80,80,0.3)",
-              color: "#f4a0a0",
+              background: "rgba(196,92,122,0.08)",
+              border: "1px solid rgba(196,92,122,0.3)",
+              color: "#a03050",
               fontSize: "0.88rem",
               fontStyle: "italic",
               textAlign: "center",
@@ -203,14 +152,10 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
             fontWeight: 600,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
-            color: "#07040f",
-            background: isGold
-              ? "linear-gradient(120deg, #7a6229 0%, #c9a84c 30%, #e8cc7a 50%, #c9a84c 70%, #7a6229 100%)"
-              : isPurple
-              ? "linear-gradient(120deg, #4c1d95 0%, #7c3aed 30%, #a78bfa 50%, #7c3aed 70%, #4c1d95 100%)"
-              : "linear-gradient(120deg, #9d4e6e 0%, #c47a99 30%, #e8b4c8 50%, #c47a99 70%, #9d4e6e 100%)",
+            color: "#fff",
+            background: `linear-gradient(120deg, ${color}cc 0%, ${color} 50%, ${color}cc 100%)`,
             backgroundSize: "200% auto",
-            boxShadow: `0 4px 20px ${glowColor}`,
+            boxShadow: `0 4px 20px rgba(${glowRgb},0.3)`,
             animation: "shimmer 3s linear infinite",
             opacity: loading ? 0.7 : 1,
             transition: "box-shadow 0.3s, transform 0.15s",
@@ -219,12 +164,12 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
           onMouseEnter={e => {
             if (!loading) {
               (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
-              (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 32px ${glowColor}`;
+              (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 32px rgba(${glowRgb},0.4)`;
             }
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-            (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${glowColor}`;
+            (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px rgba(${glowRgb},0.3)`;
           }}
         >
           {loading ? "Belépés..." : "Belépés " + sigil}
@@ -237,12 +182,12 @@ function UserCard({ name, email, sigil, color }: typeof USERS[number]) {
 export default function LoginPage() {
   return (
     <>
-      {/* Orbs */}
+      {/* Soft background orbs */}
       <div className="pointer-events-none fixed inset-0 z-0">
         {[
-          { w: 520, h: 520, top: -120, left: -120, c: "rgba(124,58,237,0.18)", d: "0s" },
-          { w: 420, h: 420, bottom: -80, right: -80, c: "rgba(201,168,76,0.13)", d: "-5s" },
-          { w: 360, h: 360, top: "40%", left: "55%", c: "rgba(232,180,200,0.1)", d: "-9s" },
+          { w: 520, h: 520, top: -120, left: -120, c: "rgba(196,92,122,0.08)", d: "0s" },
+          { w: 420, h: 420, bottom: -80, right: -80, c: "rgba(74,124,126,0.08)", d: "-5s" },
+          { w: 360, h: 360, top: "40%", left: "55%", c: "rgba(122,140,90,0.07)", d: "-9s" },
         ].map((o, i) => (
           <div
             key={i}
@@ -263,29 +208,26 @@ export default function LoginPage() {
         ))}
       </div>
 
-      <Particles />
-
       <main
         className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-10 p-8"
         style={{ animation: "fadeIn 0.6s ease" }}
       >
-        {/* Header */}
         <div className="text-center">
           <div
             className="mx-auto mb-4 flex items-center justify-center rounded-full"
             style={{
               width: 72, height: 72,
-              border: "1px solid rgba(201,168,76,0.4)",
+              border: "1px solid rgba(74,124,126,0.35)",
               animation: "rotateSlow 22s linear infinite",
             }}
           >
             <span
               style={{
                 fontSize: "2rem",
-                color: "var(--color-gold)",
+                color: "#4a7c7e",
                 display: "block",
                 animation: "rotateSlow 22s linear infinite reverse",
-                filter: "drop-shadow(0 0 12px rgba(201,168,76,0.6))",
+                filter: "drop-shadow(0 0 10px rgba(74,124,126,0.5))",
               }}
             >
               ✦
@@ -297,8 +239,7 @@ export default function LoginPage() {
               fontSize: "1.9rem",
               fontWeight: 600,
               letterSpacing: "0.14em",
-              color: "var(--color-gold-light)",
-              textShadow: "0 0 30px rgba(201,168,76,0.45)",
+              color: "#4a7c7e",
             }}
           >
             Salon Spellbook
@@ -308,7 +249,7 @@ export default function LoginPage() {
               fontFamily: "var(--font-cormorant)",
               fontStyle: "italic",
               fontSize: "1rem",
-              color: "var(--color-rose)",
+              color: "#c45c7a",
               marginTop: "0.4rem",
               letterSpacing: "0.06em",
               opacity: 0.85,
@@ -318,7 +259,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Three cards */}
         <div
           style={{
             display: "flex",

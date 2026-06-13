@@ -6,16 +6,19 @@
   --font-cinzel: var(--font-cinzel), serif;
   --font-cormorant: var(--font-cormorant), Georgia, serif;
 
-  --color-bg:           #07040f;
-  --color-bg2:          #100820;
-  --color-gold:         #c9a84c;
-  --color-gold-light:   #e8cc7a;
-  --color-gold-dim:     #7a6229;
-  --color-purple:       #7c3aed;
-  --color-purple-soft:  #a78bfa;
-  --color-rose:         #e8b4c8;
-  --color-rose-dark:    #c47a99;
-  --color-cream:        #f5e6d3;
+  --color-bg:           #e8e3db;
+  --color-bg2:          #f2ede6;
+  --color-gold:         #4a7c7e;
+  --color-gold-light:   #6a9c9e;
+  --color-gold-dim:     #2a5c5e;
+  --color-purple:       #c45c7a;
+  --color-purple-soft:  #e07a96;
+  --color-rose:         #c45c7a;
+  --color-rose-dark:    #8c3a52;
+  --color-cream:        #2c2420;
+  --color-text-soft:    rgba(44,36,32,0.55);
+  --color-panel:        rgba(255,255,255,0.65);
+  --color-border:       rgba(74,124,126,0.22);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -28,8 +31,8 @@ html, body {
 }
 
 ::selection {
-  background: rgba(201,168,76,0.3);
-  color: var(--color-cream);
+  background: rgba(74,124,126,0.22);
+  color: #2c2420;
 }
 
 ::-webkit-scrollbar { width: 5px; }
@@ -39,7 +42,7 @@ html, body {
 
 @keyframes twinkle {
   0%, 100% { opacity: 0;   transform: scale(0.5); }
-  50%       { opacity: 1;   transform: scale(1.4); filter: drop-shadow(0 0 4px #e8cc7a); }
+  50%       { opacity: 1;   transform: scale(1.4); filter: drop-shadow(0 0 4px #6a9c9e); }
 }
 @keyframes drift {
   0%   { opacity: 0;   transform: translateY(0)      rotate(0deg);   }
@@ -60,8 +63,8 @@ html, body {
   100% { background-position:  200% center; }
 }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(201,168,76,0.35), 0 0 60px rgba(201,168,76,0.12); }
-  50%       { box-shadow: 0 0 40px rgba(201,168,76,0.55), 0 0 90px rgba(201,168,76,0.22); }
+  0%, 100% { box-shadow: 0 0 20px rgba(74,124,126,0.25), 0 0 60px rgba(74,124,126,0.1); }
+  50%       { box-shadow: 0 0 40px rgba(74,124,126,0.4), 0 0 90px rgba(74,124,126,0.18); }
 }
 @keyframes orbFloat {
   0%, 100% { transform: translate(0,0) scale(1); }
@@ -76,6 +79,6 @@ html, body {
   50%     { transform: translateY(-7px); }
 }
 @keyframes borderGlow {
-  0%,100% { border-color: rgba(201,168,76,0.2); }
-  50%     { border-color: rgba(201,168,76,0.55); }
+  0%,100% { border-color: rgba(74,124,126,0.2); }
+  50%     { border-color: rgba(74,124,126,0.5); }
 }
