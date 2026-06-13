@@ -4,6 +4,7 @@ import { calendarRouter } from "~/server/api/routers/calendar";
 import { servicesRouter } from "~/server/api/routers/services";
 import { materialsRouter } from "~/server/api/routers/materials";
 import { guestsRouter } from "~/server/api/routers/guests";
+import { adminRouter } from "~/server/api/routers/admin";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -13,6 +14,7 @@ export const appRouter = createTRPCRouter({
   services: servicesRouter,
   materials: materialsRouter,
   guests: guestsRouter,
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -11,6 +11,7 @@ const NAV_ADMIN = [
   { key: "clients",      icon: "♦", label: "Recept könyv",   href: "/dashboard/guests" },
   { key: "finances",     icon: "✧", label: "Pénzügyek",      href: "/dashboard/finances" },
   { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
+  { key: "admin",        icon: "⚙", label: "Admin",          href: "/dashboard/admin" },
 ];
 
 const NAV_STAFF = [
