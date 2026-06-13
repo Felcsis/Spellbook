@@ -59,18 +59,22 @@ function SummaryCard({ label, value, color, icon, sub }: { label: string; value:
 
 function AddModal({ onClose, year, month }: { onClose: () => void; year: number; month: number }) {
   const utils = api.useUtils();
-  const [type, setType]         = useState<EntryType>("revenue");
-  const [description, setDesc]  = useState("");
-  const [amount, setAmount]     = useState("");
-  const [amountManual, setAmountManual] = useState(false);
-  const [date, setDate]         = useState(() => {
-    const d = new Date(year, month - 1, new Date().getDate());
-    return d.toISOString().slice(0, 10);
-  });
-  const [svcOpen, setSvcOpen]   = useState(false);
+  const [type, setType]   = useState<EntryType>("revenue");
+  const [date, setDate]   = useState(() => new Date(year, month - 1, new Date().getDate()).toISOString().slice(0, 10));
 
-  const { data: categories = [] }  = api.services.listCategories.useQuery();
-  const { data: matCatalog = [] }  = api.materials.list.useQuery();
+  // Non-material fields
+  const [description, setDesc]        = useState("");
+  const [amount, setAmount]           = useState("");
+  const [amountManual, setAmountManual] = useState(false);
+  const [svcOpen, setSvcOpen]         = useState(false);
+
+  // Material multi-select
+  const [matSearch, setMatSearch]     = useState("");
+  const [matOpen, setMatOpen]         = useState(false);
+  const [selectedMats, setSelectedMats] = useState<{ id: string; name: string; price: number; unit: string | null }[]>([]);
+
+  const { data: categories = [] } = api.services.listCategories.useQuery();
+  const { data: matCatalog = [] } = api.materials.list.useQuery();
 
   const allServices: { id: string; name: string; price: number; categoryName: string }[] = [];
   for (const c of categories) {
@@ -79,28 +83,37 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
     }
   }
 
-  const suggestions = type === "material" ? matCatalog : allServices;
-  const filtered = description.trim()
-    ? suggestions.filter(s => s.name.toLowerCase().includes(description.toLowerCase()))
-    : suggestions;
+  const filteredSvc = description.trim()
+    ? allServices.filter(s => s.name.toLowerCase().includes(description.toLowerCase()) || s.categoryName.toLowerCase().includes(description.toLowerCase()))
+    : allServices;
+
+  const filteredMat = matSearch.trim()
+    ? matCatalog.filter(m => m.name.toLowerCase().includes(matSearch.toLowerCase()))
+    : matCatalog;
+
+  const matTotal = selectedMats.reduce((s, m) => s + m.price, 0);
 
   const create = api.finance.create.useMutation({
-    onSuccess: async () => {
-      await utils.finance.list.invalidate();
-      onClose();
-    },
+    onSuccess: async () => { await utils.finance.list.invalidate(); onClose(); },
   });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    create.mutate({ type, description, amount: parseFloat(amount), date });
+    if (type === "material") {
+      if (selectedMats.length === 0) return;
+      const desc = selectedMats.map(m => m.name).join(", ");
+      create.mutate({ type, description: desc, amount: matTotal, date });
+    } else {
+      create.mutate({ type, description, amount: parseFloat(amount), date });
+    }
   }
 
-  function pickService(name: string, price: number) {
-    setDesc(name);
-    if (!amountManual) setAmount(String(price));
-    setSvcOpen(false);
+  function addMat(m: { id: string; name: string; price: number; unit: string | null }) {
+    if (!selectedMats.find(s => s.id === m.id)) setSelectedMats(prev => [...prev, m]);
+    setMatSearch(""); setMatOpen(false);
   }
+
+  function removeMat(id: string) { setSelectedMats(prev => prev.filter(m => m.id !== id)); }
 
   const cfg = TYPE_CONFIG[type];
 
@@ -117,7 +130,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
           borderRadius: "20px",
           padding: "2.25rem 2.5rem",
           width: "100%",
-          maxWidth: 460,
+          maxWidth: 480,
           boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
           animation: "fadeInUp 0.3s ease",
         }}
@@ -130,99 +143,120 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
           {/* Type selector */}
           <div style={{ display: "flex", gap: "0.6rem" }}>
             {(Object.entries(TYPE_CONFIG) as [EntryType, typeof TYPE_CONFIG[EntryType]][]).map(([key, c]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setType(key)}
-                style={{
-                  flex: 1,
-                  padding: "0.6rem 0.5rem",
-                  borderRadius: "8px",
-                  border: type === key ? `1px solid ${c.color}88` : "1px solid rgba(255,255,255,0.08)",
-                  background: type === key ? c.dim : "transparent",
-                  color: type === key ? c.color : "rgba(245,230,211,0.45)",
-                  fontFamily: "var(--font-cinzel)",
-                  fontSize: "0.58rem",
-                  letterSpacing: "0.12em",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-              >
+              <button key={key} type="button" onClick={() => setType(key)}
+                style={{ flex: 1, padding: "0.6rem 0.5rem", borderRadius: "8px", border: type === key ? `1px solid ${c.color}88` : "1px solid rgba(255,255,255,0.08)", background: type === key ? c.dim : "transparent", color: type === key ? c.color : "rgba(245,230,211,0.45)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
                 {c.icon} {c.label}
               </button>
             ))}
           </div>
 
-          {/* Description with service autocomplete */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", position: "relative" }}>
-            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)" }}>
-              Leírás
-            </label>
-            <div style={{ position: "relative" }}>
-              <input
-                value={description}
-                onChange={e => { setDesc(e.target.value); setSvcOpen(true); }}
-                onFocus={e => { setSvcOpen(true); e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-                onBlur={e => { setTimeout(() => setSvcOpen(false), 150); e.target.style.borderColor = "rgba(255,255,255,0.1)"; e.target.style.boxShadow = "none"; }}
-                placeholder={type === "revenue" ? "pl. Balayage, Hajvágás…" : "pl. L'Oréal festék…"}
-                required
-                style={inputStyle}
-              />
-              {description && (
-                <button type="button" onClick={() => { setDesc(""); setSvcOpen(false); }}
-                  style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>
-              )}
-            </div>
+          {/* ── MATERIAL type: multi-picker ── */}
+          {type === "material" && (
+            <div>
+              <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)", display: "block", marginBottom: "0.5rem" }}>
+                Felhasznált anyagok
+              </label>
 
-            {/* Dropdown */}
-            {svcOpen && filtered.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#120e22", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
-                {filtered.map((item, i) => {
-                  const cat = "categoryName" in item ? item.categoryName : null;
-                  const unit = "unit" in item ? (item as { unit?: string | null }).unit : null;
-                  const showCat = cat && (i === 0 || ("categoryName" in filtered[i - 1]! && (filtered[i - 1] as { categoryName: string }).categoryName !== cat));
-                  return (
-                    <div key={item.id}>
-                      {showCat && (
-                        <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: `${cfg.color}66`, textTransform: "uppercase" }}>
-                          {cat}
-                        </div>
-                      )}
-                      <div
-                        onMouseDown={() => pickService(item.name, item.price)}
-                        style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: "pointer", transition: "background 0.15s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.color}12`; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                      >
-                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{item.name}</span>
-                        {unit && <span style={{ fontSize: "0.72rem", color: `${cfg.color}66` }}>{unit}</span>}
-                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: cfg.color, fontWeight: 700 }}>{fmt(item.price)}</span>
+              {/* Selected materials */}
+              {selectedMats.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginBottom: "0.6rem" }}>
+                  {selectedMats.map(m => (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.55rem 0.85rem", background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: "9px" }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)" }}>{m.name}</span>
+                        {m.unit && <span style={{ marginLeft: "0.4rem", fontSize: "0.75rem", color: "rgba(251,191,36,0.5)" }}>{m.unit}</span>}
                       </div>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.92rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
+                      <button type="button" onClick={() => removeMat(m.id)} style={{ background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem", padding: "0 0.15rem" }}>✕</button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  ))}
+                  {/* Total row */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.85rem 0", borderTop: "1px solid rgba(251,191,36,0.15)", marginTop: "0.1rem" }}>
+                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.5)" }}>ÖSSZESEN</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(matTotal)}</span>
+                  </div>
+                </div>
+              )}
 
-          {/* Amount */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              Összeg (Ft)
-              {!amountManual && amount && <span style={{ color: "rgba(110,231,183,0.7)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>}
-            </label>
-            <input
-              type="number"
-              value={amount}
-              onChange={e => { setAmount(e.target.value); setAmountManual(true); }}
-              placeholder="0"
-              required
-              min="1"
-              style={inputStyle}
-              onFocus={e => { e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-              onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; e.target.style.boxShadow = "none"; }}
-            />
-          </div>
+              {/* Search + dropdown */}
+              <div style={{ position: "relative" }}>
+                <input
+                  value={matSearch}
+                  onChange={e => { setMatSearch(e.target.value); setMatOpen(true); }}
+                  onFocus={() => setMatOpen(true)}
+                  onBlur={() => setTimeout(() => setMatOpen(false), 150)}
+                  placeholder={matCatalog.length === 0 ? "Előbb adj hozzá anyagokat a Szolgáltatások → Anyagtár oldalon" : "Keress: pl. Szőkítő, festék…"}
+                  style={{ ...inputStyle, borderColor: "rgba(251,191,36,0.2)" }}
+                />
+                {matSearch && <button type="button" onClick={() => { setMatSearch(""); setMatOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
+
+                {matOpen && filteredMat.length > 0 && (
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#120e22", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
+                    {filteredMat.map(m => {
+                      const already = !!selectedMats.find(s => s.id === m.id);
+                      return (
+                        <div key={m.id} onMouseDown={() => { if (!already) addMat(m); }}
+                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
+                          onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                          {already && <span style={{ fontSize: "0.7rem", color: "#fbbf24" }}>✓</span>}
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{m.name}</span>
+                          {m.unit && <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.45)" }}>{m.unit}</span>}
+                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Non-material: description + amount ── */}
+          {type !== "material" && (
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", position: "relative" }}>
+                <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)" }}>Leírás</label>
+                <div style={{ position: "relative" }}>
+                  <input value={description} onChange={e => { setDesc(e.target.value); setSvcOpen(true); }}
+                    onFocus={e => { setSvcOpen(true); e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
+                    onBlur={e => { setTimeout(() => setSvcOpen(false), 150); e.target.style.borderColor = "rgba(255,255,255,0.1)"; e.target.style.boxShadow = "none"; }}
+                    placeholder={type === "revenue" ? "pl. Balayage, Hajvágás…" : "pl. Bér – október"}
+                    required style={inputStyle} />
+                  {description && <button type="button" onClick={() => { setDesc(""); setSvcOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
+                </div>
+                {svcOpen && filteredSvc.length > 0 && type === "revenue" && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#120e22", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                    {filteredSvc.map((svc, i) => {
+                      const showCat = i === 0 || filteredSvc[i - 1]?.categoryName !== svc.categoryName;
+                      return (
+                        <div key={svc.id}>
+                          {showCat && <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: `${cfg.color}66`, textTransform: "uppercase" }}>{svc.categoryName}</div>}
+                          <div onMouseDown={() => { setDesc(svc.name); if (!amountManual) setAmount(String(svc.price)); setSvcOpen(false); }}
+                            style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: "pointer", transition: "background 0.15s" }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.color}12`; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{svc.name}</span>
+                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: cfg.color, fontWeight: 700 }}>{fmt(svc.price)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  Összeg (Ft)
+                  {!amountManual && amount && <span style={{ color: "rgba(110,231,183,0.7)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>}
+                </label>
+                <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setAmountManual(true); }} placeholder="0" required min="1" style={inputStyle}
+                  onFocus={e => { e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
+                  onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; e.target.style.boxShadow = "none"; }} />
+              </div>
+            </>
+          )}
 
           {/* Date */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
@@ -250,7 +284,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
             </button>
             <button
               type="submit"
-              disabled={create.isPending}
+              disabled={create.isPending || (type === "material" && selectedMats.length === 0)}
               style={{
                 flex: 2,
                 padding: "0.8rem",
