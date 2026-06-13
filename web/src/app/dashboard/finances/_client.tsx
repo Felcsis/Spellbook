@@ -62,10 +62,24 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
   const [type, setType]         = useState<EntryType>("revenue");
   const [description, setDesc]  = useState("");
   const [amount, setAmount]     = useState("");
+  const [amountManual, setAmountManual] = useState(false);
   const [date, setDate]         = useState(() => {
     const d = new Date(year, month - 1, new Date().getDate());
     return d.toISOString().slice(0, 10);
   });
+  const [svcOpen, setSvcOpen]   = useState(false);
+
+  const { data: categories = [] } = api.services.listCategories.useQuery();
+  const allServices: { id: string; name: string; price: number; categoryName: string }[] = [];
+  for (const c of categories) {
+    for (const s of (c.services ?? [])) {
+      allServices.push({ id: s.id, name: s.name, price: s.price, categoryName: c.name });
+    }
+  }
+
+  const filtered = description.trim()
+    ? allServices.filter(s => s.name.toLowerCase().includes(description.toLowerCase()) || s.categoryName.toLowerCase().includes(description.toLowerCase()))
+    : allServices;
 
   const create = api.finance.create.useMutation({
     onSuccess: async () => {
@@ -77,6 +91,12 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     create.mutate({ type, description, amount: parseFloat(amount), date });
+  }
+
+  function pickService(name: string, price: number) {
+    setDesc(name);
+    if (!amountManual) setAmount(String(price));
+    setSvcOpen(false);
   }
 
   const cfg = TYPE_CONFIG[type];
@@ -130,31 +150,65 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
             ))}
           </div>
 
-          {/* Description */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+          {/* Description with service autocomplete */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", position: "relative" }}>
             <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)" }}>
               Leírás
             </label>
-            <input
-              value={description}
-              onChange={e => setDesc(e.target.value)}
-              placeholder="pl. Hajfesték, L'Oréal..."
-              required
-              style={inputStyle}
-              onFocus={e => { e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
-              onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; e.target.style.boxShadow = "none"; }}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                value={description}
+                onChange={e => { setDesc(e.target.value); setSvcOpen(true); }}
+                onFocus={e => { setSvcOpen(true); e.target.style.borderColor = cfg.color; e.target.style.boxShadow = `0 0 0 3px ${cfg.color}18`; }}
+                onBlur={e => { setTimeout(() => setSvcOpen(false), 150); e.target.style.borderColor = "rgba(255,255,255,0.1)"; e.target.style.boxShadow = "none"; }}
+                placeholder={type === "revenue" ? "pl. Balayage, Hajvágás…" : "pl. L'Oréal festék…"}
+                required
+                style={inputStyle}
+              />
+              {description && (
+                <button type="button" onClick={() => { setDesc(""); setSvcOpen(false); }}
+                  style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(245,230,211,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>
+              )}
+            </div>
+
+            {/* Dropdown */}
+            {svcOpen && filtered.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#120e22", border: "1px solid rgba(201,168,76,0.25)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                {filtered.map((svc, i) => {
+                  const showCat = i === 0 || filtered[i - 1]?.categoryName !== svc.categoryName;
+                  return (
+                    <div key={svc.id}>
+                      {showCat && (
+                        <div style={{ padding: "0.45rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(201,168,76,0.4)", textTransform: "uppercase" }}>
+                          {svc.categoryName}
+                        </div>
+                      )}
+                      <div
+                        onMouseDown={() => pickService(svc.name, svc.price)}
+                        style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: "pointer", transition: "background 0.15s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.color}12`; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                      >
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-cream)", flex: 1 }}>{svc.name}</span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: cfg.color, fontWeight: 700 }}>{new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(svc.price)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Amount */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)" }}>
+            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold-dim)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
               Összeg (Ft)
+              {!amountManual && amount && <span style={{ color: "rgba(110,231,183,0.7)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>}
             </label>
             <input
               type="number"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onChange={e => { setAmount(e.target.value); setAmountManual(true); }}
               placeholder="0"
               required
               min="1"
