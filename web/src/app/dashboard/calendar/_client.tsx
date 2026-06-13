@@ -30,6 +30,12 @@ type FinanceEntry = {
   description: string; amount: number; workDayId: string | null;
   createdBy: { name: string | null };
 };
+type GuestCard = {
+  id: string; date: Date | string; total: number;
+  guest:    { id: string; name: string };
+  worker:   { id: string; name: string | null };
+  services: { name: string; price: number }[];
+};
 type User = { id: string; name: string | null };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -38,6 +44,8 @@ const fmt = (n: number) =>
 const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function weekStart(d: Date) { const r = new Date(d); r.setDate(r.getDate() - ((r.getDay() + 6) % 7)); return r; }
+
+const dim = "rgba(245,230,211,0.45)";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", background: "rgba(255,255,255,0.04)",
@@ -59,9 +67,9 @@ const navBtnStyle: React.CSSProperties = {
 };
 
 // ── Day modal ─────────────────────────────────────────────────────────────────
-function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClose }: {
+function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userColors, onClose }: {
   dateStr: string; workEntries: WorkDay[]; costEntries: FinanceEntry[];
-  users: User[]; userColors: Record<string, string>; onClose: () => void;
+  guestCards: GuestCard[]; users: User[]; userColors: Record<string, string>; onClose: () => void;
 }) {
   const utils  = api.useUtils();
   const inv    = () => void utils.calendar.month.invalidate();
@@ -202,6 +210,30 @@ function DayModal({ dateStr, workEntries, costEntries, users, userColors, onClos
                   <button onClick={() => delW.mutate({ id: e.id })} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "rgba(245,230,211,0.2)"; }}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Guest cards */}
+        {guestCards.length > 0 && (
+          <div style={{ marginBottom: "1rem" }}>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "rgba(232,180,200,0.7)", textTransform: "uppercase", marginBottom: "0.5rem" }}>♦ Vendég kártyák</div>
+            {guestCards.map(card => {
+              const col = userColors[card.worker.id] ?? "#c9a84c";
+              return (
+                <div key={card.id} style={{ padding: "0.65rem 0.9rem", background: "rgba(232,180,200,0.07)", border: "1px solid rgba(232,180,200,0.2)", borderRadius: "10px", marginBottom: "0.35rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#e8b4c8", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: "var(--color-cream)" }}>{card.guest.name}</div>
+                      <div style={{ fontSize: "0.75rem", color: dim, fontStyle: "italic" }}>
+                        {card.worker.name}{card.services.length > 0 && ` · ${card.services.map(s => s.name).join(", ")}`}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(card.total)}</div>
+                  </div>
                 </div>
               );
             })}
@@ -479,8 +511,8 @@ function WorkerChip({ entry, color, expanded, onClick }: { entry: WorkDay; color
 }
 
 // ── Day column ────────────────────────────────────────────────────────────────
-function DayColumn({ date, workEntries, costEntries, userColors, isToday, onOpen, compact = false }: {
-  date: Date; workEntries: WorkDay[]; costEntries: FinanceEntry[];
+function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors, isToday, onOpen, compact = false }: {
+  date: Date; workEntries: WorkDay[]; costEntries: FinanceEntry[]; guestCards?: GuestCard[];
   userColors: Record<string, string>; isToday: boolean; onOpen: (ds: string) => void; compact?: boolean;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -528,6 +560,13 @@ function DayColumn({ date, workEntries, costEntries, userColors, isToday, onOpen
             </div>
           );
         })}
+        {guestCards.map(c => (
+          <div key={c.id} style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: "rgba(232,180,200,0.12)", border: "1px solid rgba(232,180,200,0.28)", marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#e8b4c8", flexShrink: 0 }} />
+            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: "#e8b4c8", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>♦ {c.guest.name}</span>
+            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.66rem", color: "#e8b4c8", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
+          </div>
+        ))}
         <div onClick={() => onOpen(dateStr)}
           style={{ marginTop: "auto", padding: "0.22rem", borderRadius: "6px", border: "1px dashed rgba(201,168,76,0.15)", color: "rgba(201,168,76,0.28)", fontSize: "0.72rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", transition: "all 0.2s" }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.5)"; (e.currentTarget as HTMLElement).style.color = "var(--color-gold)"; }}
@@ -540,9 +579,10 @@ function DayColumn({ date, workEntries, costEntries, userColors, isToday, onOpen
 }
 
 // ── Month view ────────────────────────────────────────────────────────────────
-function MonthView({ year, month, byDate, byCostDate, userColors, today, onOpen }: {
+function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColors, today, onOpen }: {
   year: number; month: number;
   byDate: Record<string, WorkDay[]>; byCostDate: Record<string, FinanceEntry[]>;
+  byGuestCardDate: Record<string, GuestCard[]>;
   userColors: Record<string, string>; today: string; onOpen: (d: string) => void;
 }) {
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
@@ -563,6 +603,7 @@ function MonthView({ year, month, byDate, byCostDate, userColors, today, onOpen 
           const ds       = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
           const wEntries = byDate[ds] ?? [];
           const cEntries = byCostDate[ds] ?? [];
+          const gCards   = byGuestCardDate[ds] ?? [];
           const revenue  = wEntries.reduce((s, e) => s + e.earnings, 0);
           const costs    = cEntries.reduce((s, e) => s + e.amount, 0);
           const profit   = revenue - costs;
@@ -599,6 +640,15 @@ function MonthView({ year, month, byDate, byCostDate, userColors, today, onOpen 
                 return <div key={e.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: `${col}12`, border: `1px solid ${col}22`, marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><div style={{ width: 4, height: 4, borderRadius: "50%", background: col, flexShrink: 0 }} /><span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.68rem", color: col, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</span><span style={{ fontSize: "0.62rem", color: col, fontWeight: 700 }}>−{Math.round(e.amount / 1000)}k</span></div>;
               })}
 
+              {/* Guest card chips */}
+              {gCards.map(c => (
+                <div key={c.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: "rgba(232,180,200,0.12)", border: "1px solid rgba(232,180,200,0.28)", marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#e8b4c8", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.68rem", color: "#e8b4c8", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.guest.name}</span>
+                  <span style={{ fontSize: "0.62rem", color: "#e8b4c8", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
+                </div>
+              ))}
+
               {/* Add */}
               <div onClick={() => onOpen(ds)} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", border: "1px dashed rgba(201,168,76,0.13)", color: "rgba(201,168,76,0.22)", fontSize: "0.6rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", transition: "all 0.18s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-gold)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.45)"; }}
@@ -627,18 +677,20 @@ export default function CalendarClient() {
   const qMonth = anchor.getMonth() + 1;
 
   const { data: users = [] }                    = api.calendar.users.useQuery();
-  const { data: monthData = { workDays: [], financeEntries: [] } } =
+  const { data: monthData = { workDays: [], financeEntries: [], guestCards: [] } } =
     api.calendar.month.useQuery({ year: qYear, month: qMonth });
 
-  const { workDays, financeEntries } = monthData;
+  const { workDays, financeEntries, guestCards } = monthData;
 
   const userColors: Record<string, string> = {};
   users.forEach((u, i) => { userColors[u.id] = USER_COLORS[i % USER_COLORS.length]!; });
 
-  const byDate: Record<string, WorkDay[]>       = {};
-  const byCostDate: Record<string, FinanceEntry[]> = {};
+  const byDate: Record<string, WorkDay[]>          = {};
+  const byCostDate: Record<string, FinanceEntry[]>  = {};
+  const byGuestCardDate: Record<string, GuestCard[]> = {};
   workDays.forEach(w => { const k = toDateStr(new Date(w.date)); (byDate[k] ??= []).push(w as WorkDay); });
   financeEntries.forEach(e => { const k = toDateStr(new Date(e.date)); (byCostDate[k] ??= []).push(e as FinanceEntry); });
+  guestCards.forEach(c => { const k = toDateStr(new Date(c.date)); (byGuestCardDate[k] ??= []).push(c as GuestCard); });
 
   const todayStr = toDateStr(now);
 
@@ -684,14 +736,15 @@ export default function CalendarClient() {
     { key: "3day",  label: "3 napos" }, { key: "day", label: "Napi" },
   ];
 
-  const modalWorkEntries = modalDate ? (byDate[modalDate] ?? []) : [];
-  const modalCostEntries = modalDate ? (byCostDate[modalDate] ?? []) : [];
+  const modalWorkEntries  = modalDate ? (byDate[modalDate] ?? []) : [];
+  const modalCostEntries  = modalDate ? (byCostDate[modalDate] ?? []) : [];
+  const modalGuestCards   = modalDate ? (byGuestCardDate[modalDate] ?? []) : [];
 
   return (
     <div style={{ animation: "fadeInUp 0.5s ease" }}>
       {modalDate && (
         <DayModal dateStr={modalDate} workEntries={modalWorkEntries} costEntries={modalCostEntries}
-          users={users} userColors={userColors} onClose={() => setModalDate(null)} />
+          guestCards={modalGuestCards} users={users} userColors={userColors} onClose={() => setModalDate(null)} />
       )}
 
       <div style={{ marginBottom: "1.5rem" }}>
@@ -745,7 +798,7 @@ export default function CalendarClient() {
       {/* Calendar body */}
       {view === "month" && (
         <MonthView year={qYear} month={qMonth} byDate={byDate} byCostDate={byCostDate}
-          userColors={userColors} today={todayStr} onOpen={setModalDate} />
+          byGuestCardDate={byGuestCardDate} userColors={userColors} today={todayStr} onOpen={setModalDate} />
       )}
       {(view === "week" || view === "3day" || view === "day") && (
         <div style={{ display: "flex", gap: "0.6rem" }}>
@@ -753,6 +806,7 @@ export default function CalendarClient() {
             <DayColumn key={toDateStr(date)} date={date}
               workEntries={byDate[toDateStr(date)] ?? []}
               costEntries={byCostDate[toDateStr(date)] ?? []}
+              guestCards={byGuestCardDate[toDateStr(date)] ?? []}
               userColors={userColors} isToday={toDateStr(date) === todayStr}
               onOpen={setModalDate} compact={view === "week"} />
           ))}

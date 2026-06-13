@@ -33,7 +33,7 @@ export const calendarRouter = createTRPCRouter({
       const to      = new Date(input.year, input.month, 1);
       const isAdmin = ctx.session.user.role === "admin";
 
-      const [workDays, financeEntries] = await Promise.all([
+      const [workDays, financeEntries, guestCards] = await Promise.all([
         ctx.db.workDay.findMany({
           where: {
             date: { gte: from, lt: to },
@@ -54,8 +54,20 @@ export const calendarRouter = createTRPCRouter({
           include: { createdBy: { select: { id: true, name: true } } },
           orderBy: { date: "asc" },
         }),
+        ctx.db.guestCard.findMany({
+          where: {
+            date: { gte: from, lt: to },
+            ...(!isAdmin && { workerId: ctx.session.user.id }),
+          },
+          include: {
+            guest:    { select: { id: true, name: true } },
+            worker:   { select: { id: true, name: true } },
+            services: { select: { name: true, price: true } },
+          },
+          orderBy: { date: "asc" },
+        }),
       ]);
-      return { workDays, financeEntries };
+      return { workDays, financeEntries, guestCards };
     }),
 
   upsert: protectedProcedure

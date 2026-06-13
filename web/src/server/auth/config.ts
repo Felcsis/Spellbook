@@ -42,10 +42,18 @@ export const authConfig = {
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
   callbacks: {
-    jwt: ({ token, user }) => {
+    jwt: async ({ token, user }) => {
       if (user) {
         token.sub  = user.id;
         token.role = (user as { role?: string }).role ?? "staff";
+      }
+      // Régi tokenekhez: lekérjük a role-t az adatbázisból
+      if (!token.role && token.sub) {
+        const dbUser = await db.user.findUnique({
+          where:  { id: token.sub },
+          select: { role: true },
+        });
+        token.role = dbUser?.role ?? "staff";
       }
       return token;
     },

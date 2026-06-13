@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 const NAV = [
   { key: "dashboard",    icon: "◈", label: "Főoldal",         href: "/dashboard" },
   { key: "appointments", icon: "✦", label: "Időpontok",       href: null },
-  { key: "services",     icon: "✂", label: "Szolgáltatások",  href: null },
+  { key: "services",     icon: "✂", label: "Szolgáltatások",  href: "/dashboard/services" },
   { key: "clients",      icon: "♦", label: "Vendégek",        href: null },
   { key: "finances",     icon: "✧", label: "Pénzügyek",       href: "/dashboard/finances" },
   { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
@@ -231,7 +231,7 @@ export default function DashboardClient({ user }: { user: { name?: string | null
               {CARDS.map(({ icon, title, desc, key }) => (
                 <button
                   key={key}
-                  onClick={() => (key === "finances" || key === "calendar") ? router.push(`/dashboard/${key}`) : setActive(key as NavKey)}
+                  onClick={() => (key === "finances" || key === "calendar" || key === "services") ? router.push(`/dashboard/${key}`) : setActive(key as NavKey)}
                   style={{
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(201,168,76,0.22)",
