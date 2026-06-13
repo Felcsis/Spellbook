@@ -726,7 +726,7 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                       </div>
                     )}
                     <div style={{ textAlign: "center", borderLeft: "1px solid var(--border)", paddingLeft: "1.25rem" }}>
-                      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: myProfit >= 0 ? "#7a9e8c" : "#c47878", fontWeight: 700 }}>🪙 {fmt(myProfit)}</div>
+                      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: myProfit >= 0 ? "#7a9e8c" : "#c47878", fontWeight: 700 }}><span style={{ color: "#c9a060", textShadow: "0 0 6px #c9a06066", marginRight: "0.3rem", fontSize: "1.1em" }}>●</span>{fmt(myProfit)}</div>
                       <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{st.isOwner ? "profit" : "marad a szalonnak"}</div>
                     </div>
                   </div>
