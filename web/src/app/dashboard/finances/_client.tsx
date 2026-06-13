@@ -6,9 +6,9 @@ import { api } from "~/trpc/react";
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
 const TYPE_CONFIG = {
-  revenue:  { label: "Bevétel",       color: "#6ee7b7", dim: "rgba(110,231,183,0.15)", icon: "◈" },
-  material: { label: "Anyagköltség",  color: "#fbbf24", dim: "rgba(251,191,36,0.15)",  icon: "✦" },
-  wage:     { label: "Bér",           color: "#a78bfa", dim: "rgba(167,139,250,0.15)", icon: "♦" },
+  revenue:  { label: "Bevétel",       color: "#7a9e8c", dim: "rgba(122,158,140,0.15)", icon: "◈" },
+  material: { label: "Anyagköltség",  color: "#c49060", dim: "rgba(196,144,96,0.15)",  icon: "✦" },
+  wage:     { label: "Bér",           color: "#9278b0", dim: "rgba(146,120,176,0.15)", icon: "♦" },
 } as const;
 
 type EntryType = keyof typeof TYPE_CONFIG;
@@ -186,15 +186,15 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--text-soft)" }}>×</span>
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(251,191,36,0.7)" }}>{fmt(m.unitPrice)}</span>
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "rgba(44,36,32,0.35)" }}>=</span>
-                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#fbbf24", fontWeight: 700, marginLeft: "auto" }}>{fmt(total)}</span>
+                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#c49060", fontWeight: 700, marginLeft: "auto" }}>{fmt(total)}</span>
                         </div>
                       </div>
                     );
                   })}
                   {/* Total row */}
-                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.6rem", padding: "0.3rem 0.5rem 0", borderTop: "1px solid rgba(251,191,36,0.15)" }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.6rem", padding: "0.3rem 0.5rem 0", borderTop: "1px solid rgba(196,144,96,0.15)" }}>
                     <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.5)" }}>ÖSSZESEN</span>
-                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(matTotal)}</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", color: "#c49060", fontWeight: 700 }}>{fmt(matTotal)}</span>
                   </div>
                 </div>
               )}
@@ -227,9 +227,9 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                            {already && <span style={{ fontSize: "0.7rem", color: "#fbbf24" }}>✓</span>}
+                            {already && <span style={{ fontSize: "0.7rem", color: "#c49060" }}>✓</span>}
                             <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
+                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#c49060", fontWeight: 700 }}>{fmt(m.price)}</span>
                           </div>
                         </div>
                       );
@@ -424,14 +424,14 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
 
       {/* Summary cards */}
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
-        <SummaryCard label="Bevétel"      value={revenue}  color="#6ee7b7" icon="◈" />
-        <SummaryCard label="Anyagköltség" value={material} color="#fbbf24" icon="✦" />
-        {isAdmin && <SummaryCard label="Bérek" value={wage} color="#a78bfa" icon="♦" />}
+        <SummaryCard label="Bevétel"      value={revenue}  color="#7a9e8c" icon="◈" />
+        <SummaryCard label="Anyagköltség" value={material} color="#c49060" icon="✦" />
+        {isAdmin && <SummaryCard label="Bérek" value={wage} color="#9278b0" icon="♦" />}
         {isAdmin && (
           <SummaryCard
             label="Nyereség"
             value={profit}
-            color={profit >= 0 ? "#6ee7b7" : "#f87171"}
+            color={profit >= 0 ? "#7a9e8c" : "#c47878"}
             icon="✧"
             sub={revenue > 0 ? `Árrés: ${Math.round((profit / revenue) * 100)}%` : undefined}
           />
@@ -511,7 +511,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
                         borderRadius: "6px",
                         transition: "color 0.2s, background 0.2s",
                       }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = "none"; }}
                     >
                       ✕
