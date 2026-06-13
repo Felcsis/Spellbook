@@ -544,6 +544,16 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
   );
 }
 
+// ── User signature colors (matches login page) ────────────────────────────────
+const USER_COLORS: Record<string, string> = {
+  "Felicia": "#c9906a",
+  "Gitta":   "#9878b8",
+  "Lili":    "#e8a0b8",
+};
+function userColor(name: string | null | undefined) {
+  return USER_COLORS[name ?? ""] ?? "var(--color-teal)";
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmin?: boolean; userId?: string }) {
   const now = new Date();
@@ -581,6 +591,21 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
 
   function prevMonth() { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); }
   function nextMonth() { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }
+
+  // Per-staff breakdown for admin
+  type StaffStat = { name: string; isOwner: boolean; revenue: number; material: number; wage: number };
+  const staffStats: Record<string, StaffStat> = {};
+  if (isAdmin) {
+    entries.forEach(e => {
+      const by = e.createdBy as { id: string; name: string } | undefined;
+      const name = by?.name ?? "?";
+      const isOwner = by?.id === userId;
+      if (!staffStats[name]) staffStats[name] = { name, isOwner, revenue: 0, material: 0, wage: 0 };
+      if (e.type === "revenue")  staffStats[name]!.revenue  += e.amount;
+      if (e.type === "material") staffStats[name]!.material += e.amount;
+      if (e.type === "wage")     staffStats[name]!.wage     += e.amount;
+    });
+  }
 
   // Staff only sees their revenue entries
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue");
@@ -669,6 +694,49 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
         )}
       </div>
 
+      {/* Per-staff breakdown — admin only, only when showing all */}
+      {isAdmin && !filterUserId && Object.keys(staffStats).length > 0 && (
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.75rem" }}>◈ Személyenkénti bontás</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {Object.values(staffStats).sort((a, b) => b.revenue - a.revenue).map(st => {
+              const staffWage = st.isOwner ? 0 : Math.round(st.revenue * STAFF_RATE);
+              const myProfit  = st.revenue - st.material - staffWage;
+              const uC        = userColor(st.name);
+              return (
+                <div key={st.name} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1.1rem", background: "var(--bg-panel)", border: `1px solid ${uC}33`, borderLeft: `4px solid ${uC}`, borderRadius: 12, flexWrap: "wrap" }}>
+                  <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.1rem", color: uC, minWidth: 80, fontWeight: 700 }}>
+                    {st.name}
+                  </div>
+                  <div style={{ flex: 1, display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(st.revenue)}</div>
+                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>bevétel</div>
+                    </div>
+                    {st.material > 0 && (
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#c49060", fontWeight: 700 }}>−{fmt(st.material)}</div>
+                        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>anyag</div>
+                      </div>
+                    )}
+                    {!st.isOwner && (
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: uC, fontWeight: 700 }}>{fmt(staffWage)}</div>
+                        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>bér (60%)</div>
+                      </div>
+                    )}
+                    <div style={{ textAlign: "center", borderLeft: "1px solid var(--border)", paddingLeft: "1.25rem" }}>
+                      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: myProfit >= 0 ? "#7a9e8c" : "#c47878", fontWeight: 700 }}>🪙 {fmt(myProfit)}</div>
+                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.45rem", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{st.isOwner ? "profit" : "marad a szalonnak"}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Entries by day */}
       {isLoading ? (
         <div style={{ textAlign: "center", color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", padding: "3rem" }}>Betöltés...</div>
@@ -702,8 +770,10 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                     const cfg        = TYPE_CONFIG[entry.type as EntryType];
                     const card       = (entry as { guestCard?: { guest: { name: string }; services: { name: string; price: number; duration: number; gender?: string | null }[]; materials: { name: string; brand?: string | null; colorCode?: string | null; grams: number }[] } }).guestCard;
                     const isExpanded = expandedId === entry.id;
+                    const creatorName = entry.createdBy?.name ?? entry.workDay?.user?.name;
+                    const uCol = !filterUserId ? userColor(creatorName) : cfg.color;
                     return (
-                      <div key={entry.id} style={{ background: "var(--bg-panel)", border: `1px solid ${isExpanded ? cfg.color + "44" : cfg.color + "22"}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
+                      <div key={entry.id} style={{ background: "var(--bg-panel)", border: `1px solid ${isExpanded ? cfg.color + "44" : cfg.color + "22"}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s", borderLeft: !filterUserId ? `3px solid ${uCol}` : undefined }}>
                         {/* Main row */}
                         <div
                           onClick={() => setExpandedId(isExpanded ? null : entry.id)}
@@ -716,9 +786,9 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                               {card && <span style={{ color: "#a78bfa", marginRight: "0.4rem", fontSize: "0.75rem" }}>♦</span>}
                               {card ? card.guest.name : entry.description}
                             </div>
-                            {entry.createdBy?.name && (
-                              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)", fontStyle: "italic" }}>
-                                {entry.createdBy.name}
+                            {creatorName && (
+                              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: !filterUserId ? uCol : "var(--text-soft)", fontStyle: "italic", fontWeight: !filterUserId ? 600 : 400 }}>
+                                {creatorName}
                               </div>
                             )}
                           </div>
