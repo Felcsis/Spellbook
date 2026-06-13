@@ -20,7 +20,7 @@ const inputStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.18em",
-  textTransform: "uppercase", color: "rgba(74,124,126,0.6)", display: "block", marginBottom: "0.3rem",
+  textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.3rem",
 };
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
           {card.services.length > 0 && <span style={{ color: dim }}> · {card.services.map(s => s.name).join(", ")}</span>}
         </div>
         {card.materials.length > 0 && (
-          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "rgba(251,191,36,0.5)", padding: "0.15rem 0.5rem", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 4 }}>
+          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "rgba(251,191,36,0.5)", padding: "0.15rem 0.5rem", border: "1px solid var(--border)", borderRadius: 4 }}>
             ✦ RECEPT
           </span>
         )}
@@ -79,11 +79,11 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
 
           {card.services.length > 0 && (
             <div>
-              <div style={{ ...labelStyle, color: "rgba(110,231,183,0.5)", marginBottom: "0.4rem" }}>◈ Elvégzett szolgáltatások</div>
+              <div style={{ ...labelStyle, color: "var(--text-muted)", marginBottom: "0.4rem" }}>◈ Elvégzett szolgáltatások</div>
               {card.services.map(s => (
                 <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid var(--bg-panel)" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream }}>{s.name}</span>
-                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(s.price)}</span>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price)}</span>
                 </div>
               ))}
             </div>
@@ -91,7 +91,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
 
           {card.materials.length > 0 && (
             <div>
-              <div style={{ ...labelStyle, color: "rgba(251,191,36,0.55)", marginBottom: "0.4rem" }}>✦ Szín recept</div>
+              <div style={{ ...labelStyle, color: "var(--text-muted)", marginBottom: "0.4rem" }}>✦ Szín recept</div>
               <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 0.9fr 0.7fr 0.9fr", gap: "0.25rem 0.6rem", alignItems: "center" }}>
                 {["Anyag","Márka","Kód","Gramm","Ár"].map(h => (
                   <div key={h} style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.12em", color: "var(--border)", textTransform: "uppercase", paddingBottom: "0.2rem", borderBottom: "1px solid var(--bg-highlight)" }}>{h}</div>
@@ -163,7 +163,7 @@ function GuestRow({ guest, onDeleteCard, onNewCard }: {
         <button type="button"
           onClick={e => { e.stopPropagation(); onNewCard(guest.id, guest.name); }}
           style={{ background: "var(--bg-highlight)", border: "1px solid var(--border)", borderRadius: 7, color: gold, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", padding: "0.3rem 0.65rem", flexShrink: 0, transition: "all 0.2s" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.14)"; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-active)"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}>
           ＋ Kártya
         </button>
@@ -280,7 +280,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
     });
   }
 
-  const workerColors = ["#c9a84c","#a78bfa","#e8b4c8"];
+  const workerColors = ["var(--color-teal)","var(--color-teal)","var(--color-teal)"];
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto"
@@ -366,10 +366,10 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
               {selSvcs.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
                   {selSvcs.map((s, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.28rem 0.65rem", background: "rgba(110,231,183,0.1)", border: "1px solid rgba(110,231,183,0.3)", borderRadius: 7 }}>
-                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#6ee7b7" }}>{s.name}</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "#6ee7b7", opacity: 0.7, fontWeight: 700 }}>{fmt(s.price)}</span>
-                      <button type="button" onClick={() => setSelSvcs(prev => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "rgba(110,231,183,0.5)", cursor: "pointer", fontSize: "0.75rem" }}>✕</button>
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.28rem 0.65rem", background: "var(--bg-active)", border: "1px solid var(--border)", borderRadius: 7 }}>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)" }}>{s.name}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "var(--color-teal)", opacity: 0.7, fontWeight: 700 }}>{fmt(s.price)}</span>
+                      <button type="button" onClick={() => setSelSvcs(prev => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.75rem" }}>✕</button>
                     </div>
                   ))}
                 </div>
@@ -388,11 +388,11 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                           {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "rgba(110,231,183,0.4)", textTransform: "uppercase" }}>{s.categoryName}</div>}
                           <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { name: s.name, price: s.price }]); setSvcSearch(""); setSvcOpen(false); } }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
-                            onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(110,231,183,0.08)"; }}
+                            onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                            {already && <span style={{ color: "#6ee7b7", fontSize: "0.65rem" }}>✓</span>}
+                            {already && <span style={{ color: "var(--color-teal)", fontSize: "0.65rem" }}>✓</span>}
                             <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: cream, flex: 1 }}>{s.name}</span>
-                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(s.price)}</span>
+                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price)}</span>
                           </div>
                         </div>
                       );
@@ -414,7 +414,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {matRows.map((row, i) => (
-                  <div key={i} style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 10, padding: "0.7rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                  <div key={i} style={{ background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.7rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <div style={{ flex: 2, position: "relative" }}>
                         <input value={row.name}
@@ -422,14 +422,14 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                           onFocus={() => { setActiveMat(i); setMatSearch(row.name); setMatOpen(true); }}
                           onBlur={() => setTimeout(() => setMatOpen(false), 150)}
                           placeholder="Anyag neve…"
-                          style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "rgba(251,191,36,0.2)" }} />
+                          style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "var(--border)" }} />
                         {matOpen && activeMat === i && filtMat.length > 0 && (
                           <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                             {filtMat.map(m => (
                               <div key={m.name}
                                 onMouseDown={() => { updateMat(i, "name", m.name); updateMat(i, "unitPrice", m.unitPrice); setMatSearch(""); setMatOpen(false); }}
                                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.48rem 0.85rem", cursor: "pointer", transition: "background 0.12s" }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-active)"; }}
                                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                                 <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream, flex: 1 }}>{m.name}</span>
                                 <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#fbbf24", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
@@ -464,7 +464,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
             {/* Grand total + submit */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-                {svcTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "#6ee7b7" }}>Szolgáltatás: {fmt(svcTotal)}</span>}
+                {svcTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--color-teal)" }}>Szolgáltatás: {fmt(svcTotal)}</span>}
                 {matTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "#fbbf24" }}>Anyag: {fmt(matTotal)}</span>}
               </div>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.14em", color: dim }}>
