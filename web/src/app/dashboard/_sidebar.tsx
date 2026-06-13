@@ -65,7 +65,7 @@ export default function SidebarLayout({
         className="relative z-10 flex flex-col"
         style={{
           width: 260, flexShrink: 0,
-          background: "rgba(255,252,247,0.88)",
+          background: "rgba(220,210,195,0.92)",
           borderRight: "1px solid rgba(74,124,126,0.18)",
           backdropFilter: "blur(20px)",
           padding: "2rem 1.25rem",

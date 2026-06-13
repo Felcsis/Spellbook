@@ -45,7 +45,7 @@ export default function DashboardClient({ name }: { name?: string | null }) {
             key={title}
             onClick={() => href && router.push(href)}
             style={{
-              background: "rgba(255,252,247,0.75)",
+              background: "rgba(215,205,190,0.75)",
               border: "1px solid rgba(74,124,126,0.2)",
               borderRadius: "16px",
               padding: "1.75rem 1.5rem",

@@ -48,7 +48,7 @@ function weekStart(d: Date) { const r = new Date(d); r.setDate(r.getDate() - ((r
 const dim = "rgba(44,36,32,0.45)";
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", background: "rgba(255,252,247,0.7)",
+  width: "100%", background: "rgba(215,205,190,0.7)",
   border: "1px solid rgba(74,124,126,0.15)", borderRadius: "10px",
   padding: "0.7rem 0.9rem", color: "#2c2420",
   fontFamily: "var(--font-cormorant)", fontSize: "1rem",
@@ -60,7 +60,7 @@ const labelStyle: React.CSSProperties = {
   color: "rgba(74,124,126,0.6)", marginBottom: "0.4rem",
 };
 const navBtnStyle: React.CSSProperties = {
-  background: "rgba(255,252,247,0.7)", border: "1px solid rgba(74,124,126,0.15)",
+  background: "rgba(215,205,190,0.7)", border: "1px solid rgba(74,124,126,0.15)",
   borderRadius: "8px", color: "#4a7c7e", fontSize: "1.2rem",
   width: 36, height: 36, cursor: "pointer",
   display: "flex", alignItems: "center", justifyContent: "center",
@@ -162,7 +162,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 pt-12"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", animation: "fadeIn 0.2s ease" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#f5f0e8", border: "1px solid rgba(74,124,126,0.2)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
+      <div style={{ background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.2)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
@@ -175,7 +175,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
 
         {/* Daily summary bar */}
         {(dayRevenue > 0 || dayCosts > 0) && (
-          <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "rgba(255,252,247,0.65)", borderRadius: "12px", border: "1px solid rgba(74,124,126,0.1)" }}>
+          <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "rgba(212,202,187,0.65)", borderRadius: "12px", border: "1px solid rgba(74,124,126,0.1)" }}>
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#6ee7b7aa", marginBottom: "0.2rem" }}>BEVÉTEL</div>
               <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(dayRevenue)}</div>
@@ -267,7 +267,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
         <div style={{ borderTop: "1px solid rgba(74,124,126,0.1)", margin: "1rem 0" }} />
 
         {/* Tab switcher */}
-        <div style={{ display: "flex", background: "rgba(255,252,247,0.65)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "10px", padding: "3px", gap: "3px", marginBottom: "1.1rem" }}>
+        <div style={{ display: "flex", background: "rgba(212,202,187,0.65)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "10px", padding: "3px", gap: "3px", marginBottom: "1.1rem" }}>
           {([["work", "◈ Munkadíj"], ["cost", "✦ Kiadás"]] as const).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setTab(key)}
               style={{ flex: 1, padding: "0.5rem", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.12em", background: tab === key ? "rgba(74,124,126,0.12)" : "transparent", color: tab === key ? "#4a7c7e" : "rgba(44,36,32,0.4)", transition: "all 0.2s" }}>
@@ -348,7 +348,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
 
               {/* Dropdown list */}
               {svcOpen && filteredSvcs.length > 0 && (
-                <div style={{ position: "absolute", left: 0, right: 0, zIndex: 100, background: "#f5f0e8", border: "1px solid rgba(74,124,126,0.18)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                <div style={{ position: "absolute", left: 0, right: 0, zIndex: 100, background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.18)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
                   {filteredSvcs.map((svc, i) => {
                     const already = selectedSvc.has(svc.id);
                     const col = userColors[userId] ?? "#c9a84c";
@@ -362,9 +362,9 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                         )}
                         <div
                           onMouseDown={() => { if (!already) addService(svc.id); }}
-                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: already ? "default" : "pointer", background: already ? "rgba(255,252,247,0.5)" : "transparent", transition: "background 0.15s", opacity: already ? 0.45 : 1 }}
+                          style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.55rem 0.9rem", cursor: already ? "default" : "pointer", background: already ? "rgba(208,198,182,0.5)" : "transparent", transition: "background 0.15s", opacity: already ? 0.45 : 1 }}
                           onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = `${col}12`; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(255,252,247,0.5)" : "transparent"; }}>
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(208,198,182,0.5)" : "transparent"; }}>
                           {already && <span style={{ fontSize: "0.65rem", color: col }}>✓</span>}
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "rgba(44,36,32,0.4)" : "#2c2420", flex: 1 }}>{svc.name}</span>
                           <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: col, fontWeight: 700 }}>{fmt(svc.price)}</span>
@@ -411,7 +411,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                       style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(44,36,32,0.3)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
                   )}
                   {matOpen && filteredMat.length > 0 && (
-                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#f5f0e8", border: "1px solid rgba(74,124,126,0.18)", borderRadius: "10px", marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.18)", borderRadius: "10px", marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                       {filteredMat.map(m => (
                         <div key={m.id}
                           onMouseDown={() => {
@@ -526,9 +526,9 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
     <div style={{ flex: 1, minWidth: 0, background: isToday ? "rgba(74,124,126,0.04)" : "transparent", border: isToday ? "1px solid rgba(74,124,126,0.18)" : "1px solid rgba(74,124,126,0.08)", borderRadius: "14px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Header */}
       <div onClick={() => onOpen(dateStr)}
-        style={{ padding: compact ? "0.55rem 0.7rem" : "0.85rem 1rem", borderBottom: "1px solid rgba(74,124,126,0.09)", cursor: "pointer", background: isToday ? "rgba(74,124,126,0.09)" : "rgba(255,252,247,0.5)", transition: "background 0.2s" }}
+        style={{ padding: compact ? "0.55rem 0.7rem" : "0.85rem 1rem", borderBottom: "1px solid rgba(74,124,126,0.09)", cursor: "pointer", background: isToday ? "rgba(74,124,126,0.09)" : "rgba(208,198,182,0.5)", transition: "background 0.2s" }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(74,124,126,0.08)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "rgba(74,124,126,0.09)" : "rgba(255,252,247,0.5)"; }}>
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "rgba(74,124,126,0.09)" : "rgba(208,198,182,0.5)"; }}>
         <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.1em", color: isToday ? "#4a7c7e" : "rgba(74,124,126,0.6)", textTransform: "uppercase" }}>{DAYS_L[dow]}</div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
           <div style={{ fontFamily: "var(--font-playfair)", fontSize: compact ? "1.05rem" : "1.35rem", color: isToday ? "#4a7c7e" : "#2c2420", lineHeight: 1.1 }}>
@@ -593,7 +593,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div style={{ background: "rgba(255,252,247,0.5)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "20px", overflow: "hidden" }}>
+    <div style={{ background: "rgba(208,198,182,0.5)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "20px", overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid rgba(74,124,126,0.09)" }}>
         {DAYS_S.map(d => <div key={d} style={{ padding: "0.6rem 0", textAlign: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.15em", color: "rgba(74,124,126,0.6)", textTransform: "uppercase" }}>{d}</div>)}
       </div>
@@ -755,7 +755,7 @@ export default function CalendarClient() {
       {/* Toolbar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
         {/* View switcher */}
-        <div style={{ display: "flex", background: "rgba(255,252,247,0.7)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "10px", padding: "3px", gap: "3px" }}>
+        <div style={{ display: "flex", background: "rgba(215,205,190,0.7)", border: "1px solid rgba(74,124,126,0.12)", borderRadius: "10px", padding: "3px", gap: "3px" }}>
           {VIEW_BTNS.map(({ key, label }) => (
             <button key={key} onClick={() => setView(key)}
               style={{ padding: "0.42rem 0.85rem", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.1em", background: view === key ? "rgba(74,124,126,0.15)" : "transparent", color: view === key ? "#4a7c7e" : "rgba(44,36,32,0.45)", transition: "all 0.2s" }}>

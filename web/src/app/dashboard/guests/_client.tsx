@@ -13,7 +13,7 @@ const dim   = "rgba(44,36,32,0.45)";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "0.6rem 0.85rem", borderRadius: 9,
-  background: "rgba(255,252,247,0.7)", border: "1px solid rgba(74,124,126,0.18)",
+  background: "rgba(215,205,190,0.7)", border: "1px solid rgba(74,124,126,0.18)",
   color: cream, fontFamily: "var(--font-cormorant)", fontSize: "1rem",
   outline: "none", boxSizing: "border-box",
 };
@@ -54,7 +54,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
   const date = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
 
   return (
-    <div style={{ background: "rgba(255,252,247,0.5)", border: "1px solid rgba(74,124,126,0.1)", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}
+    <div style={{ background: "rgba(208,198,182,0.5)", border: "1px solid rgba(74,124,126,0.1)", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.25)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,124,126,0.1)"; }}>
 
@@ -81,7 +81,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
             <div>
               <div style={{ ...labelStyle, color: "rgba(110,231,183,0.5)", marginBottom: "0.4rem" }}>◈ Elvégzett szolgáltatások</div>
               {card.services.map(s => (
-                <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid rgba(255,252,247,0.65)" }}>
+                <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderBottom: "1px solid rgba(212,202,187,0.65)" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream }}>{s.name}</span>
                   <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(s.price)}</span>
                 </div>
@@ -110,7 +110,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
           )}
 
           {card.notes && (
-            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: dim, fontStyle: "italic", padding: "0.4rem 0.7rem", background: "rgba(255,252,247,0.5)", borderRadius: 7, borderLeft: "2px solid rgba(74,124,126,0.18)" }}>
+            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: dim, fontStyle: "italic", padding: "0.4rem 0.7rem", background: "rgba(208,198,182,0.5)", borderRadius: 7, borderLeft: "2px solid rgba(74,124,126,0.18)" }}>
               {card.notes}
             </div>
           )}
@@ -287,7 +287,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "3rem 1rem" }}>
-        <div style={{ background: "#f5f0e8", border: "1px solid rgba(74,124,126,0.2)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
+        <div style={{ background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.2)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
           onClick={e => e.stopPropagation()}>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.75rem" }}>
@@ -311,7 +311,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                     style={{ ...inputStyle, borderColor: guestId ? "rgba(74,124,126,0.4)" : "rgba(74,124,126,0.18)", opacity: prefillGuestId ? 0.75 : 1 }} />
                   {guestId && <div style={{ position: "absolute", right: "0.85rem", top: "50%", transform: "translateY(-50%)", color: gold, fontSize: "0.8rem" }}>✓</div>}
                   {guestOpen && !prefillGuestId && (
-                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "#f5f0e8", border: "1px solid rgba(74,124,126,0.18)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                    <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "#e6ddd0", border: "1px solid rgba(74,124,126,0.18)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                       {filtGuests.map(g => (
                         <div key={g.id} onMouseDown={() => { setGuestId(g.id); setGuestSearch(g.name); setGuestOpen(false); }}
                           style={{ padding: "0.55rem 0.9rem", cursor: "pointer", fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: cream, transition: "background 0.15s" }}
@@ -379,7 +379,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                   onFocus={() => setSvcOpen(true)} onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
                   placeholder="Keress szolgáltatást…" style={inputStyle} />
                 {svcOpen && filtSvcs.length > 0 && (
-                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#f5f0e8", border: "1px solid rgba(110,231,183,0.2)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#e6ddd0", border: "1px solid rgba(110,231,183,0.2)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                     {filtSvcs.map((s, i) => {
                       const already = !!selSvcs.find(x => x.name === s.name);
                       const showCat = i === 0 || filtSvcs[i-1]?.categoryName !== s.categoryName;
@@ -424,7 +424,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                           placeholder="Anyag neve…"
                           style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "rgba(251,191,36,0.2)" }} />
                         {matOpen && activeMat === i && filtMat.length > 0 && (
-                          <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "#f5f0e8", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                          <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "#e6ddd0", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                             {filtMat.map(m => (
                               <div key={m.name}
                                 onMouseDown={() => { updateMat(i, "name", m.name); updateMat(i, "unitPrice", m.unitPrice); setMatSearch(""); setMatOpen(false); }}
@@ -536,7 +536,7 @@ export default function GuestsClient() {
       {isLoading ? (
         <div style={{ color: dim, fontFamily: "var(--font-cormorant)", textAlign: "center", padding: "3rem" }}>Betöltés...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "4rem 2rem", background: "rgba(255,252,247,0.5)", border: "1px dashed rgba(74,124,126,0.15)", borderRadius: 16 }}>
+        <div style={{ textAlign: "center", padding: "4rem 2rem", background: "rgba(208,198,182,0.5)", border: "1px dashed rgba(74,124,126,0.15)", borderRadius: 16 }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>♦</div>
           <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "0.85rem", letterSpacing: "0.12em", marginBottom: "0.5rem" }}>Még nincs vendég a receptkönyvben</div>
           <div style={{ fontFamily: "var(--font-cormorant)", color: dim }}>Hozd létre az első kártyát az "＋ Új kártya" gombbal.</div>

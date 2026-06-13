@@ -32,7 +32,7 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
   return (
     <div
       style={{
-        background: "rgba(255,252,247,0.82)",
+        background: "rgba(220,210,195,0.85)",
         border: `1px solid ${color}44`,
         borderRadius: "24px",
         padding: "2.5rem 2rem",
@@ -98,7 +98,7 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
             placeholder="· · · · · · · ·"
             required
             style={{
-              background: "rgba(255,255,255,0.7)",
+              background: "rgba(215,205,190,0.55)",
               border: `1px solid ${color}33`,
               borderRadius: "10px",
               padding: "0.8rem 1rem",

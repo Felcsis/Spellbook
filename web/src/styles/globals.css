@@ -6,8 +6,8 @@
   --font-cinzel: var(--font-cinzel), serif;
   --font-cormorant: var(--font-cormorant), Georgia, serif;
 
-  --color-bg:           #e8e3db;
-  --color-bg2:          #f2ede6;
+  --color-bg:           #d9d0c3;
+  --color-bg2:          #e4dccf;
   --color-gold:         #4a7c7e;
   --color-gold-light:   #6a9c9e;
   --color-gold-dim:     #2a5c5e;
@@ -17,8 +17,8 @@
   --color-rose-dark:    #8c3a52;
   --color-cream:        #2c2420;
   --color-text-soft:    rgba(44,36,32,0.55);
-  --color-panel:        rgba(255,255,255,0.65);
-  --color-border:       rgba(74,124,126,0.22);
+  --color-panel:        rgba(210,200,185,0.6);
+  --color-border:       rgba(74,124,126,0.18);
 }
 
 *, *::before, *::after { box-sizing: border-box; }

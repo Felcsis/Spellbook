@@ -21,7 +21,7 @@ function SummaryCard({ label, value, color, icon, sub }: { label: string; value:
   return (
     <div
       style={{
-        background: "rgba(255,252,247,0.8)",
+        background: "rgba(218,208,193,0.8)",
         border: `1px solid ${color}44`,
         borderRadius: "16px",
         padding: "1.5rem 1.75rem",
@@ -133,7 +133,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
     >
       <div
         style={{
-          background: "#f5f0e8",
+          background: "#e6ddd0",
           border: "1px solid rgba(74,124,126,0.25)",
           borderRadius: "20px",
           padding: "2.25rem 2.5rem",
@@ -212,7 +212,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                 {matSearch && <button type="button" onClick={() => { setMatSearch(""); setMatOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(44,36,32,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
 
                 {matOpen && filteredMat.length > 0 && (
-                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#f5f0e8", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "#e6ddd0", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
                     {filteredMat.map((m, i) => {
                       const already = !!selectedMats.find(s => s.id === m.id);
                       const showCat = i === 0 || filteredMat[i - 1]?.categoryName !== m.categoryName;
@@ -254,7 +254,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
                   {description && <button type="button" onClick={() => { setDesc(""); setSvcOpen(false); }} style={{ position: "absolute", right: "0.7rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(44,36,32,0.3)", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>}
                 </div>
                 {svcOpen && filteredSvc.length > 0 && type === "revenue" && (
-                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#f5f0e8", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, background: "#e6ddd0", border: `1px solid ${cfg.color}44`, borderRadius: "12px", marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
                     {filteredSvc.map((svc, i) => {
                       const showCat = i === 0 || filteredSvc[i - 1]?.categoryName !== svc.categoryName;
                       return (
@@ -340,7 +340,7 @@ function AddModal({ onClose, year, month }: { onClose: () => void; year: number;
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(255,252,247,0.7)",
+  background: "rgba(215,205,190,0.7)",
   border: "1px solid rgba(74,124,126,0.15)",
   borderRadius: "10px",
   padding: "0.75rem 1rem",
@@ -448,7 +448,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
           style={{
             textAlign: "center",
             padding: "4rem 2rem",
-            background: "rgba(255,252,247,0.5)",
+            background: "rgba(208,198,182,0.5)",
             border: "1px dashed rgba(74,124,126,0.15)",
             borderRadius: "16px",
             color: "rgba(44,36,32,0.35)",
@@ -478,14 +478,14 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
                       alignItems: "center",
                       gap: "1rem",
                       padding: "0.9rem 1.25rem",
-                      background: "rgba(255,252,247,0.6)",
+                      background: "rgba(210,200,185,0.6)",
                       border: `1px solid ${cfg.color}22`,
                       borderRadius: "12px",
                       marginBottom: "0.4rem",
                       transition: "background 0.2s",
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${cfg.dim}`; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,252,247,0.6)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(210,200,185,0.6)"; }}
                   >
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "#2c2420" }}>
@@ -528,7 +528,7 @@ export default function FinancesClient({ isAdmin = true }: { isAdmin?: boolean }
 }
 
 const navBtn: React.CSSProperties = {
-  background: "rgba(255,252,247,0.7)",
+  background: "rgba(215,205,190,0.7)",
   border: "1px solid rgba(74,124,126,0.15)",
   borderRadius: "8px",
   color: "#4a7c7e",
