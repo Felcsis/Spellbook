@@ -27,6 +27,23 @@ export const guestsRouter = createTRPCRouter({
       ctx.db.guest.create({ data: { name: input.name, phone: input.phone } })
     ),
 
+  // Recept könyv — vendégenként csoportosítva az összes kártyával
+  guestBook: protectedProcedure.query(({ ctx }) =>
+    ctx.db.guest.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        cards: {
+          orderBy: { date: "desc" },
+          include: {
+            worker:    { select: { id: true, name: true } },
+            services:  true,
+            materials: true,
+          },
+        },
+      },
+    })
+  ),
+
   // Guest cards
   listCards: protectedProcedure
     .input(z.object({ guestId: z.string().optional() }))
