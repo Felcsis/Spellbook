@@ -88,6 +88,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
   const [earnings,       setEarnings]       = useState("");
   const [earningsManual, setEarningsManual] = useState(false);
   const [wNotes,         setWNotes]         = useState("");
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   // Service search
   const [svcSearch,      setSvcSearch]      = useState("");
   const [svcOpen,        setSvcOpen]        = useState(false);
@@ -143,6 +144,19 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
     setSelectedSvc(new Set()); setEarnings(""); setEarningsManual(false);
     setWNotes(""); setSvcSearch(""); setSvcOpen(false);
     setMatDesc(""); setMatAmt(""); setMatOpen(false); setMatManual(false);
+    setEditingEntryId(null);
+  }
+
+  function loadEntry(e: WorkDay) {
+    setUserId(e.userId);
+    setEarnings(String(e.earnings));
+    setEarningsManual(true);
+    setWNotes(e.notes ?? "");
+    const svcIds = new Set((e.services ?? []).map(s => s.serviceId));
+    setSelectedSvc(svcIds);
+    setEditingEntryId(e.id);
+    setTab("work");
+    setSvcSearch(""); setSvcOpen(false);
   }
 
   const filteredMat = matDesc.trim()
@@ -201,18 +215,29 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
           <div style={{ marginBottom: "1rem" }}>
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "#7a9e8caa", textTransform: "uppercase", marginBottom: "0.5rem" }}>◈ Munkadíjak</div>
             {workEntries.map(e => {
-              const col = userColors[e.userId] ?? "#c9a84c";
+              const col      = userColors[e.userId] ?? "#c9a84c";
+              const isEditing = editingEntryId === e.id;
               return (
-                <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 0.9rem", background: `${col}12`, border: `1px solid ${col}30`, borderRadius: "10px", marginBottom: "0.35rem" }}>
+                <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 0.9rem", background: isEditing ? `${col}22` : `${col}12`, border: `1px solid ${isEditing ? col + "88" : col + "30"}`, borderRadius: "10px", marginBottom: "0.35rem", transition: "all 0.2s" }}>
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: col, boxShadow: `0 0 6px ${col}88`, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: col }}>{e.user.name}</div>
                     {e.notes && <div style={{ fontSize: "0.78rem", fontStyle: "italic", color: `${col}88` }}>{e.notes}</div>}
+                    {(e.services ?? []).length > 0 && (
+                      <div style={{ fontSize: "0.72rem", color: `${col}77`, marginTop: "0.1rem" }}>
+                        {e.services!.map(s => s.service.name).join(", ")}
+                      </div>
+                    )}
                   </div>
                   <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(e.earnings)}</div>
-                  <button onClick={() => delW.mutate({ id: e.id })} style={delBtnStyle}
+                  <button onClick={() => isEditing ? resetWork() : loadEntry(e)} style={{ ...delBtnStyle, color: isEditing ? col : "var(--text-dim)" }}
+                    onMouseEnter={el => { (el.target as HTMLElement).style.color = col; }}
+                    onMouseLeave={el => { (el.target as HTMLElement).style.color = isEditing ? col : "var(--text-dim)"; }}
+                    title="Szerkesztés">✎</button>
+                  <button onClick={() => { if (isEditing) resetWork(); delW.mutate({ id: e.id }); }} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
-                    onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}>✕</button>
+                    onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}
+                    title="Törlés">✕</button>
                 </div>
               );
             })}
@@ -289,11 +314,18 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
               notes: wNotes || undefined,
               serviceIds: Array.from(selectedSvc),
             });
-            if (matDesc.trim() && matAmt) {
+            if (!editingEntryId && matDesc.trim() && matAmt) {
               await addC.mutateAsync({ date: dateStr, type: "material", description: matDesc.trim(), amount: parseFloat(matAmt) });
             }
             resetWork();
           }} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+            {editingEntryId && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 0.8rem", background: "rgba(122,158,140,0.08)", border: "1px solid rgba(122,158,140,0.2)", borderRadius: "8px" }}>
+                <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.15em", color: "#7a9e8c" }}>✎ SZERKESZTÉS MÓD</span>
+                <button type="button" onClick={resetWork} style={{ background: "none", border: "none", color: "var(--text-soft)", cursor: "pointer", fontSize: "0.8rem" }}>Mégse</button>
+              </div>
+            )}
 
             {/* Worker */}
             <div>
