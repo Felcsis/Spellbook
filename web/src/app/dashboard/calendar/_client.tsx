@@ -73,11 +73,12 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
   guestCards: GuestCard[]; users: User[]; userColors: Record<string, string>; onClose: () => void;
 }) {
   const utils  = api.useUtils();
-  const inv    = () => { void utils.calendar.month.invalidate(); void utils.finance.list.invalidate(); };
+  const inv    = () => { void utils.calendar.month.invalidate(); void utils.finance.list.invalidate(); void utils.guests.guestBook.invalidate(); };
   const upsert = api.calendar.upsert.useMutation({ onSuccess: inv });
   const delW   = api.calendar.delete.useMutation({ onSuccess: inv });
   const addC   = api.calendar.addCost.useMutation({ onSuccess: inv });
   const delC   = api.calendar.deleteCost.useMutation({ onSuccess: inv });
+  const delCard = api.guests.deleteCard.useMutation({ onSuccess: inv });
 
   const { data: categories = [] }  = api.calendar.services.useQuery();
   const { data: matCatalog = [] }  = api.materials.list.useQuery();
@@ -187,7 +188,25 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", color: "var(--text-muted)", marginBottom: "0.3rem", textTransform: "uppercase" }}>Napi bejegyzések</div>
             <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: "var(--color-teal)", textTransform: "capitalize" }}>{displayDate}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-soft)", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            {(workEntries.length > 0 || costEntries.length > 0 || guestCards.length > 0) && (
+              <button
+                onClick={() => {
+                  if (!confirm("Törlöd az összes bejegyzést ezen a napon?")) return;
+                  workEntries.forEach(e => delW.mutate({ id: e.id }));
+                  costEntries.forEach(e => delC.mutate({ id: e.id }));
+                  guestCards.forEach(c => delCard.mutate({ id: c.id }));
+                  resetWork();
+                }}
+                style={{ background: "none", border: "1px solid rgba(220,80,80,0.3)", borderRadius: "7px", padding: "0.3rem 0.65rem", color: "rgba(220,100,100,0.7)", fontSize: "0.65rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e07070"; (e.currentTarget as HTMLElement).style.color = "#e07070"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(220,80,80,0.3)"; (e.currentTarget as HTMLElement).style.color = "rgba(220,100,100,0.7)"; }}
+              >
+                Mindent töröl
+              </button>
+            )}
+            <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-soft)", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
+          </div>
         </div>
 
         {/* Daily summary bar */}
@@ -251,17 +270,19 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
             {guestCards.map(card => {
               const col = userColors[card.worker.id] ?? "#c9a84c";
               return (
-                <div key={card.id} style={{ padding: "0.65rem 0.9rem", background: "rgba(192,152,152,0.07)", border: "1px solid rgba(192,152,152,0.18)", borderRadius: "10px", marginBottom: "0.35rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: "var(--text-primary)" }}>{card.guest.name}</div>
-                      <div style={{ fontSize: "0.75rem", color: dim, fontStyle: "italic" }}>
-                        {card.worker.name}{card.services.length > 0 && ` · ${card.services.map(s => s.name).join(", ")}`}
-                      </div>
+                <div key={card.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.9rem", background: "rgba(192,152,152,0.07)", border: "1px solid rgba(192,152,152,0.18)", borderRadius: "10px", marginBottom: "0.35rem" }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: "var(--text-primary)" }}>{card.guest.name}</div>
+                    <div style={{ fontSize: "0.75rem", color: dim, fontStyle: "italic" }}>
+                      {card.worker.name}{card.services.length > 0 && ` · ${card.services.map(s => s.name).join(", ")}`}
                     </div>
-                    <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(card.total)}</div>
                   </div>
+                  <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(card.total)}</div>
+                  <button onClick={() => delCard.mutate({ id: card.id })} style={delBtnStyle}
+                    onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
+                    onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}
+                    title="Törlés">✕</button>
                 </div>
               );
             })}
