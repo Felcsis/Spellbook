@@ -100,16 +100,18 @@ model WorkDayService {
 }
 
 model FinanceEntry {
-    id          String   @id @default(cuid())
-    type        String   // "revenue" | "material" | "wage"
+    id          String     @id @default(cuid())
+    type        String     // "revenue" | "material" | "wage"
     description String
     amount      Float
-    date        DateTime @default(now())
-    createdAt   DateTime @default(now())
-    createdBy   User     @relation(fields: [createdById], references: [id])
+    date        DateTime   @default(now())
+    createdAt   DateTime   @default(now())
+    createdBy   User       @relation(fields: [createdById], references: [id])
     createdById String
-    workDay     WorkDay? @relation(fields: [workDayId], references: [id], onDelete: Cascade)
-    workDayId   String?  @unique
+    workDay     WorkDay?   @relation(fields: [workDayId], references: [id], onDelete: Cascade)
+    workDayId   String?    @unique
+    guestCard   GuestCard? @relation(fields: [guestCardId], references: [id], onDelete: SetNull)
+    guestCardId String?    @unique
 
     @@index([date])
     @@index([type])
@@ -127,28 +129,31 @@ model Guest {
 }
 
 model GuestCard {
-    id        String              @id @default(cuid())
-    date      DateTime            @db.Date
-    guest     Guest               @relation(fields: [guestId], references: [id], onDelete: Cascade)
-    guestId   String
-    worker    User                @relation(fields: [workerId], references: [id])
-    workerId  String
-    total     Float               @default(0)
-    notes     String?
-    createdAt DateTime            @default(now())
-    services  GuestCardService[]
-    materials GuestCardMaterial[]
+    id            String              @id @default(cuid())
+    date          DateTime            @db.Date
+    guest         Guest               @relation(fields: [guestId], references: [id], onDelete: Cascade)
+    guestId       String
+    worker        User                @relation(fields: [workerId], references: [id])
+    workerId      String
+    total         Float               @default(0)
+    notes         String?
+    createdAt     DateTime            @default(now())
+    services      GuestCardService[]
+    materials     GuestCardMaterial[]
+    financeEntry  FinanceEntry?
 
     @@index([guestId])
     @@index([date])
 }
 
 model GuestCardService {
-    id      String    @id @default(cuid())
-    card    GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
-    cardId  String
-    name    String
-    price   Float
+    id       String    @id @default(cuid())
+    card     GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+    cardId   String
+    name     String
+    price    Float
+    duration Int       @default(0)
+    gender   String?
 }
 
 model GuestCardMaterial {

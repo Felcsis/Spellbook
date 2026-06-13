@@ -11,8 +11,10 @@ const MaterialInput = z.object({
 });
 
 const ServiceInput = z.object({
-  name:  z.string().min(1),
-  price: z.number().min(0),
+  name:     z.string().min(1),
+  price:    z.number().min(0),
+  duration: z.number().min(0).default(0),
+  gender:   z.string().optional(),
 });
 
 export const guestsRouter = createTRPCRouter({

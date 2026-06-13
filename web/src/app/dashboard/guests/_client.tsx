@@ -199,10 +199,9 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
   const { data: workers = [] }    = api.calendar.users.useQuery();
   const { data: categories = [] } = api.services.listCategories.useQuery();
 
-  const createGuest = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
-  const createCard  = api.guests.createCard.useMutation({
-    onSuccess: () => { void utils.guests.guestBook.invalidate(); onClose(); },
-  });
+  const createGuest   = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
+  const createCard    = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
+  const createFinance = api.finance.create.useMutation({ onSuccess: () => void utils.finance.list.invalidate() });
 
   const [guestSearch, setGuestSearch] = useState(prefillGuestName ?? "");
   const [guestId,     setGuestId]     = useState(prefillGuestId ?? "");
@@ -266,19 +265,40 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
       finalGuestId = g.id;
     }
     if (!finalGuestId) return;
+    const finalWorkerId = workerId || (workers[0]?.id ?? "");
     const mats = matRows
       .filter(r => r.name.trim() && parseFloat(r.grams) > 0)
       .map(r => ({
         name: r.name, brand: r.brand || undefined, colorCode: r.colorCode || undefined,
         grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
       }));
-    await createCard.mutateAsync({
+    const card = await createCard.mutateAsync({
       guestId: finalGuestId,
-      workerId: workerId || (workers[0]?.id ?? ""),
+      workerId: finalWorkerId,
       date, notes: notes || undefined,
       services: selSvcs,
       materials: mats,
     });
+
+    // Revenue entry linked to the card
+    if (selSvcs.length > 0) {
+      const svcTotal = selSvcs.reduce((s, x) => s + x.price, 0);
+      const desc = selSvcs.map(s => s.name).join(", ");
+      await createFinance.mutateAsync({
+        type: "revenue", description: desc, amount: svcTotal, date,
+        guestCardId: card.id, workerUserId: finalWorkerId,
+      });
+    }
+    // Material entry
+    if (mats.length > 0) {
+      const matTot = mats.reduce((s, r) => s + r.lineTotal, 0);
+      const matDesc = mats.map(r => `${r.name} (${r.grams}g)`).join(", ");
+      await createFinance.mutateAsync({
+        type: "material", description: matDesc, amount: matTot, date,
+        workerUserId: finalWorkerId,
+      });
+    }
+    onClose();
   }
 
   const workerColors = ["var(--color-teal)","var(--color-teal)","var(--color-teal)"];

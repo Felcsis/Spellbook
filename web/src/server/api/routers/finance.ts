@@ -23,7 +23,7 @@ export const financeRouter = createTRPCRouter({
         },
         orderBy: { date: "desc" },
         include: {
-          createdBy: { select: { name: true } },
+          createdBy: { select: { id: true, name: true } },
           workDay:   { include: { user: { select: { name: true } } } },
           guestCard: {
             include: {
@@ -38,24 +38,27 @@ export const financeRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(z.object({
-      type:        z.enum(["revenue", "material", "wage"]),
-      description: z.string().min(1),
-      amount:      z.number().positive(),
-      date:        z.string(),
-      guestCardId: z.string().optional(),
+      type:         z.enum(["revenue", "material", "wage"]),
+      description:  z.string().min(1),
+      amount:       z.number().positive(),
+      date:         z.string(),
+      guestCardId:  z.string().optional(),
+      workerUserId: z.string().optional(),
     }))
-    .mutation(({ ctx, input }) =>
-      ctx.db.financeEntry.create({
+    .mutation(({ ctx, input }) => {
+      const isAdmin    = ctx.session.user.role === "admin";
+      const createdById = (isAdmin && input.workerUserId) ? input.workerUserId : ctx.session.user.id;
+      return ctx.db.financeEntry.create({
         data: {
           type:        input.type,
           description: input.description,
           amount:      input.amount,
           date:        new Date(input.date),
-          createdById: ctx.session.user.id,
+          createdById,
           ...(input.guestCardId && { guestCardId: input.guestCardId }),
         },
-      })
-    ),
+      });
+    }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))

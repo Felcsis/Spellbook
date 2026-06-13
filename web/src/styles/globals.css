@@ -80,6 +80,35 @@
   --color-text-soft:  var(--text-muted);
 }
 
+/* ── Golden shimmer button ── */
+.btn-gold {
+  background: linear-gradient(120deg, #9e7040 0%, #c49060 25%, #e0b878 50%, #c49060 75%, #9e7040 100%);
+  background-size: 250% auto;
+  animation: shimmer 2.8s linear infinite;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 18px rgba(196,144,96,0.38);
+  transition: box-shadow 0.25s, transform 0.15s !important;
+  cursor: pointer;
+}
+.btn-gold:hover:not(:disabled) {
+  box-shadow: 0 6px 28px rgba(196,144,96,0.55);
+  transform: translateY(-2px);
+}
+.btn-gold:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .btn-gold {
+  background: linear-gradient(120deg, #b88848 0%, #d8a860 25%, #f0c878 50%, #d8a860 75%, #b88848 100%);
+  background-size: 250% auto;
+  box-shadow: 0 4px 20px rgba(216,168,96,0.4);
+}
+[data-theme="dark"] .btn-gold:hover:not(:disabled) {
+  box-shadow: 0 6px 30px rgba(216,168,96,0.6);
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {

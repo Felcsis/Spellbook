@@ -5,5 +5,10 @@ import FinancesClient from "./_client";
 export default async function FinancesPage() {
   const session = await auth();
   if (!session) redirect("/login");
-  return <FinancesClient isAdmin={session.user.role === "admin"} />;
+  return (
+    <FinancesClient
+      isAdmin={session.user.role === "admin"}
+      userId={session.user.id}
+    />
+  );
 }
