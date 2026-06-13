@@ -16,7 +16,7 @@ type Category = {
 const gold   = "var(--color-teal)";
 const cream  = "var(--text-primary)";
 const dimmed = "var(--text-soft)";
-const panelBg = "rgba(20,12,40,0.6)";
+const panelBg = "var(--bg-card)";
 const border  = "1px solid var(--border)";
 
 // ── Inline modal ───────────────────────────────────────────────────────────
@@ -27,7 +27,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       onClick={onClose}
     >
       <div
-        style={{ background: "rgba(14,8,28,0.97)", border, borderRadius: 14, padding: "2rem", width: 420, maxWidth: "calc(100vw - 2rem)", boxShadow: "0 0 40px rgba(124,58,237,0.18)" }}
+        style={{ background: "var(--bg-modal)", border, borderRadius: 14, padding: "2rem", width: 420, maxWidth: "calc(100vw - 2rem)", boxShadow: "var(--shadow-modal)" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{title}</div>
@@ -55,7 +55,7 @@ const inputStyle: React.CSSProperties = {
 
 function Btn({ onClick, children, variant = "primary", disabled }: { onClick: () => void; children: React.ReactNode; variant?: "primary" | "ghost" | "danger"; disabled?: boolean }) {
   const bg: Record<string, string> = {
-    primary: "linear-gradient(135deg, rgba(196,92,122,0.5), var(--border))",
+    primary: "linear-gradient(135deg, var(--bg-active), var(--bg-highlight))",
     ghost:   "var(--bg-today)",
     danger:  "rgba(220,50,50,0.15)",
   };
