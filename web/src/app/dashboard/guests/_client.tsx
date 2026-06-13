@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -282,9 +283,11 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
 
   const workerColors = ["var(--color-teal)","var(--color-teal)","var(--color-teal)"];
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, overflowY: "auto", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "3rem 1rem" }}>
         <div style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
@@ -481,7 +484,8 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

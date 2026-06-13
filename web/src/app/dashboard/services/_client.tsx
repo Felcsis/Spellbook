@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -19,11 +20,14 @@ const dimmed = "var(--text-soft)";
 const panelBg = "var(--bg-card)";
 const border  = "1px solid var(--border)";
 
-// ── Inline modal ───────────────────────────────────────────────────────────
+// ── Portal modal ───────────────────────────────────────────────────────────
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  return createPortal(
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
@@ -33,7 +37,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
         <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{title}</div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -239,7 +244,7 @@ function CategoryBlock({ cat, isAdmin }: { cat: Category; isAdmin: boolean }) {
 // ── Material row ───────────────────────────────────────────────────────────
 type Material = { id: string; name: string; price: number; unit: string | null; active: boolean };
 
-function MaterialRow({ mat }: { mat: Material }) {
+function MaterialRow({ mat, isAdmin }: { mat: Material; isAdmin: boolean }) {
   const utils  = api.useUtils();
   const inv    = () => void utils.materials.listAll.invalidate();
   const upd    = api.materials.update.useMutation({ onSuccess: inv });
@@ -277,19 +282,21 @@ function MaterialRow({ mat }: { mat: Material }) {
       <div style={{ fontFamily: "var(--font-cormorant)", color: "#fbbf24", fontSize: "1rem", minWidth: 80, textAlign: "right" }}>
         {mat.price.toLocaleString("hu-HU")} Ft
       </div>
-      <div style={{ display: "flex", gap: "0.4rem" }}>
-        <button onClick={() => toggle.mutate({ id: mat.id, active: !mat.active })} title={mat.active ? "Inaktiválás" : "Aktiválás"} style={{ background: "none", border: "none", cursor: "pointer", color: mat.active ? "#fbbf24" : dimmed, fontSize: "1rem" }}>
-          {mat.active ? "✦" : "✧"}
-        </button>
-        <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", color: dimmed, fontSize: "0.9rem" }}>✎</button>
-        <button onClick={() => { if (confirm(`Törlöd: „${mat.name}"?`)) del.mutate({ id: mat.id }); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.5)", fontSize: "0.9rem" }}>✕</button>
-      </div>
+      {isAdmin && (
+        <div style={{ display: "flex", gap: "0.4rem" }}>
+          <button onClick={() => toggle.mutate({ id: mat.id, active: !mat.active })} title={mat.active ? "Inaktiválás" : "Aktiválás"} style={{ background: "none", border: "none", cursor: "pointer", color: mat.active ? "#fbbf24" : dimmed, fontSize: "1rem" }}>
+            {mat.active ? "✦" : "✧"}
+          </button>
+          <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", color: dimmed, fontSize: "0.9rem" }}>✎</button>
+          <button onClick={() => { if (confirm(`Törlöd: „${mat.name}"?`)) del.mutate({ id: mat.id }); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.5)", fontSize: "0.9rem" }}>✕</button>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Materials panel ────────────────────────────────────────────────────────
-function MaterialsPanel() {
+function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
   const utils = api.useUtils();
   const { data: materials = [], isLoading } = api.materials.listAll.useQuery();
   const create = api.materials.create.useMutation({ onSuccess: () => { void utils.materials.listAll.invalidate(); setName(""); setPrice(""); setUnit(""); } });
@@ -306,8 +313,8 @@ function MaterialsPanel() {
 
   return (
     <div>
-      {/* Add row */}
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem", backdropFilter: "blur(12px)" }}>
+      {/* Add row — admin only */}
+      {isAdmin && <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem", backdropFilter: "blur(12px)" }}>
         <div style={{ flex: 2 }}>
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Anyag neve</div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Szőkítőpor, L'Oréal festék…" style={inputStyle}
@@ -324,7 +331,7 @@ function MaterialsPanel() {
             onKeyDown={e => e.key === "Enter" && add()} />
         </div>
         <Btn onClick={add} disabled={!name.trim() || !price || create.isPending}>＋ Hozzáad</Btn>
-      </div>
+      </div>}
 
       {/* List */}
       {isLoading ? (
@@ -337,7 +344,7 @@ function MaterialsPanel() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-          {materials.map(m => <MaterialRow key={m.id} mat={m} />)}
+          {materials.map(m => <MaterialRow key={m.id} mat={m} isAdmin={isAdmin} />)}
         </div>
       )}
     </div>
@@ -396,7 +403,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
       )}
 
       {/* Materials tab */}
-      {tab === "materials" && <MaterialsPanel />}
+      {tab === "materials" && <MaterialsPanel isAdmin={isAdmin} />}
 
       {isAdmin && addCat && <CategoryModal onClose={() => setAddCat(false)} />}
     </div>

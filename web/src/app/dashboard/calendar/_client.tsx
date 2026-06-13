@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -158,9 +159,11 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
     ? allServicesFlat.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(svcSearch.toLowerCase()))
     : allServicesFlat;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 pt-12"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", animation: "fadeIn 0.2s ease" }}
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "3rem 1.5rem", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", animation: "fadeIn 0.2s ease" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
 
@@ -480,7 +483,8 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
