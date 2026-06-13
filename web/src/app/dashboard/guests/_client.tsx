@@ -66,7 +66,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
           {card.services.length > 0 && <span style={{ color: dim }}> · {card.services.map(s => s.name).join(", ")}</span>}
         </div>
         {card.materials.length > 0 && (
-          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "rgba(251,191,36,0.5)", padding: "0.15rem 0.5rem", border: "1px solid var(--border)", borderRadius: 4 }}>
+          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", padding: "0.15rem 0.5rem", border: "1px solid var(--border)", borderRadius: 4 }}>
             ✦ RECEPT
           </span>
         )}
@@ -102,7 +102,7 @@ function VisitCard({ card, onDelete }: { card: GuestCardData; onDelete: () => vo
                     <span key={`${m.id}b`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: dim }}>{m.brand ?? "—"}</span>
                     <span key={`${m.id}c`} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: "rgba(232,180,200,0.8)", letterSpacing: "0.05em" }}>{m.colorCode ?? "—"}</span>
                     <span key={`${m.id}g`} style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: dim }}>{m.grams}g</span>
-                    <span key={`${m.id}p`} style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.lineTotal)}</span>
+                    <span key={`${m.id}p`} style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(m.lineTotal)}</span>
                   </>
                 ))}
               </div>
@@ -141,13 +141,13 @@ function GuestRow({ guest, onDeleteCard, onNewCard }: {
   const totalSpent = guest.cards.reduce((s, c) => s + c.total, 0);
 
   return (
-    <div style={{ background: "rgba(20,12,40,0.65)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden", backdropFilter: "blur(12px)", transition: "box-shadow 0.2s" }}
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden", backdropFilter: "blur(12px)", transition: "box-shadow 0.2s" }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px var(--bg-highlight)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
 
       <div style={{ padding: "1.1rem 1.4rem", display: "flex", alignItems: "center", gap: "1rem", cursor: "pointer" }}
         onClick={() => setOpen(o => !o)}>
-        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg,rgba(124,58,237,0.55),var(--border))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "1rem", color: cream, flexShrink: 0, border: "1px solid var(--border)" }}>
+        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg, var(--bg-active), var(--border))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "1rem", color: cream, flexShrink: 0, border: "1px solid var(--border)" }}>
           {(guest.name[0] ?? "?").toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -379,13 +379,13 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                   onFocus={() => setSvcOpen(true)} onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
                   placeholder="Keress szolgáltatást…" style={inputStyle} />
                 {svcOpen && filtSvcs.length > 0 && (
-                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(110,231,183,0.2)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                     {filtSvcs.map((s, i) => {
                       const already = !!selSvcs.find(x => x.name === s.name);
                       const showCat = i === 0 || filtSvcs[i-1]?.categoryName !== s.categoryName;
                       return (
                         <div key={s.id}>
-                          {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "rgba(110,231,183,0.4)", textTransform: "uppercase" }}>{s.categoryName}</div>}
+                          {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "var(--text-dim)", textTransform: "uppercase" }}>{s.categoryName}</div>}
                           <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { name: s.name, price: s.price }]); setSvcSearch(""); setSvcOpen(false); } }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
@@ -407,7 +407,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <label style={{ ...labelStyle, marginBottom: 0 }}>✦ Szín recept</label>
                 <button type="button" onClick={() => setMatRows(p => [...p, { name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }])}
-                  style={{ background: "none", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 6, color: "#fbbf24", cursor: "pointer", fontSize: "0.7rem", padding: "0.2rem 0.6rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em" }}>
+                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, color: "var(--color-teal)", cursor: "pointer", fontSize: "0.7rem", padding: "0.2rem 0.6rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em" }}>
                   ＋ Sor
                 </button>
               </div>
@@ -424,7 +424,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                           placeholder="Anyag neve…"
                           style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "var(--border)" }} />
                         {matOpen && activeMat === i && filtMat.length > 0 && (
-                          <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                          <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                             {filtMat.map(m => (
                               <div key={m.name}
                                 onMouseDown={() => { updateMat(i, "name", m.name); updateMat(i, "unitPrice", m.unitPrice); setMatSearch(""); setMatOpen(false); }}
@@ -432,7 +432,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-active)"; }}
                                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                                 <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream, flex: 1 }}>{m.name}</span>
-                                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#fbbf24", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
+                                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "var(--color-teal)", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
                               </div>
                             ))}
                           </div>
@@ -446,9 +446,9 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                       <input type="number" value={row.grams} onChange={e => updateMat(i, "grams", e.target.value)} placeholder="Gramm" min="0" step="any"
                         style={{ ...inputStyle, flex: 1, fontSize: "0.9rem", textAlign: "center" }} />
                       <span style={{ fontFamily: "var(--font-cormorant)", color: dim, fontSize: "0.9rem" }}>g ×</span>
-                      <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(251,191,36,0.7)", fontSize: "0.9rem", minWidth: 55 }}>{fmt(row.unitPrice)}</span>
+                      <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--color-teal)", fontSize: "0.9rem", minWidth: 55 }}>{fmt(row.unitPrice)}</span>
                       <span style={{ color: dim, fontSize: "0.85rem" }}>=</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", color: "#fbbf24", fontWeight: 700, fontSize: "0.95rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", color: "var(--color-teal)", fontWeight: 700, fontSize: "0.95rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
                     </div>
                   </div>
                 ))}
@@ -465,7 +465,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
                 {svcTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--color-teal)" }}>Szolgáltatás: {fmt(svcTotal)}</span>}
-                {matTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "#fbbf24" }}>Anyag: {fmt(matTotal)}</span>}
+                {matTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--color-teal)"
               </div>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.14em", color: dim }}>
                 VÉGÖSSZEG <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", color: gold, fontWeight: 700, marginLeft: "0.5rem" }}>{fmt(grandTotal)}</span>
@@ -475,7 +475,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button type="button" onClick={onClose} style={{ flex: 1, padding: "0.8rem", borderRadius: 10, background: "transparent", border: "1px solid var(--border)", color: dim, fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.14em", cursor: "pointer" }}>Mégse</button>
               <button type="submit" disabled={createCard.isPending || (!guestId && !guestName.trim())}
-                style={{ flex: 2, padding: "0.8rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg,#7a6229 0%,#c9a84c 50%,#7a6229 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", opacity: createCard.isPending ? 0.7 : 1 }}>
+                style={{ flex: 2, padding: "0.8rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg, var(--color-teal) 0%, var(--color-teal-light) 50%, var(--color-teal) 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", opacity: createCard.isPending ? 0.7 : 1 }}>
                 {createCard.isPending ? "Mentés..." : "Mentés a receptkönyvbe ✦"}
               </button>
             </div>
@@ -523,7 +523,7 @@ export default function GuestsClient() {
           <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-pink)", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>Minden vendég szín receptje és látogatási előzménye</p>
         </div>
         <button onClick={() => openNewCard()}
-          style={{ padding: "0.75rem 1.5rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg,#7a6229 0%,#c9a84c 50%,#7a6229 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 20px var(--border)", flexShrink: 0 }}>
+          style={{ padding: "0.75rem 1.5rem", borderRadius: 10, border: "none", background: "linear-gradient(120deg, var(--color-teal) 0%, var(--color-teal-light) 50%, var(--color-teal) 100%)", backgroundSize: "200% auto", color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", cursor: "pointer", animation: "shimmer 3s linear infinite", boxShadow: "0 4px 20px var(--border)", flexShrink: 0 }}>
           ＋ Új kártya
         </button>
       </div>
