@@ -7,10 +7,10 @@ import { api } from "~/trpc/react";
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 const DAYS_S  = ["H","K","Sz","Cs","P","Szo","V"];
 const DAYS_L  = ["Hétfő","Kedd","Szerda","Csütörtök","Péntek","Szombat","Vasárnap"];
-const USER_COLORS = ["#c9a84c","#a78bfa","#e8b4c8","#6ee7b7","#fb923c"];
+const USER_COLORS = ["#c49060","#9278b0","#c09898","#7a9e8c","#b07858"];
 const COST_CONFIG = {
-  material: { label: "Anyagköltség", color: "#fbbf24", icon: "✦" },
-  wage:     { label: "Bér",          color: "#a78bfa", icon: "♦" },
+  material: { label: "Anyagköltség", color: "#c49060", icon: "✦" },
+  wage:     { label: "Bér",          color: "#9278b0", icon: "♦" },
 } as const;
 
 type View = "month" | "week" | "3day" | "day";
@@ -57,7 +57,7 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem",
   letterSpacing: "0.2em", textTransform: "uppercase",
-  color: "rgba(74,124,126,0.6)", marginBottom: "0.4rem",
+  color: "var(--text-muted)", marginBottom: "0.4rem",
 };
 const navBtnStyle: React.CSSProperties = {
   background: "var(--bg-card)", border: "1px solid var(--border)",
@@ -167,7 +167,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
           <div>
-            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", color: "rgba(74,124,126,0.6)", marginBottom: "0.3rem", textTransform: "uppercase" }}>Napi bejegyzések</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.2em", color: "var(--text-muted)", marginBottom: "0.3rem", textTransform: "uppercase" }}>Napi bejegyzések</div>
             <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: "var(--color-teal)", textTransform: "capitalize" }}>{displayDate}</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-soft)", fontSize: "1.3rem", cursor: "pointer" }}>✕</button>
@@ -177,18 +177,18 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
         {(dayRevenue > 0 || dayCosts > 0) && (
           <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.25rem", padding: "0.85rem 1rem", background: "var(--bg-panel)", borderRadius: "12px", border: "1px solid var(--bg-active)" }}>
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#6ee7b7aa", marginBottom: "0.2rem" }}>BEVÉTEL</div>
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(dayRevenue)}</div>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#7a9e8caa", marginBottom: "0.2rem" }}>BEVÉTEL</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(dayRevenue)}</div>
             </div>
             <div style={{ width: 1, background: "var(--border)" }} />
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#fbbf24aa", marginBottom: "0.2rem" }}>KIADÁS</div>
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(dayCosts)}</div>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#c49060aa", marginBottom: "0.2rem" }}>KIADÁS</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#c49060", fontWeight: 700 }}>{fmt(dayCosts)}</div>
             </div>
             <div style={{ width: 1, background: "var(--border)" }} />
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: dayProfit >= 0 ? "#6ee7b7aa" : "#f87171aa", marginBottom: "0.2rem" }}>PROFIT</div>
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#6ee7b7" : "#f87171", fontWeight: 700 }}>{fmt(dayProfit)}</div>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: dayProfit >= 0 ? "#7a9e8caa" : "#f87171aa", marginBottom: "0.2rem" }}>PROFIT</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{fmt(dayProfit)}</div>
             </div>
           </div>
         )}
@@ -196,7 +196,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
         {/* Existing work entries */}
         {workEntries.length > 0 && (
           <div style={{ marginBottom: "1rem" }}>
-            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "#6ee7b7aa", textTransform: "uppercase", marginBottom: "0.5rem" }}>◈ Munkadíjak</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "#7a9e8caa", textTransform: "uppercase", marginBottom: "0.5rem" }}>◈ Munkadíjak</div>
             {workEntries.map(e => {
               const col = userColors[e.userId] ?? "#c9a84c";
               return (
@@ -219,13 +219,13 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
         {/* Guest cards */}
         {guestCards.length > 0 && (
           <div style={{ marginBottom: "1rem" }}>
-            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "rgba(232,180,200,0.7)", textTransform: "uppercase", marginBottom: "0.5rem" }}>♦ Vendég kártyák</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.5rem" }}>♦ Vendég kártyák</div>
             {guestCards.map(card => {
               const col = userColors[card.worker.id] ?? "#c9a84c";
               return (
-                <div key={card.id} style={{ padding: "0.65rem 0.9rem", background: "rgba(232,180,200,0.07)", border: "1px solid rgba(232,180,200,0.2)", borderRadius: "10px", marginBottom: "0.35rem" }}>
+                <div key={card.id} style={{ padding: "0.65rem 0.9rem", background: "rgba(192,152,152,0.07)", border: "1px solid rgba(192,152,152,0.18)", borderRadius: "10px", marginBottom: "0.35rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#e8b4c8", flexShrink: 0 }} />
+                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: "var(--text-primary)" }}>{card.guest.name}</div>
                       <div style={{ fontSize: "0.75rem", color: dim, fontStyle: "italic" }}>
@@ -243,9 +243,9 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
         {/* Existing cost entries */}
         {costEntries.length > 0 && (
           <div style={{ marginBottom: "1rem" }}>
-            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "#fbbf24aa", textTransform: "uppercase", marginBottom: "0.5rem" }}>✦ Kiadások</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "#c49060aa", textTransform: "uppercase", marginBottom: "0.5rem" }}>✦ Kiadások</div>
             {costEntries.map(e => {
-              const col = e.type === "material" ? "#fbbf24" : "#a78bfa";
+              const col = e.type === "material" ? "#c49060" : "#9278b0";
               return (
                 <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 0.9rem", background: `${col}10`, border: `1px solid ${col}28`, borderRadius: "10px", marginBottom: "0.35rem" }}>
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: col, flexShrink: 0 }} />
@@ -381,21 +381,21 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
               <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: "0.4rem" }}>
                 Munkadíj (Ft)
                 {selectedSvc.size > 0 && !earningsManual && (
-                  <span style={{ color: "rgba(110,231,183,0.7)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>
+                  <span style={{ color: "rgba(122,158,140,0.6)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>AUTO</span>
                 )}
               </label>
               <input type="number" value={earnings} onChange={e => handleEarningsChange(e.target.value)}
                 placeholder="0" min="0" required style={{
                   ...inputStyle,
-                  borderColor: selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "var(--border)",
+                  borderColor: selectedSvc.size > 0 && !earningsManual ? "rgba(122,158,140,0.35)" : "var(--border)",
                 }}
                 onFocus={e => { e.target.style.borderColor = userColors[userId] ?? "var(--color-teal)"; }}
-                onBlur={e => { e.target.style.borderColor = selectedSvc.size > 0 && !earningsManual ? "rgba(110,231,183,0.4)" : "var(--border)"; }} />
+                onBlur={e => { e.target.style.borderColor = selectedSvc.size > 0 && !earningsManual ? "rgba(122,158,140,0.35)" : "var(--border)"; }} />
             </div>
 
             {/* Inline material cost */}
-            <div style={{ padding: "0.85rem 1rem", background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.55)", textTransform: "uppercase" }}>✦ Anyagköltség (opcionális)</div>
+            <div style={{ padding: "0.85rem 1rem", background: "rgba(196,144,96,0.05)", border: "1px solid rgba(196,144,96,0.15)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.16em", color: "rgba(196,144,96,0.5)", textTransform: "uppercase" }}>✦ Anyagköltség (opcionális)</div>
               <div style={{ display: "flex", gap: "0.6rem" }}>
                 {/* Material search */}
                 <div style={{ flex: 2, position: "relative" }}>
@@ -404,7 +404,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     onBlur={() => setTimeout(() => setMatOpen(false), 150)}
                     placeholder={matCatalog.length === 0 ? "pl. Szőkítő…" : "Keress az anyagtárban…"}
                     style={{ ...inputStyle, width: "100%" }}
-                    onFocusCapture={e => { (e.target as HTMLInputElement).style.borderColor = "#fbbf24"; }}
+                    onFocusCapture={e => { (e.target as HTMLInputElement).style.borderColor = "#c49060"; }}
                     onBlurCapture={e => { (e.target as HTMLInputElement).style.borderColor = "var(--border)"; }} />
                   {matDesc && (
                     <button type="button" onClick={() => { setMatDesc(""); setMatAmt(""); setMatManual(false); setMatOpen(false); }}
@@ -420,11 +420,11 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                             setMatOpen(false);
                           }}
                           style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.85rem", cursor: "pointer", transition: "background 0.15s" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(196,144,96,0.08)"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                           <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                           {m.unit && <span style={{ fontSize: "0.72rem", color: "var(--border)" }}>{m.unit}</span>}
-                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(m.price)}</span>
+                          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "#c49060", fontWeight: 700 }}>{fmt(m.price)}</span>
                         </div>
                       ))}
                     </div>
@@ -432,9 +432,9 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                 </div>
                 <input type="number" value={matAmt} onChange={e => { setMatAmt(e.target.value); setMatManual(true); }}
                   placeholder="0 Ft" min="0"
-                  style={{ ...inputStyle, flex: 1, borderColor: matAmt && !matManual ? "rgba(251,191,36,0.4)" : "var(--border)" }}
-                  onFocus={e => { e.target.style.borderColor = "#fbbf24"; }}
-                  onBlur={e => { e.target.style.borderColor = matAmt && !matManual ? "rgba(251,191,36,0.4)" : "var(--border)"; }} />
+                  style={{ ...inputStyle, flex: 1, borderColor: matAmt && !matManual ? "rgba(196,144,96,0.3)" : "var(--border)" }}
+                  onFocus={e => { e.target.style.borderColor = "#c49060"; }}
+                  onBlur={e => { e.target.style.borderColor = matAmt && !matManual ? "rgba(196,144,96,0.3)" : "var(--border)"; }} />
               </div>
             </div>
 
@@ -502,7 +502,7 @@ function WorkerChip({ entry, color, expanded, onClick }: { entry: WorkDay; color
       style={{ padding: expanded ? "0.8rem 0.9rem" : "0.28rem 0.55rem", borderRadius: "9px", background: expanded ? `${color}20` : `${color}14`, border: `1px solid ${expanded ? color + "66" : color + "28"}`, cursor: "pointer", transition: "all 0.25s", marginBottom: "0.25rem", boxShadow: expanded ? `0 4px 16px ${color}20` : "none" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0, boxShadow: `0 0 5px ${color}99` }} />
-        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color, flex: 1 }}>{entry.user.name}</span>
+        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color, flex: 1 }}>{entry.user.name}</span>
         <span style={{ fontFamily: "var(--font-playfair)", fontSize: expanded ? "0.95rem" : "0.72rem", color, fontWeight: 700, flexShrink: 0 }}>{expanded ? fmt(entry.earnings) : `${Math.round(entry.earnings / 1000)}k`}</span>
       </div>
       {expanded && entry.notes && <div style={{ marginTop: "0.3rem", paddingTop: "0.3rem", borderTop: `1px solid ${color}22`, fontStyle: "italic", fontSize: "0.82rem", color: `${color}bb`, fontFamily: "var(--font-cormorant)" }}>{entry.notes}</div>}
@@ -529,7 +529,7 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
         style={{ padding: compact ? "0.55rem 0.7rem" : "0.85rem 1rem", borderBottom: "1px solid var(--bg-highlight)", cursor: "pointer", background: isToday ? "var(--bg-highlight)" : "var(--bg-panel)", transition: "background 0.2s" }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "var(--bg-highlight)" : "var(--bg-panel)"; }}>
-        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.1em", color: isToday ? "var(--color-teal)" : "rgba(74,124,126,0.6)", textTransform: "uppercase" }}>{DAYS_L[dow]}</div>
+        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.08em", color: isToday ? "var(--color-teal)" : "var(--text-muted)", textTransform: "uppercase" }}>{DAYS_L[dow]}</div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
           <div style={{ fontFamily: "var(--font-playfair)", fontSize: compact ? "1.05rem" : "1.35rem", color: isToday ? "var(--color-teal)" : "var(--text-primary)", lineHeight: 1.1 }}>
             {date.getDate()}
@@ -537,9 +537,9 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
           </div>
           {profit !== 0 && (
             <div style={{ textAlign: "right" }}>
-              {revenue > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#6ee7b7", fontWeight: 700 }}>{fmt(revenue)}</div>}
-              {costs > 0   && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: "#fbbf24" }}>−{fmt(costs)}</div>}
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: profit >= 0 ? "#6ee7b7" : "#f87171", fontWeight: 700 }}>{profit >= 0 ? "=" : ""}{fmt(profit)}</div>
+              {revenue > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(revenue)}</div>}
+              {costs > 0   && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: "#c49060" }}>−{fmt(costs)}</div>}
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: profit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{profit >= 0 ? "=" : ""}{fmt(profit)}</div>
             </div>
           )}
         </div>
@@ -551,7 +551,7 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
           <WorkerChip key={e.id} entry={e} color={userColors[e.userId] ?? "#c9a84c"} expanded={expandedId === e.id} onClick={() => setExpandedId(expandedId === e.id ? null : e.id)} />
         ))}
         {costEntries.map(e => {
-          const col = e.type === "material" ? "#fbbf24" : "#a78bfa";
+          const col = e.type === "material" ? "#c49060" : "#9278b0";
           return (
             <div key={e.id} style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: `${col}12`, border: `1px solid ${col}25`, marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <div style={{ width: 5, height: 5, borderRadius: "50%", background: col, flexShrink: 0 }} />
@@ -561,10 +561,10 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
           );
         })}
         {guestCards.map(c => (
-          <div key={c.id} style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: "rgba(232,180,200,0.12)", border: "1px solid rgba(232,180,200,0.28)", marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#e8b4c8", flexShrink: 0 }} />
-            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: "#e8b4c8", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>♦ {c.guest.name}</span>
-            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.66rem", color: "#e8b4c8", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
+          <div key={c.id} style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: "rgba(192,152,152,0.1)", border: "1px solid rgba(192,152,152,0.2)", marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
+            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: "#c09898", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>♦ {c.guest.name}</span>
+            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.66rem", color: "#c09898", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
           </div>
         ))}
         <div onClick={() => onOpen(dateStr)}
@@ -595,11 +595,11 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
   return (
     <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--bg-highlight)" }}>
-        {DAYS_S.map(d => <div key={d} style={{ padding: "0.6rem 0", textAlign: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.15em", color: "rgba(74,124,126,0.6)", textTransform: "uppercase" }}>{d}</div>)}
+        {DAYS_S.map(d => <div key={d} style={{ padding: "0.6rem 0", textAlign: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>{d}</div>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
         {cells.map((day, idx) => {
-          if (!day) return <div key={`e${idx}`} style={{ minHeight: 88, borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: "rgba(74,124,126,0.03)" }} />;
+          if (!day) return <div key={`e${idx}`} style={{ minHeight: 110, borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: "rgba(74,124,126,0.03)" }} />;
           const ds       = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
           const wEntries = byDate[ds] ?? [];
           const cEntries = byCostDate[ds] ?? [];
@@ -611,11 +611,11 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
           return (
             <div key={ds}
-              style={{ minHeight: 88, padding: "0.38rem", borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: isToday ? "var(--bg-today)" : "transparent", cursor: "pointer", transition: "background 0.18s", position: "relative" }}
+              style={{ minHeight: 110, padding: "0.38rem", borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: isToday ? "var(--bg-today)" : "transparent", cursor: "pointer", transition: "background 0.18s", position: "relative" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-today)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "var(--bg-today)" : "transparent"; }}>
               {/* Day number */}
-              <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", color: isToday ? "#fff" : "var(--text-soft)", background: isToday ? "var(--color-teal)" : "transparent", marginBottom: "0.25rem" }}>{day}</div>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.72rem", color: isToday ? "#fff" : "var(--text-primary)", background: isToday ? "var(--color-teal)" : "transparent", marginBottom: "0.3rem" }}>{day}</div>
 
               {/* Work entries */}
               {wEntries.map(e => {
@@ -626,8 +626,8 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
                     style={{ padding: exp ? "0.3rem 0.45rem" : "0.15rem 0.38rem", borderRadius: "5px", background: `${col}${exp ? "22" : "16"}`, border: `1px solid ${col}${exp ? "55" : "25"}`, marginBottom: "0.18rem", transition: "all 0.2s", cursor: "pointer" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
                       <div style={{ width: 4, height: 4, borderRadius: "50%", background: col, flexShrink: 0 }} />
-                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.72rem", color: col, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{e.user.name}</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.64rem", color: col, fontWeight: 700 }}>{Math.round(e.earnings / 1000)}k</span>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: col, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{e.user.name}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: col, fontWeight: 700 }}>{Math.round(e.earnings / 1000)}k</span>
                     </div>
                     {exp && <div style={{ marginTop: "0.2rem", paddingTop: "0.2rem", borderTop: `1px solid ${col}22` }}><div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: col, fontWeight: 700 }}>{fmt(e.earnings)}</div>{e.notes && <div style={{ fontStyle: "italic", fontSize: "0.68rem", color: `${col}88` }}>{e.notes}</div>}</div>}
                   </div>
@@ -636,16 +636,16 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
               {/* Cost chips */}
               {cEntries.map(e => {
-                const col = e.type === "material" ? "#fbbf24" : "#a78bfa";
-                return <div key={e.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: `${col}12`, border: `1px solid ${col}22`, marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><div style={{ width: 4, height: 4, borderRadius: "50%", background: col, flexShrink: 0 }} /><span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.68rem", color: col, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</span><span style={{ fontSize: "0.62rem", color: col, fontWeight: 700 }}>−{Math.round(e.amount / 1000)}k</span></div>;
+                const col = e.type === "material" ? "#c49060" : "#9278b0";
+                return <div key={e.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: `${col}12`, border: `1px solid ${col}22`, marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><div style={{ width: 4, height: 4, borderRadius: "50%", background: col, flexShrink: 0 }} /><span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: col, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</span><span style={{ fontSize: "0.7rem", color: col, fontWeight: 700 }}>−{Math.round(e.amount / 1000)}k</span></div>;
               })}
 
               {/* Guest card chips */}
               {gCards.map(c => (
-                <div key={c.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: "rgba(232,180,200,0.12)", border: "1px solid rgba(232,180,200,0.28)", marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#e8b4c8", flexShrink: 0 }} />
-                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.68rem", color: "#e8b4c8", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.guest.name}</span>
-                  <span style={{ fontSize: "0.62rem", color: "#e8b4c8", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
+                <div key={c.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: "rgba(192,152,152,0.1)", border: "1px solid rgba(192,152,152,0.2)", marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "#c09898", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.guest.name}</span>
+                  <span style={{ fontSize: "0.7rem", color: "#c09898", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
                 </div>
               ))}
 
@@ -656,7 +656,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
               {/* Profit badge */}
               {(revenue > 0 || costs > 0) && (
-                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.58rem", color: profit >= 0 ? "rgba(110,231,183,0.6)" : "rgba(248,113,113,0.6)", fontWeight: 700 }}>{fmt(profit)}</div>
+                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: profit >= 0 ? "rgba(122,158,140,0.5)" : "rgba(196,120,120,0.5)", fontWeight: 700 }}>{fmt(profit)}</div>
               )}
             </div>
           );
@@ -787,9 +787,9 @@ export default function CalendarClient() {
             );
           })}
           {totalRevenue > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.32rem 0.7rem", background: (totalProfit >= 0 ? "rgba(110,231,183," : "rgba(248,113,113,") + "0.1)", border: `1px solid ${totalProfit >= 0 ? "rgba(110,231,183,0.3)" : "rgba(248,113,113,0.3)"}`, borderRadius: "7px" }}>
-              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", color: totalProfit >= 0 ? "#6ee7b7" : "#f87171" }}>PROFIT</span>
-              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: totalProfit >= 0 ? "#6ee7b7" : "#f87171", fontWeight: 700 }}>{fmt(totalProfit)}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.32rem 0.7rem", background: (totalProfit >= 0 ? "rgba(110,231,183," : "rgba(248,113,113,") + "0.1)", border: `1px solid ${totalProfit >= 0 ? "rgba(122,158,140,0.25)" : "rgba(196,120,120,0.25)"}`, borderRadius: "7px" }}>
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", color: totalProfit >= 0 ? "#7a9e8c" : "#c47878" }}>PROFIT</span>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: totalProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{fmt(totalProfit)}</span>
             </div>
           )}
         </div>
