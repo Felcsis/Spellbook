@@ -49,6 +49,7 @@ export const calendarRouter = createTRPCRouter({
           where: {
             date:      { gte: from, lt: to },
             workDayId: null,
+            type:      { in: ["material", "wage"] },
             ...(!isAdmin && { createdById: ctx.session.user.id }),
           },
           include: { createdBy: { select: { id: true, name: true } } },

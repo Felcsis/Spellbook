@@ -188,7 +188,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
             <div style={{ width: 1, background: "var(--border)" }} />
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: dayProfit >= 0 ? "#7a9e8caa" : "#f87171aa", marginBottom: "0.2rem" }}>PROFIT</div>
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{fmt(dayProfit)}</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{dayProfit >= 0 ? "🪙 " : "−"}{fmt(Math.abs(dayProfit))}</div>
             </div>
           </div>
         )}
@@ -539,7 +539,7 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
             <div style={{ textAlign: "right" }}>
               {revenue > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(revenue)}</div>}
               {costs > 0   && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: "#c49060" }}>−{fmt(costs)}</div>}
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: profit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{profit >= 0 ? "=" : ""}{fmt(profit)}</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: profit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{profit >= 0 ? "🪙" : "−"}{fmt(Math.abs(profit))}</div>
             </div>
           )}
         </div>
@@ -656,7 +656,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
               {/* Profit badge */}
               {(revenue > 0 || costs > 0) && (
-                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: profit >= 0 ? "rgba(122,158,140,0.5)" : "rgba(196,120,120,0.5)", fontWeight: 700 }}>{fmt(profit)}</div>
+                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: profit >= 0 ? "rgba(122,158,140,0.65)" : "rgba(196,120,120,0.65)", fontWeight: 700 }}>{profit >= 0 ? "🪙 " : "−"}{fmt(Math.abs(profit))}</div>
               )}
             </div>
           );
