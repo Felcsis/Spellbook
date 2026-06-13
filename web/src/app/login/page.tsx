@@ -6,9 +6,9 @@ import { useState } from "react";
 import { ThemeToggle } from "~/app/_theme-toggle";
 
 const USERS = [
-  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "var(--color-teal)", glowRgb: "160,120,120" },
-  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "var(--color-teal)", glowRgb: "160,120,120" },
-  { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "var(--color-teal)", glowRgb: "160,120,120" },
+  { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "#c9906a", glowRgb: "201,144,106" },
+  { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "#9878b8", glowRgb: "152,120,184" },
+  { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "#e8a0b8", glowRgb: "232,160,184" },
 ] as const;
 
 function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) {
@@ -143,34 +143,16 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
         <button
           type="submit"
           disabled={loading}
+          className="btn-gold"
           style={{
             padding: "0.88rem",
-            border: "none",
             borderRadius: "10px",
-            cursor: loading ? "not-allowed" : "pointer",
             fontFamily: "var(--font-cinzel)",
             fontSize: "0.72rem",
             fontWeight: 600,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
-            color: "#fff",
-            background: `linear-gradient(120deg, ${color}cc 0%, ${color} 50%, ${color}cc 100%)`,
-            backgroundSize: "200% auto",
-            boxShadow: `0 4px 20px rgba(${glowRgb},0.3)`,
-            animation: "shimmer 3s linear infinite",
-            opacity: loading ? 0.7 : 1,
-            transition: "box-shadow 0.3s, transform 0.15s",
             width: "100%",
-          }}
-          onMouseEnter={e => {
-            if (!loading) {
-              (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
-              (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 32px rgba(${glowRgb},0.4)`;
-            }
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-            (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px rgba(${glowRgb},0.3)`;
           }}
         >
           {loading ? "Belépés..." : "Belépés " + sigil}
