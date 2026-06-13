@@ -84,14 +84,24 @@ function ServiceModal({ categoryId, service, onClose }: { categoryId: string; se
   const [price, setPrice] = useState(service?.price?.toString() ?? "");
   const [dur, setDur]     = useState(service?.duration?.toString() ?? "30");
   const [desc, setDesc]   = useState(service?.description ?? "");
+  const [err, setErr]     = useState("");
 
-  const create = api.services.createService.useMutation({ onSuccess: () => { void utils.services.listCategories.invalidate(); onClose(); } });
-  const update = api.services.updateService.useMutation({ onSuccess: () => { void utils.services.listCategories.invalidate(); onClose(); } });
+  const create = api.services.createService.useMutation({
+    onSuccess: () => { void utils.services.listCategories.invalidate(); onClose(); },
+    onError:   e  => setErr(e.message),
+  });
+  const update = api.services.updateService.useMutation({
+    onSuccess: () => { void utils.services.listCategories.invalidate(); onClose(); },
+    onError:   e  => setErr(e.message),
+  });
 
   const save = () => {
+    setErr("");
     const p = parseFloat(price);
     const d = parseInt(dur);
-    if (!name.trim() || isNaN(p) || isNaN(d)) return;
+    if (!name.trim()) { setErr("A megnevezés megadása kötelező."); return; }
+    if (isNaN(p) || p < 0) { setErr("Adj meg érvényes árat."); return; }
+    if (isNaN(d) || d <= 0) { setErr("Adj meg érvényes időtartamot."); return; }
     if (service) {
       update.mutate({ id: service.id, name, price: p, duration: d, description: desc || undefined });
     } else {
@@ -99,23 +109,34 @@ function ServiceModal({ categoryId, service, onClose }: { categoryId: string; se
     }
   };
 
+  const isPending = create.isPending || update.isPending;
+
   return (
     <Modal title={service ? "Szolgáltatás szerkesztése" : "Új szolgáltatás"} onClose={onClose}>
       <Field label="Megnevezés">
-        <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="pl. Hajvágás" autoFocus />
+        <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="pl. Hajvágás" autoFocus
+          onKeyDown={e => e.key === "Enter" && save()} />
       </Field>
       <Field label="Ár (Ft)">
-        <input style={inputStyle} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="pl. 5000" />
+        <input style={inputStyle} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="pl. 5000"
+          onKeyDown={e => e.key === "Enter" && save()} />
       </Field>
       <Field label="Időtartam (perc)">
-        <input style={inputStyle} type="number" value={dur} onChange={e => setDur(e.target.value)} placeholder="30" />
+        <input style={inputStyle} type="number" value={dur} onChange={e => setDur(e.target.value)} placeholder="30"
+          onKeyDown={e => e.key === "Enter" && save()} />
       </Field>
       <Field label="Megjegyzés (opcionális)">
-        <input style={inputStyle} value={desc} onChange={e => setDesc(e.target.value)} placeholder="rövid leírás..." />
+        <input style={inputStyle} value={desc} onChange={e => setDesc(e.target.value)} placeholder="rövid leírás..."
+          onKeyDown={e => e.key === "Enter" && save()} />
       </Field>
+      {err && (
+        <div style={{ color: "#e05555", fontSize: "0.85rem", marginBottom: "0.75rem", fontFamily: "var(--font-cormorant)" }}>
+          {err}
+        </div>
+      )}
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
         <Btn variant="ghost" onClick={onClose}>Mégsem</Btn>
-        <Btn onClick={save} disabled={create.isPending || update.isPending}>Mentés</Btn>
+        <Btn onClick={save} disabled={isPending}>{isPending ? "Mentés…" : "Mentés"}</Btn>
       </div>
     </Modal>
   );
