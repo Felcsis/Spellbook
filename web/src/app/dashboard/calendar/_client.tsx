@@ -481,7 +481,18 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                 onBlur={e => { e.target.style.borderColor = "var(--border)"; }} />
             </div>
 
-            <SaveBtn loading={upsert.isPending || addC.isPending} />
+            {editingEntryId ? (
+              <div style={{ display: "flex", gap: "0.6rem" }}>
+                <button type="button" disabled={delW.isPending}
+                  onClick={() => { delW.mutate({ id: editingEntryId }); resetWork(); }}
+                  style={{ padding: "0.8rem 1rem", borderRadius: "10px", border: "1px solid rgba(220,80,80,0.35)", background: "rgba(220,80,80,0.08)", color: "#e07070", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.15em", cursor: "pointer", transition: "all 0.2s" }}>
+                  {delW.isPending ? "Törlés…" : "✕ Törlés"}
+                </button>
+                <SaveBtn loading={upsert.isPending} />
+              </div>
+            ) : (
+              <SaveBtn loading={upsert.isPending || addC.isPending} />
+            )}
           </form>
         )}
 
