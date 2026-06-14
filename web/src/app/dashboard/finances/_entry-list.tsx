@@ -149,7 +149,7 @@ function VisitGroupRow({
           )}
           {!isAdmin && (
             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#a78bfa", fontWeight: 700 }}>
-              {fmt(Math.round(group.totalRevenue * STAFF_RATE))} neked
+              {fmt(Math.round(group.totalRevenue * STAFF_RATE))} bér
             </span>
           )}
         </div>
