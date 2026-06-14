@@ -199,30 +199,136 @@ function DeleteModal({ user, onClose, onDeleted }: {
 
 type UserRow = { id: string; name: string | null; email: string | null; role: string };
 
+const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
+const fmt = (n: number) => new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
+
+// ── Staff finances section ────────────────────────────────────────────────────
+function StaffFinances({ users }: { users: UserRow[] }) {
+  const now = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+
+  const { data: entries = [] } = api.admin.staffFinances.useQuery({ year, month });
+
+  const staff = users.filter(u => u.role !== "admin");
+
+  function prevMonth() { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); }
+  function nextMonth() { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }
+
+  const byUser = (userId: string) => entries.filter(e =>
+    e.workDay ? e.workDay.userId === userId : e.createdBy.id === userId
+  );
+
+  return (
+    <div>
+      {/* Month nav */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem" }}>
+        <button onClick={prevMonth} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--color-teal)", width: 34, height: 34, cursor: "pointer", fontSize: "1rem" }}>‹</button>
+        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", letterSpacing: "0.16em", color: "var(--text-primary)", minWidth: 160, textAlign: "center" }}>{MONTHS[month - 1]} {year}</span>
+        <button onClick={nextMonth} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--color-teal)", width: 34, height: 34, cursor: "pointer", fontSize: "1rem" }}>›</button>
+      </div>
+
+      {/* Per-staff cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        {staff.map(u => {
+          const uc      = userColor(u.name);
+          const uEntries = byUser(u.id);
+          const revenue  = uEntries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
+          const material = uEntries.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
+          const wageActual = uEntries.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
+          const wage       = wageActual > 0 ? wageActual : Math.round(revenue * 0.6);
+          const net        = revenue - material - wageActual;
+          const revenueEntries = uEntries.filter(e => e.type === "revenue");
+
+          return (
+            <div key={u.id} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderLeft: `4px solid ${uc}`, borderRadius: 14, overflow: "hidden" }}>
+              {/* Worker header */}
+              <div style={{ padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.9rem" }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: `radial-gradient(circle, ${uc}44, ${uc}22)`, border: `2px solid ${uc}66`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.95rem", color: uc, flexShrink: 0 }}>
+                  {(u.name ?? "?")[0]}
+                </div>
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.15rem", color: uc, fontWeight: 600, flex: 1 }}>{u.name}</span>
+                <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", color: net >= 0 ? "var(--color-teal)" : "#f87171", fontWeight: 700 }}>{fmt(net)}</div>
+              </div>
+
+              {/* Summary row */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: "1px solid var(--bg-highlight)" }}>
+                {[
+                  { label: "Bevétel", value: revenue, color: "var(--color-teal)" },
+                  { label: "Anyagköltség", value: material, color: "#c4926e" },
+                  { label: wageActual > 0 ? "Bér" : "Várható bér (60%)", value: wage, color: "#9878b8" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ padding: "0.7rem 1.1rem", borderRight: "1px solid var(--bg-highlight)", textAlign: "center" }}>
+                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.14em", color: "var(--text-muted)", marginBottom: "0.25rem" }}>{label.toUpperCase()}</div>
+                    <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color, fontWeight: 700 }}>{fmt(value)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Entry list */}
+              {revenueEntries.length > 0 && (
+                <div style={{ borderTop: "1px solid var(--bg-highlight)" }}>
+                  {revenueEntries.map(e => (
+                    <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 1.25rem", borderBottom: "1px solid var(--bg-highlight)" }}>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-muted)", minWidth: 80 }}>
+                        {new Date(e.date).toLocaleDateString("hu-HU", { month: "numeric", day: "numeric" })}
+                      </span>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{e.description}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(e.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {uEntries.length === 0 && (
+                <div style={{ padding: "1rem 1.25rem", fontFamily: "var(--font-cormorant)", color: "var(--text-muted)", fontSize: "0.95rem", borderTop: "1px solid var(--bg-highlight)", textAlign: "center" }}>
+                  Nincs bejegyzés ebben a hónapban
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AdminClient() {
-  const { data: users, refetch } = api.admin.listUsers.useQuery();
+  const { data: users = [], refetch } = api.admin.listUsers.useQuery();
   const [showCreate, setShowCreate] = useState(false);
   const [editUser, setEditUser]     = useState<UserRow | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
+  const [tab, setTab] = useState<"users" | "finances">("users");
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: "0.45rem 1.1rem", borderRadius: 8, border: "none", cursor: "pointer",
+    fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.14em",
+    background: active ? "var(--bg-active)" : "transparent",
+    color: active ? "var(--color-teal)" : "var(--text-muted)",
+    transition: "all 0.2s",
+  });
 
   return (
     <div style={{ maxWidth: 680 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" }}>
-        <div>
-          <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.5rem", color: "var(--color-teal)", margin: 0 }}>
-            ✦ Admin felület
-          </h1>
-          <p style={{ color: "var(--text-muted)", fontFamily: "var(--font-cormorant)", fontSize: "1rem", marginTop: "0.25rem" }}>
-            Felhasználók kezelése
-          </p>
-        </div>
-        <Btn onClick={() => setShowCreate(true)}>+ Új felhasználó</Btn>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.25rem" }}>
+        <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.5rem", color: "var(--color-teal)", margin: 0 }}>
+          ✦ Admin felület
+        </h1>
+        {tab === "users" && <Btn onClick={() => setShowCreate(true)}>+ Új felhasználó</Btn>}
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1.75rem", background: "var(--bg-panel)", padding: "0.25rem", borderRadius: 10, width: "fit-content" }}>
+        <button style={tabStyle(tab === "users")}   onClick={() => setTab("users")}>Felhasználók</button>
+        <button style={tabStyle(tab === "finances")} onClick={() => setTab("finances")}>Pénzügyek</button>
+      </div>
+
+      {tab === "finances" && <StaffFinances users={users} />}
+
       {/* User cards */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      {tab === "users" && <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         {users?.map(u => {
           const uc = userColor(u.name);
           return (
@@ -287,7 +393,7 @@ export default function AdminClient() {
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* Modals */}
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} onCreated={() => void refetch()} />}

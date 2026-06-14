@@ -37,12 +37,17 @@ export default function EvesClient({ isAdmin = true, userId = "" }: { isAdmin?: 
 
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
   const { data: yearData = [], isLoading } = api.finance.yearSummary.useQuery({ year, filterUserId });
+  const { data: perUserData = [] } = api.finance.perUserYear.useQuery({ year }, { enabled: isAdmin });
 
   const yearRev    = yearData.reduce((s, m) => s + m.revenue, 0);
   const yearMat    = yearData.reduce((s, m) => s + m.material, 0);
   const yearWage   = yearData.reduce((s, m) => s + m.wage, 0);
   const yearProfit = yearRev - yearMat - yearWage;
   const maxRev     = Math.max(...yearData.map(m => m.revenue), 1);
+
+  const workerYearStats = perUserData
+    .map(u => ({ ...u, earn: u.wage > 0 ? u.wage : Math.round(u.revenue * STAFF_RATE) }))
+    .filter(u => u.revenue > 0 || u.wage > 0);
 
   function goToMonth(month: number) {
     router.push(`/dashboard/finances/havi?year=${year}&month=${month}`);
@@ -81,13 +86,35 @@ export default function EvesClient({ isAdmin = true, userId = "" }: { isAdmin?: 
       </div>
 
       {/* Year totals */}
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: workerYearStats.length > 0 ? "0.75rem" : "2rem" }}>
         <StatBox label={`${year} bevétel`} value={yearRev}    color="#527666" sub="összesen" large />
-        {isAdmin && <StatBox label="Anyagköltség" value={yearMat}    color="#a06830" sub="összesen" />}
-        {isAdmin && <StatBox label="Bérek"        value={yearWage}   color="#7256a0" sub="összesen" />}
-        {isAdmin && <StatBox label="Nyereség"     value={yearProfit} color={yearProfit >= 0 ? "#527666" : "#c47878"} sub={yearRev > 0 ? `${Math.round((yearProfit/yearRev)*100)}% árrés` : ""} large />}
-        {!isAdmin && <StatBox label="Neked jár (60%)" value={Math.round(yearRev * STAFF_RATE)} color="#a78bfa" sub="éves bér" large />}
+        {isAdmin && <StatBox label="Anyagköltség" value={yearMat} color="#a06830" sub="összesen" />}
+        {isAdmin && yearRev > 0 && <StatBox label={yearWage > 0 ? "Bérek" : "Várható bér (60%)"} value={yearWage > 0 ? yearWage : Math.round(yearRev * STAFF_RATE)} color="#7256a0" sub={yearWage > 0 ? "összesen" : "becslés"} />}
+        {isAdmin && <StatBox label="Nyereség" value={yearProfit} color={yearProfit >= 0 ? "#527666" : "#c47878"} sub={yearRev > 0 ? `${Math.round((yearProfit/yearRev)*100)}% árrés` : ""} large />}
+        {!isAdmin && <StatBox label={yearWage > 0 ? "Béred" : "Neked jár (60%)"} value={yearWage > 0 ? yearWage : Math.round(yearRev * STAFF_RATE)} color="#a78bfa" sub="éves bér" large />}
       </div>
+
+      {/* Per-worker annual earnings */}
+      {isAdmin && workerYearStats.length > 0 && (
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(114,86,160,0.55)", marginBottom: "0.55rem" }}>♦ Bérek</div>
+          <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
+            {workerYearStats.map(w => {
+              const colors: Record<string, string> = { Gitta: "#9878b8", Lili: "#e8a0b8", Felicia: "#c9906a" };
+              const uc = colors[w.name] ?? "#7256a0";
+              return (
+                <div key={w.id} style={{ background: "var(--bg-card)", border: `1px solid ${uc}33`, borderRadius: 14, padding: "0.85rem 1.25rem", flex: "1 1 140px", minWidth: 130 }}>
+                  <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", textTransform: "uppercase", color: `${uc}99`, marginBottom: "0.35rem" }}>{w.name}</div>
+                  <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: uc, fontWeight: 700, lineHeight: 1 }}>{fmt(w.earn)}</div>
+                  <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)", marginTop: "0.25rem", fontStyle: "italic" }}>
+                    {w.wage > 0 ? "rögzített bér" : `bevétel: ${fmt(w.revenue)}`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Monthly bar chart */}
       {isLoading ? (
@@ -128,7 +155,7 @@ export default function EvesClient({ isAdmin = true, userId = "" }: { isAdmin?: 
                   )}
                   {!isAdmin && m.revenue > 0 && (
                     <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "#a78bfa", minWidth: 80, textAlign: "right" }}>
-                      {fmt(Math.round(m.revenue * STAFF_RATE))}
+                      {fmt(m.wage > 0 ? m.wage : Math.round(m.revenue * STAFF_RATE))}
                     </div>
                   )}
                 </div>

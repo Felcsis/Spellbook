@@ -65,9 +65,6 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const profit   = revenue - material - wage;
   const staffNet = Math.round(revenue * STAFF_RATE);
 
-  const { mon: weekMon, sun: weekSun } = weekBounds(now);
-  const todayRevenue = entries.filter(e => e.type === "revenue" && toDateStr(new Date(e.date)) === todayStr).reduce((s, e) => s + e.amount, 0);
-  const weekRevenue  = entries.filter(e => { const d = new Date(e.date); return e.type === "revenue" && d >= weekMon && d <= weekSun; }).reduce((s, e) => s + e.amount, 0);
 
   // Per-staff breakdown
   type StaffStat = { name: string; isOwner: boolean; revenue: number; material: number; wage: number };
@@ -84,7 +81,7 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
     });
   }
 
-  const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material");
+  const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material" || e.type === "wage");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
 
   function prevMonth() { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); }
@@ -126,19 +123,13 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
 
       {/* Stat boxes */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
-        {isCurrentMonth && <>
-          <StatBox label="Ma" value={todayRevenue} color="#527666" sub="bevétel" />
-          <StatBox label="Ez a hét" value={weekRevenue} color="#527666" sub="bevétel" />
-        </>}
-        <StatBox label={isCurrentMonth ? "Ez a hónap" : (MONTHS[month-1] ?? "")} value={revenue} color="#527666" sub="bevétel" large={!isCurrentMonth} />
+        <StatBox label={MONTHS[month-1] ?? ""} value={revenue} color="#527666" sub="bevétel" large />
         {isAdmin ? <>
           <StatBox label="Anyagköltség" value={material} color="#a06830" sub="kiadás" />
-          <StatBox label="Bérek"        value={wage}     color="#7256a0" sub="kiadás" />
+          <StatBox label={wage > 0 ? "Bérek" : "Várható bér (60%)"} value={wage > 0 ? wage : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />
           <StatBox label="Nyereség"     value={profit}   color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
         </> : <>
-          <StatBox label="Neked jár (60%)" value={staffNet} color="#a78bfa" sub="havi bér" large />
-          {isCurrentMonth && todayRevenue > 0 && <StatBox label="Mai bér"  value={Math.round(todayRevenue * STAFF_RATE)} color="#a78bfa" sub="60%" />}
-          {isCurrentMonth && weekRevenue  > 0 && <StatBox label="Heti bér" value={Math.round(weekRevenue  * STAFF_RATE)} color="#a78bfa" sub="60%" />}
+          <StatBox label={wage > 0 ? "Béred" : "Neked jár (60%)"} value={wage > 0 ? wage : staffNet} color="#a78bfa" sub="havi bér" large />
         </>}
       </div>
 
