@@ -215,7 +215,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
 
         {/* ── Category tabs ── */}
         <div>
-          <span style={lbl}>Részleg</span>
+          <span style={lbl}>Szolgáltatások</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
             {categories.map(c => {
               const sel = activeCat === c.name;
