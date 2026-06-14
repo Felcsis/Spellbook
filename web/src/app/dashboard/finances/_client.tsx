@@ -6,9 +6,9 @@ import { api } from "~/trpc/react";
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
 const TYPE_CONFIG = {
-  revenue:  { label: "Bevétel",       color: "#7a9e8c", dim: "rgba(122,158,140,0.12)", icon: "◈" },
-  material: { label: "Anyagköltség",  color: "#c49060", dim: "rgba(196,144,96,0.12)",  icon: "✦" },
-  wage:     { label: "Bér",           color: "#9278b0", dim: "rgba(146,120,176,0.12)", icon: "♦" },
+  revenue:  { label: "Bevétel",       color: "#527666", dim: "rgba(82,118,102,0.12)",  icon: "◈" },
+  material: { label: "Anyagköltség",  color: "#a06830", dim: "rgba(160,104,48,0.12)",  icon: "✦" },
+  wage:     { label: "Bér",           color: "#7256a0", dim: "rgba(114,86,160,0.12)",  icon: "♦" },
 } as const;
 
 type EntryType = keyof typeof TYPE_CONFIG;
@@ -189,8 +189,8 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
   return (
     <>
       {anyOpen && <div onClick={closeAll} style={{ position: "fixed", inset: 0, zIndex: 150 }} />}
-    <div style={{ background: "var(--bg-panel)", border: "1px solid rgba(122,158,140,0.28)", borderRadius: 18, padding: "1.5rem 1.75rem", marginBottom: "2rem" }}>
-      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(122,158,140,0.65)", textTransform: "uppercase", marginBottom: "1.25rem" }}>◈ Látogatás rögzítése</div>
+    <div style={{ background: "var(--bg-panel)", border: "1px solid rgba(82,118,102,0.28)", borderRadius: 18, padding: "1.5rem 1.75rem", marginBottom: "2rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.65)", textTransform: "uppercase", marginBottom: "1.25rem" }}>◈ Látogatás rögzítése</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
@@ -202,7 +202,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
               const sel = activeCat === c.name;
               return (
                 <button key={c.id} type="button" onClick={() => { setActiveCat(sel ? null : c.name); setSvcSearch(""); setSvcOpen(true); }}
-                  style={{ padding: "0.38rem 0.85rem", borderRadius: 8, border: sel ? "1px solid rgba(122,158,140,0.6)" : "1px solid var(--border)", background: sel ? "rgba(122,158,140,0.15)" : "var(--bg-card)", color: sel ? "#7a9e8c" : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: "pointer", transition: "all 0.18s" }}>
+                  style={{ padding: "0.38rem 0.85rem", borderRadius: 8, border: sel ? "1px solid rgba(82,118,102,0.6)" : "1px solid var(--border)", background: sel ? "rgba(82,118,102,0.15)" : "var(--bg-card)", color: sel ? "#527666" : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: "pointer", transition: "all 0.18s" }}>
                   {c.name}
                 </button>
               );
@@ -216,9 +216,9 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
           {selSvcs.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.5rem" }}>
               {selSvcs.map(s => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.65rem", background: "rgba(122,158,140,0.1)", border: "1px solid rgba(122,158,140,0.3)", borderRadius: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#7a9e8c", flex: 1, minWidth: 120 }}>{s.name}</span>
-                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(122,158,140,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.65rem", background: "rgba(82,118,102,0.1)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#527666", flex: 1, minWidth: 120 }}>{s.name}</span>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(82,118,102,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
                   {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>{s.duration} perc</span>}
                   {/* Női / Férfi / Gyermek toggle */}
                   {(["nő", "férfi", "gyermek"] as const).map(g => {
@@ -237,7 +237,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
                       </button>
                     );
                   })}
-                  <button type="button" onClick={() => setSelSvcs(p => p.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: "rgba(122,158,140,0.4)", cursor: "pointer", fontSize: "0.75rem", marginLeft: "0.2rem" }}>✕</button>
+                  <button type="button" onClick={() => setSelSvcs(p => p.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: "rgba(82,118,102,0.4)", cursor: "pointer", fontSize: "0.75rem", marginLeft: "0.2rem" }}>✕</button>
                 </div>
               ))}
             </div>
@@ -248,19 +248,19 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
               onFocus={() => setSvcOpen(true)}
               onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
               placeholder={activeCat ? `Keress a ${activeCat} kategóriában…` : "Keress szolgáltatást, vagy válassz részleget fentebb…"}
-              style={{ ...inputStyle, borderColor: "rgba(122,158,140,0.25)" }} />
+              style={{ ...inputStyle, borderColor: "rgba(82,118,102,0.25)" }} />
             {(svcOpen && displayedCatSvcs.length > 0) && (
-              <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(122,158,140,0.3)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
                 {displayedCatSvcs.map(s => {
                   const already = !!selSvcs.find(x => x.id === s.id);
                   return (
                     <div key={s.id} onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, s]); setSvcSearch(""); } }}
                       style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
-                      onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(122,158,140,0.1)"; }}
+                      onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.1)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                      {already && <span style={{ color: "#7a9e8c", fontSize: "0.65rem" }}>✓</span>}
+                      {already && <span style={{ color: "#527666", fontSize: "0.65rem" }}>✓</span>}
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(s.price)}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#527666", fontWeight: 700 }}>{fmt(s.price)}</span>
                     </div>
                   );
                 })}
@@ -313,14 +313,14 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
         {/* ── Szín recept toggle ── */}
         <div>
           <button type="button" onClick={() => setShowMats(p => !p)}
-            style={{ background: showMats ? "rgba(251,191,36,0.1)" : "transparent", border: `1px solid ${showMats ? "rgba(251,191,36,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "#fbbf24" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
+            style={{ background: showMats ? "rgba(200,162,68,0.1)" : "transparent", border: `1px solid ${showMats ? "rgba(200,162,68,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "#c8a244" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
             ✦ {showMats ? "Szín recept ▾" : "Szín recept hozzáadása"}
           </button>
 
           {showMats && (
             <div style={{ marginTop: "0.65rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
               {matRows.map((row, i) => (
-                <div key={i} style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.18)", borderRadius: 10, padding: "0.65rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                <div key={i} style={{ background: "rgba(200,162,68,0.04)", border: "1px solid rgba(200,162,68,0.18)", borderRadius: 10, padding: "0.65rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                   <div style={{ display: "flex", gap: "0.45rem" }}>
                     <div style={{ flex: 2, position: "relative" }}>
                       <input value={row.name}
@@ -328,16 +328,16 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
                         onFocus={() => { setActiveMat(i); setMatSearch(row.name); setMatOpen(true); }}
                         onBlur={() => setTimeout(() => setMatOpen(false), 150)}
                         placeholder="Anyag neve…"
-                        style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "rgba(251,191,36,0.2)" }} />
+                        style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "rgba(200,162,68,0.2)" }} />
                       {matOpen && activeMat === i && filtMat.length > 0 && (
-                        <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
+                        <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid rgba(200,162,68,0.3)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                           {filtMat.map(m => (
                             <div key={m.name} onMouseDown={() => { updateMat(i, "name", m.name); updateMat(i, "unitPrice", m.unitPrice); setMatSearch(""); setMatOpen(false); }}
                               style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.45rem 0.85rem", cursor: "pointer", transition: "background 0.12s" }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(200,162,68,0.1)"; }}
                               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                               <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#fbbf24", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#c8a244", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
                             </div>
                           ))}
                         </div>
@@ -351,20 +351,20 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
                     <input type="number" value={row.grams} onChange={e => updateMat(i, "grams", e.target.value)} placeholder="Gramm" min="0" step="any"
                       style={{ ...inputStyle, flex: 1, fontSize: "0.9rem", textAlign: "center" }} />
                     <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-soft)", fontSize: "0.9rem" }}>g ×</span>
-                    <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(251,191,36,0.7)", fontSize: "0.9rem", minWidth: 50 }}>{fmt(row.unitPrice)}</span>
+                    <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(200,162,68,0.7)", fontSize: "0.9rem", minWidth: 50 }}>{fmt(row.unitPrice)}</span>
                     <span style={{ color: "var(--text-soft)", fontSize: "0.85rem" }}>=</span>
-                    <span style={{ fontFamily: "var(--font-playfair)", color: "#fbbf24", fontWeight: 700, fontSize: "0.92rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", color: "#c8a244", fontWeight: 700, fontSize: "0.92rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
                   </div>
                 </div>
               ))}
               <button type="button" onClick={() => setMatRows(p => [...p, { name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }])}
-                style={{ alignSelf: "flex-start", background: "none", border: "1px solid rgba(251,191,36,0.22)", borderRadius: 6, color: "rgba(251,191,36,0.7)", cursor: "pointer", fontSize: "0.68rem", padding: "0.2rem 0.65rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em" }}>
+                style={{ alignSelf: "flex-start", background: "none", border: "1px solid rgba(200,162,68,0.22)", borderRadius: 6, color: "rgba(200,162,68,0.7)", cursor: "pointer", fontSize: "0.68rem", padding: "0.2rem 0.65rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em" }}>
                 ＋ Sor
               </button>
               {matTotal > 0 && (
-                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0.5rem 0", borderTop: "1px solid rgba(251,191,36,0.1)" }}>
-                  <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.45)" }}>ANYAG ÖSSZESEN</span>
-                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#c49060", fontWeight: 700 }}>{fmt(matTotal)}</span>
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0.5rem 0", borderTop: "1px solid rgba(200,162,68,0.1)" }}>
+                  <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", color: "rgba(200,162,68,0.45)" }}>ANYAG ÖSSZESEN</span>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#a06830", fontWeight: 700 }}>{fmt(matTotal)}</span>
                 </div>
               )}
             </div>
@@ -379,16 +379,16 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
           </div>
           <div style={{ flex: 1, minWidth: 120 }}>
             <span style={{ ...lbl, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              Összeg (Ft) {!isManual && autoTotal > 0 && <span style={{ color: "rgba(122,158,140,0.7)", fontFamily: "var(--font-cinzel)", fontSize: "0.45rem" }}>AUTO</span>}
+              Összeg (Ft) {!isManual && autoTotal > 0 && <span style={{ color: "rgba(82,118,102,0.7)", fontFamily: "var(--font-cinzel)", fontSize: "0.45rem" }}>AUTO</span>}
             </span>
             <input type="number" min="0"
               value={isManual ? manualAmt : autoTotal > 0 ? String(autoTotal) : ""}
               onChange={e => { setManualAmt(e.target.value); setIsManual(true); }}
               placeholder="0"
-              style={{ ...inputStyle, borderColor: total > 0 ? "rgba(122,158,140,0.4)" : "var(--border)" }} />
+              style={{ ...inputStyle, borderColor: total > 0 ? "rgba(82,118,102,0.4)" : "var(--border)" }} />
           </div>
           <button onClick={handleSave} disabled={saving || !canSave}
-            style={{ flex: "0 0 auto", padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: canSave ? "linear-gradient(120deg,#4a7a6a 0%,#7a9e8c 50%,#4a7a6a 100%)" : "var(--bg-card)", backgroundSize: "200% auto", color: canSave ? "#fff" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.15em", cursor: canSave ? "pointer" : "not-allowed", animation: canSave ? "shimmer 3s linear infinite" : "none", opacity: saving ? 0.7 : 1, transition: "all 0.2s", alignSelf: "flex-end" }}>
+            style={{ flex: "0 0 auto", padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: canSave ? "linear-gradient(120deg,#4a7a6a 0%,#527666 50%,#4a7a6a 100%)" : "var(--bg-card)", backgroundSize: "200% auto", color: canSave ? "#fff" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.15em", cursor: canSave ? "pointer" : "not-allowed", animation: canSave ? "shimmer 3s linear infinite" : "none", opacity: saving ? 0.7 : 1, transition: "all 0.2s", alignSelf: "flex-end" }}>
             {saving ? "Mentés..." : "Rögzítés ◈"}
           </button>
         </div>
@@ -470,7 +470,7 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
               {selectedMats.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.65rem" }}>
                   {selectedMats.map(m => (
-                    <div key={m.id} style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.22)", borderRadius: 10, padding: "0.55rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                    <div key={m.id} style={{ background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.22)", borderRadius: 10, padding: "0.55rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                         <button type="button" onClick={() => setSelectedMats(p => p.filter(x => x.id !== m.id))} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
@@ -480,14 +480,14 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
                           onChange={e => setSelectedMats(p => p.map(x => x.id === m.id ? { ...x, qty: e.target.value } : x))}
                           style={{ ...inputStyle, width: 72, padding: "0.35rem 0.5rem", fontSize: "0.9rem", textAlign: "center" }} />
                         <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-soft)", fontSize: "0.9rem" }}>×</span>
-                        <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(251,191,36,0.7)", fontSize: "0.9rem" }}>{fmt(m.unitPrice)}</span>
-                        <span style={{ fontFamily: "var(--font-playfair)", color: "#c49060", fontWeight: 700, fontSize: "0.95rem", marginLeft: "auto" }}>{fmt(lineTotal(m))}</span>
+                        <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(200,162,68,0.7)", fontSize: "0.9rem" }}>{fmt(m.unitPrice)}</span>
+                        <span style={{ fontFamily: "var(--font-playfair)", color: "#a06830", fontWeight: 700, fontSize: "0.95rem", marginLeft: "auto" }}>{fmt(lineTotal(m))}</span>
                       </div>
                     </div>
                   ))}
-                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0.5rem 0", borderTop: "1px solid rgba(196,144,96,0.15)" }}>
-                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.14em", color: "rgba(251,191,36,0.5)" }}>ÖSSZESEN</span>
-                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#c49060", fontWeight: 700 }}>{fmt(matTotal)}</span>
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0.5rem 0", borderTop: "1px solid rgba(160,104,48,0.15)" }}>
+                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.14em", color: "rgba(200,162,68,0.5)" }}>ÖSSZESEN</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#a06830", fontWeight: 700 }}>{fmt(matTotal)}</span>
                   </div>
                 </div>
               )}
@@ -497,22 +497,22 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
                   onFocus={() => setMatOpen(true)}
                   onBlur={() => setTimeout(() => setMatOpen(false), 150)}
                   placeholder="Keress az árlistán…"
-                  style={{ ...inputStyle, borderColor: "rgba(251,191,36,0.2)" }} />
+                  style={{ ...inputStyle, borderColor: "rgba(200,162,68,0.2)" }} />
                 {matOpen && filteredMat.length > 0 && (
-                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(200,162,68,0.3)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 200, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.65)" }}>
                     {filteredMat.map((m, i) => {
                       const already = !!selectedMats.find(s => s.id === m.id);
                       const showCat = i === 0 || filteredMat[i-1]?.categoryName !== m.categoryName;
                       return (
                         <div key={m.id}>
-                          {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(251,191,36,0.4)", textTransform: "uppercase" }}>{m.categoryName}</div>}
+                          {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "rgba(200,162,68,0.4)", textTransform: "uppercase" }}>{m.categoryName}</div>}
                           <div onMouseDown={() => { if (!already) setSelectedMats(p => [...p, { id: m.id, name: m.name, unitPrice: m.price, qty: "1" }]); setMatSearch(""); setMatOpen(false); }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
-                            onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(251,191,36,0.1)"; }}
+                            onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(200,162,68,0.1)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                            {already && <span style={{ color: "#c49060", fontSize: "0.7rem" }}>✓</span>}
+                            {already && <span style={{ color: "#a06830", fontSize: "0.7rem" }}>✓</span>}
                             <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#c49060", fontWeight: 700 }}>{fmt(m.price)}</span>
+                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#a06830", fontWeight: 700 }}>{fmt(m.price)}</span>
                           </div>
                         </div>
                       );
@@ -576,10 +576,12 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
   const [filterUserId, setFilterUserId] = useState<string | undefined>(undefined);
   const [editDateKey,  setEditDateKey]  = useState<string | null>(null);
   const [editDateVal,  setEditDateVal]  = useState("");
+  const [viewMode,     setViewMode]     = useState<"month" | "year">("month");
 
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
 
-  const { data: entries = [], isLoading, refetch } = api.finance.list.useQuery({ year, month, filterUserId });
+  const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId }, { enabled: viewMode === "month" });
+  const { data: yearData = [] } = api.finance.yearSummary.useQuery({ year, filterUserId }, { enabled: viewMode === "year" });
   const utils = api.useUtils();
   const inv = () => { void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); };
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
@@ -623,28 +625,39 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
     });
   }
 
-  // Staff only sees their revenue entries
-  const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue");
+  // Staff sees revenue + material (linked to their visits), not wages
+  const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material");
 
   // Group entries: entries sharing a guestCardId become one "visit group"
+  // Fallback: standalone material entries on the same day + same creator merge into the revenue group
   type EntryItem = typeof entries[number];
   type VisitGroup = { key: string; date: string; cardId: string | null; entries: EntryItem[]; totalRevenue: number; totalMaterial: number };
 
   const visitGroups: VisitGroup[] = [];
   const cardGroupMap: Record<string, VisitGroup> = {};
+  // key = "date|creatorId" → revenue group with no cardId
+  const dayCreatorMap: Record<string, VisitGroup> = {};
 
   visibleEntries.forEach(e => {
-    const dateKey = toDateStr(new Date(e.date));
-    const cardId  = (e as { guestCardId?: string | null }).guestCardId ?? null;
+    const dateKey   = toDateStr(new Date(e.date));
+    const cardId    = (e as { guestCardId?: string | null }).guestCardId ?? null;
+    const creatorId = e.createdBy?.id ?? "";
+
     if (cardId && cardGroupMap[cardId]) {
       const g = cardGroupMap[cardId]!;
       g.entries.push(e);
       if (e.type === "revenue")  g.totalRevenue  += e.amount;
       if (e.type === "material") g.totalMaterial += e.amount;
+    } else if (!cardId && e.type === "material" && dayCreatorMap[`${dateKey}|${creatorId}`]) {
+      // Merge orphan material into the revenue group from the same day/creator
+      const g = dayCreatorMap[`${dateKey}|${creatorId}`]!;
+      g.entries.push(e);
+      g.totalMaterial += e.amount;
     } else {
       const g: VisitGroup = { key: cardId ?? e.id, date: dateKey, cardId, entries: [e], totalRevenue: e.type === "revenue" ? e.amount : 0, totalMaterial: e.type === "material" ? e.amount : 0 };
       visitGroups.push(g);
       if (cardId) cardGroupMap[cardId] = g;
+      if (!cardId && e.type === "revenue") dayCreatorMap[`${dateKey}|${creatorId}`] = g;
     }
   });
 
@@ -689,9 +702,9 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
               ))}
             </div>
           )}
-          <button onClick={() => setShowOther(true)} style={{ padding: "0.7rem 1.25rem", borderRadius: 10, border: "1px solid rgba(196,144,96,0.35)", background: "rgba(196,144,96,0.08)", color: "#c49060", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.15em", cursor: "pointer", flexShrink: 0, transition: "all 0.2s" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(196,144,96,0.15)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(196,144,96,0.08)"; }}>
+          <button onClick={() => setShowOther(true)} style={{ padding: "0.7rem 1.25rem", borderRadius: 10, border: "1px solid rgba(160,104,48,0.35)", background: "rgba(160,104,48,0.08)", color: "#a06830", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.15em", cursor: "pointer", flexShrink: 0, transition: "all 0.2s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(160,104,48,0.15)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(160,104,48,0.08)"; }}>
             {isAdmin ? "✦ Anyag / Bér" : "✦ Anyagköltség rögzítése"}
           </button>
         </div>
@@ -700,39 +713,106 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
       {/* Visit entry */}
       {isThisMonth && <VisitEntry userId={userId} onSaved={() => void utils.finance.list.invalidate()} />}
 
-      {/* Month navigator */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-        <button onClick={prevMonth} style={navBtn}>‹</button>
-        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", letterSpacing: "0.14em", color: "var(--color-teal)", minWidth: 160, textAlign: "center" }}>
-          {MONTHS[month - 1]} {year}
-        </span>
-        <button onClick={nextMonth} style={navBtn}>›</button>
+      {/* Navigator */}
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+        {/* Havi / Éves toggle */}
+        <div style={{ display: "flex", gap: "0.3rem", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 9, padding: "0.2rem" }}>
+          {(["month", "year"] as const).map(m => (
+            <button key={m} onClick={() => setViewMode(m)}
+              style={{ padding: "0.3rem 0.8rem", borderRadius: 7, border: "none", background: viewMode === m ? "var(--bg-active)" : "transparent", color: viewMode === m ? "var(--color-teal)" : "var(--text-muted)", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}>
+              {m === "month" ? "Havi" : "Éves"}
+            </button>
+          ))}
+        </div>
+
+        {viewMode === "month" ? (
+          <>
+            <button onClick={prevMonth} style={navBtn}>‹</button>
+            <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", letterSpacing: "0.14em", color: "var(--color-teal)", minWidth: 160, textAlign: "center" }}>
+              {MONTHS[month - 1]} {year}
+            </span>
+            <button onClick={nextMonth} style={navBtn}>›</button>
+          </>
+        ) : (
+          <>
+            <button onClick={() => setYear(y => y - 1)} style={navBtn}>‹</button>
+            <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", letterSpacing: "0.14em", color: "var(--color-teal)", minWidth: 80, textAlign: "center" }}>{year}</span>
+            <button onClick={() => setYear(y => y + 1)} style={navBtn}>›</button>
+          </>
+        )}
       </div>
+
+      {/* Year view */}
+      {viewMode === "year" && (() => {
+        const yearRev  = yearData.reduce((s, m) => s + m.revenue, 0);
+        const yearMat  = yearData.reduce((s, m) => s + m.material, 0);
+        const yearWage = yearData.reduce((s, m) => s + m.wage, 0);
+        const yearProfit = yearRev - yearMat - yearWage;
+        const maxRev = Math.max(...yearData.map(m => m.revenue), 1);
+        return (
+          <div style={{ marginBottom: "2rem" }}>
+            {/* Year totals */}
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+              <StatBox label={`${year} bevétel`} value={yearRev}    color="#527666" sub="összesen" large />
+              {isAdmin && <StatBox label="Anyagköltség" value={yearMat}  color="#a06830" sub="összesen" />}
+              {isAdmin && <StatBox label="Bérek"        value={yearWage} color="#7256a0" sub="összesen" />}
+              {isAdmin && <StatBox label="Nyereség"     value={yearProfit} color={yearProfit >= 0 ? "#527666" : "#c47878"} sub={yearRev > 0 ? `${Math.round((yearProfit/yearRev)*100)}% árrés` : ""} large />}
+              {!isAdmin && <StatBox label="Neked jár (60%)" value={Math.round(yearRev * STAFF_RATE)} color="#a78bfa" sub="éves bér" large />}
+            </div>
+            {/* Monthly bars */}
+            <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 14, padding: "1.25rem 1rem" }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.18em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "1rem" }}>Havi bontás</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+                {yearData.map(m => {
+                  const pct = maxRev > 0 ? (m.revenue / maxRev) * 100 : 0;
+                  const profit = m.revenue - m.material - m.wage;
+                  return (
+                    <div key={m.month} style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
+                      onClick={() => { setMonth(m.month); setViewMode("month"); }}>
+                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.08em", color: "var(--text-muted)", width: 52, textAlign: "right", flexShrink: 0 }}>{MONTHS[m.month-1]?.slice(0,4)?.toUpperCase()}</div>
+                      <div style={{ flex: 1, height: 20, background: "var(--bg-card)", borderRadius: 5, overflow: "hidden", position: "relative" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, rgba(82,118,102,0.5), rgba(82,118,102,0.25))", borderRadius: 5, transition: "width 0.5s ease" }} />
+                      </div>
+                      <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: m.revenue > 0 ? "#527666" : "var(--text-dim)", fontWeight: 700, minWidth: 80, textAlign: "right" }}>{m.revenue > 0 ? fmt(m.revenue) : "—"}</div>
+                      {isAdmin && m.revenue > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: profit >= 0 ? "rgba(82,118,102,0.6)" : "#c47878", minWidth: 75, textAlign: "right" }}>{fmt(profit)}</div>}
+                      {!isAdmin && m.revenue > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "#a78bfa", minWidth: 75, textAlign: "right" }}>{fmt(Math.round(m.revenue * STAFF_RATE))}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Summary row */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
         {isCurrentMonth && (
           <>
-            <StatBox label="Ma" value={todayRevenue} color="#7a9e8c" sub="bevétel" />
-            <StatBox label="Ez a hét" value={weekRevenue} color="#7a9e8c" sub="bevétel" />
+            <StatBox label="Ma" value={todayRevenue} color="#527666" sub="bevétel" />
+            <StatBox label="Ez a hét" value={weekRevenue} color="#527666" sub="bevétel" />
           </>
         )}
-        <StatBox label={isCurrentMonth ? "Ez a hónap" : (MONTHS[month-1] ?? "")} value={revenue} color="#7a9e8c" sub="bevétel" large={!isCurrentMonth} />
+        <StatBox label={isCurrentMonth ? "Ez a hónap" : (MONTHS[month-1] ?? "")} value={revenue} color="#527666" sub="bevétel" large={!isCurrentMonth} />
         {isAdmin ? (
           <>
-            <StatBox label="Anyagköltség" value={material} color="#c49060" sub="kiadás" />
-            <StatBox label="Bérek" value={wage} color="#9278b0" sub="kiadás" />
-            <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#7a9e8c" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
+            <StatBox label="Anyagköltség" value={material} color="#a06830" sub="kiadás" />
+            <StatBox label="Bérek" value={wage} color="#7256a0" sub="kiadás" />
+            <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
           </>
         ) : (
-          <StatBox label="Neked jár (60%)" value={staffNet} color="#a78bfa" sub="nettó bér" large />
+          <>
+            <StatBox label="Neked jár (60%)" value={staffNet} color="#a78bfa" sub="havi bér" large />
+            {isCurrentMonth && todayRevenue > 0 && <StatBox label="Mai bér" value={Math.round(todayRevenue * STAFF_RATE)} color="#a78bfa" sub="60%" />}
+            {isCurrentMonth && weekRevenue > 0 && <StatBox label="Heti bér" value={Math.round(weekRevenue * STAFF_RATE)} color="#a78bfa" sub="60%" />}
+          </>
         )}
       </div>
 
       {/* Per-staff breakdown — admin only, only when showing all */}
       {isAdmin && !filterUserId && Object.keys(staffStats).length > 0 && (
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.75rem" }}>◈ Személyenkénti bontás</div>
+          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.75rem" }}>◈ Személyenkénti bontás</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {Object.values(staffStats).sort((a, b) => b.revenue - a.revenue).map(st => {
               const staffWage = st.isOwner ? 0 : Math.round(st.revenue * STAFF_RATE);
@@ -751,13 +831,13 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                     {/* Bevétel */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0" }}>
                       <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>◈ Bevétel</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(st.revenue)}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#527666", fontWeight: 700 }}>{fmt(st.revenue)}</span>
                     </div>
                     {/* Anyag */}
                     {st.material > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderTop: "1px solid var(--border)" }}>
                         <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>✦ Anyagköltség <span style={{ opacity: 0.5 }}>(vendég fizette)</span></span>
-                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: "#c49060", fontWeight: 700 }}>{fmt(st.material)}</span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: "#a06830", fontWeight: 700 }}>{fmt(st.material)}</span>
                       </div>
                     )}
                     {/* Bér */}
@@ -772,7 +852,7 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                       <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: uC, textTransform: "uppercase", fontWeight: 700 }}>
                         {st.isOwner ? "● Neked marad" : "● Szalonnak marad"}
                       </span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: myProfit >= 0 ? "#7a9e8c" : "#c47878", fontWeight: 700 }}>{fmt(myProfit)}</span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: myProfit >= 0 ? "#527666" : "#c47878", fontWeight: 700 }}>{fmt(myProfit)}</span>
                     </div>
                   </div>
                 </div>
@@ -805,8 +885,8 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                     {isToday ? "Ma — " : ""}{new Date(ds + "T12:00:00").toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" })}
                   </div>
                   <div style={{ flex: 1, height: 1, background: "var(--bg-active)" }} />
-                  {dayRev > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(dayRev)}</span>}
-                  {dayCost > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#c49060" }}>−{fmt(dayCost)}</span>}
+                  {dayRev > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#527666", fontWeight: 700 }}>{fmt(dayRev)}</span>}
+                  {dayCost > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#a06830" }}>−{fmt(dayCost)}</span>}
                 </div>
 
                 {/* Visit groups for this day */}
@@ -816,7 +896,7 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                     const card        = revEntry ? (revEntry as { guestCard?: { guest: { name: string }; services: { name: string; price: number; duration: number; gender?: string | null; categoryName?: string | null }[]; materials: { name: string; brand?: string | null; colorCode?: string | null; grams: number; lineTotal: number }[] } }).guestCard : undefined;
                     const isExpanded  = expandedId === group.key;
                     const creatorName = revEntry?.createdBy?.name ?? revEntry?.workDay?.user?.name;
-                    const uCol        = !filterUserId ? userColor(creatorName) : "#7a9e8c";
+                    const uCol        = !filterUserId ? userColor(creatorName) : "#527666";
                     const grandTotal  = group.totalRevenue - group.totalMaterial;
                     const hasMultiple = group.entries.length > 1 || (card && (card.services.length > 1 || card.materials.length > 0));
                     const canDelete   = group.entries.every(e => !e.workDayId);
@@ -826,10 +906,10 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                         {/* Main row */}
                         <div onClick={() => setExpandedId(isExpanded ? null : group.key)}
                           style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.75rem 1.1rem", cursor: "pointer", transition: "background 0.2s" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(122,158,140,0.06)"; }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.06)"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
 
-                          <span style={{ color: "#7a9e8c", fontSize: "0.85rem", flexShrink: 0, opacity: 0.7 }}>◈</span>
+                          <span style={{ color: "#527666", fontSize: "0.85rem", flexShrink: 0, opacity: 0.7 }}>◈</span>
 
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -844,23 +924,36 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                           </div>
 
                           {/* Amounts */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
-                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(group.totalRevenue)}</span>
-                            {group.totalMaterial > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "#c49060" }}>−{fmt(group.totalMaterial)} anyag</span>}
-                          </div>
+                          {isAdmin ? (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#527666", fontWeight: 700 }}>{fmt(group.totalRevenue)}</span>
+                              {group.totalMaterial > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "#a06830" }}>−{fmt(group.totalMaterial)} anyag</span>}
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "var(--text-muted)" }}>{fmt(group.totalRevenue)}</span>
+                              {group.totalMaterial > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#a06830" }}>−{fmt(group.totalMaterial)} anyag</span>}
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: uCol, fontWeight: 700 }}>
+                                {fmt(Math.round(group.totalRevenue * STAFF_RATE))} neked
+                              </span>
+                            </div>
+                          )}
 
-                          {hasMultiple && <span style={{ color: "rgba(122,158,140,0.5)", fontSize: "0.65rem", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>}
+                          {hasMultiple && <span style={{ color: "rgba(82,118,102,0.5)", fontSize: "0.65rem", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>}
 
-                          {/* Dátum szerkesztés */}
-                          <button onClick={e => { e.stopPropagation(); const d = group.entries[0]!.date; setEditDateVal(new Date(d).toISOString().slice(0,10)); setEditDateKey(editDateKey === group.key ? null : group.key); }}
-                            style={{ background: "none", border: "none", color: editDateKey === group.key ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s", flexShrink: 0 }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
-                            onMouseLeave={e => { if (editDateKey !== group.key) (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; }}
-                            title="Dátum szerkesztése">
-                            ✎
-                          </button>
+                          {/* Dátum szerkesztés — csak admin */}
+                          {isAdmin && (
+                            <button onClick={e => { e.stopPropagation(); const d = group.entries[0]!.date; setEditDateVal(new Date(d).toISOString().slice(0,10)); setEditDateKey(editDateKey === group.key ? null : group.key); }}
+                              style={{ background: "none", border: "none", color: editDateKey === group.key ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s", flexShrink: 0 }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
+                              onMouseLeave={e => { if (editDateKey !== group.key) (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; }}
+                              title="Dátum szerkesztése">
+                              ✎
+                            </button>
+                          )}
 
-                          {canDelete && (
+                          {/* Törlés — csak admin */}
+                          {isAdmin && canDelete && (
                             <button onClick={e => { e.stopPropagation(); group.entries.forEach(en => del.mutate({ id: en.id })); }}
                               style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s, background 0.2s", flexShrink: 0 }}
                               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
@@ -872,7 +965,7 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
 
                         {/* Date editor */}
                         {editDateKey === group.key && (
-                          <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 1.1rem", borderTop: "1px solid rgba(122,158,140,0.12)", background: "rgba(122,158,140,0.04)" }}>
+                          <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 1.1rem", borderTop: "1px solid rgba(82,118,102,0.12)", background: "rgba(82,118,102,0.04)" }}>
                             <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.12em", color: "var(--text-muted)", textTransform: "uppercase" }}>Új dátum</span>
                             <input type="date" value={editDateVal} onChange={e => setEditDateVal(e.target.value)}
                               style={{ ...inputStyle, width: "auto", padding: "0.3rem 0.65rem", fontSize: "0.9rem", colorScheme: "light" }} />
@@ -890,12 +983,12 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
 
                         {/* Expanded detail */}
                         {isExpanded && (
-                          <div style={{ padding: "0 1.1rem 0.9rem 2.5rem", borderTop: "1px solid rgba(122,158,140,0.1)" }}>
+                          <div style={{ padding: "0 1.1rem 0.9rem 2.5rem", borderTop: "1px solid rgba(82,118,102,0.1)" }}>
                             {card ? (
                               <>
                                 {card.services.length > 0 && (
                                   <div style={{ marginTop: "0.65rem" }}>
-                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>Elvégzett szolgáltatások</div>
+                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>Elvégzett szolgáltatások</div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                                       {card.services.map((s, i) => {
                                         const hourlyRate = s.duration > 0 ? Math.round((s.price / s.duration) * 60) : null;
@@ -907,10 +1000,10 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                                           ? { label: "Gyermek",bg: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "rgba(167,139,250,0.3)" }
                                           : null;
                                         return (
-                                          <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(122,158,140,0.08)", border: "1px solid rgba(122,158,140,0.15)", borderRadius: 7, flexWrap: "wrap" }}>
+                                          <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(82,118,102,0.08)", border: "1px solid rgba(82,118,102,0.15)", borderRadius: 7, flexWrap: "wrap" }}>
                                             {gBadge && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", padding: "0.12rem 0.4rem", borderRadius: 4, background: gBadge.bg, color: gBadge.color, border: `1px solid ${gBadge.border}` }}>{gBadge.label}</span>}
-                                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#7a9e8c", flex: 1 }}>{s.name}{s.categoryName ? ` ${s.categoryName}` : ""}</span>
-                                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "rgba(122,158,140,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
+                                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#527666", flex: 1 }}>{s.name}{s.categoryName ? ` ${s.categoryName}` : ""}</span>
+                                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "rgba(82,118,102,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
                                             {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
                                             {hourlyRate && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-muted)" }}>{fmt(hourlyRate)}/óra</span>}
                                           </div>
@@ -921,20 +1014,20 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                                 )}
                                 {(card.materials.length > 0 || group.totalMaterial > 0) && (
                                   <div style={{ marginTop: "0.65rem" }}>
-                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>✦ Anyagköltség: {fmt(group.totalMaterial)}</div>
+                                    <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(200,162,68,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>✦ Anyagköltség: {fmt(group.totalMaterial)}</div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
                                       {card.materials.length > 0 ? card.materials.map((m, i) => (
-                                        <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", padding: "0.2rem 0.65rem", background: "rgba(251,191,36,0.05)", borderRadius: 6 }}>
+                                        <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", padding: "0.2rem 0.65rem", background: "rgba(200,162,68,0.05)", borderRadius: 6 }}>
                                           <span style={{ color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                                           {m.brand     && <span style={{ color: "var(--text-soft)", fontSize: "0.82rem" }}>{m.brand}</span>}
-                                          {m.colorCode && <span style={{ color: "#fbbf24", fontWeight: 600, fontSize: "0.82rem" }}>{m.colorCode}</span>}
+                                          {m.colorCode && <span style={{ color: "#c8a244", fontWeight: 600, fontSize: "0.82rem" }}>{m.colorCode}</span>}
                                           <span style={{ color: "var(--text-muted)" }}>{m.grams}g</span>
-                                          <span style={{ color: "#c49060", fontWeight: 700, fontSize: "0.82rem", marginLeft: "0.5rem" }}>{fmt(m.lineTotal)}</span>
+                                          <span style={{ color: "#a06830", fontWeight: 700, fontSize: "0.82rem", marginLeft: "0.5rem" }}>{fmt(m.lineTotal)}</span>
                                         </div>
                                       )) : group.entries.filter(e => e.type === "material").map(e => (
-                                        <div key={e.id} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", padding: "0.2rem 0.65rem", background: "rgba(251,191,36,0.05)", borderRadius: 6 }}>
+                                        <div key={e.id} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", padding: "0.2rem 0.65rem", background: "rgba(200,162,68,0.05)", borderRadius: 6 }}>
                                           <span style={{ color: "var(--text-primary)", flex: 1 }}>{e.description}</span>
-                                          <span style={{ color: "#c49060", fontWeight: 700, fontSize: "0.82rem" }}>{fmt(e.amount)}</span>
+                                          <span style={{ color: "#a06830", fontWeight: 700, fontSize: "0.82rem" }}>{fmt(e.amount)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -946,7 +1039,7 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
                                 {group.entries.map(e => (
                                   <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", padding: "0.2rem 0.4rem" }}>
                                     <span style={{ fontStyle: "italic" }}>{e.description}</span>
-                                    <span style={{ color: e.type === "revenue" ? "#7a9e8c" : "#c49060", fontWeight: 600 }}>{e.type !== "revenue" && "−"}{fmt(e.amount)}</span>
+                                    <span style={{ color: e.type === "revenue" ? "#527666" : "#a06830", fontWeight: 600 }}>{e.type !== "revenue" && "−"}{fmt(e.amount)}</span>
                                   </div>
                                 ))}
                               </div>
