@@ -234,12 +234,34 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
             </div>
           )}
 
+          {/* Quick filter buttons + main + button */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.45rem" }}>
+            {[
+              { label: "Vágás",          kw: "vágás" },
+              { label: "Festés",         kw: "festés" },
+              { label: "Szőkítés",       kw: "szőkít" },
+              { label: "Hajgöndörítés",  kw: "göndörít" },
+              { label: "Mosás",          kw: "mosás" },
+            ].map(({ label, kw }) => {
+              const active = svcOpen && svcSearch === kw;
+              return (
+                <button key={kw} type="button"
+                  onClick={() => { setSvcSearch(kw); setSvcOpen(true); }}
+                  style={{ padding: "0.3rem 0.75rem", borderRadius: 7, border: `1px solid ${active ? "rgba(82,118,102,0.55)" : "rgba(82,118,102,0.2)"}`, background: active ? "rgba(82,118,102,0.14)" : "var(--bg-card)", color: active ? "#527666" : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: "pointer", transition: "all 0.16s" }}
+                  onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.07)"; (e.currentTarget as HTMLElement).style.color = "#527666"; } }}
+                  onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"; (e.currentTarget as HTMLElement).style.color = "var(--text-soft)"; } }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* + button + dropdown */}
           <div style={{ position: "relative" }}>
             <button type="button" onClick={() => { setSvcOpen(p => !p); setSvcSearch(""); }}
-              style={{ display: "flex", alignItems: "center", gap: "0.45rem", padding: "0.45rem 0.95rem", borderRadius: 9, border: `1px solid ${svcOpen ? "rgba(82,118,102,0.5)" : "rgba(82,118,102,0.25)"}`, background: svcOpen ? "rgba(82,118,102,0.1)" : "var(--bg-card)", color: svcOpen ? "#527666" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.18s" }}>
-              <span style={{ fontSize: "1rem", lineHeight: 1, color: svcOpen ? "#527666" : "rgba(82,118,102,0.5)", fontWeight: 300 }}>＋</span>
-              Szolgáltatás hozzáadása
+              style={{ display: "flex", alignItems: "center", gap: "0.45rem", padding: "0.45rem 0.95rem", borderRadius: 9, border: `1px solid ${svcOpen && !svcSearch ? "rgba(82,118,102,0.5)" : "rgba(82,118,102,0.25)"}`, background: svcOpen && !svcSearch ? "rgba(82,118,102,0.1)" : "var(--bg-card)", color: svcOpen && !svcSearch ? "#527666" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.18s" }}>
+              <span style={{ fontSize: "1rem", lineHeight: 1, color: svcOpen && !svcSearch ? "#527666" : "rgba(82,118,102,0.5)", fontWeight: 300 }}>＋</span>
+              Mind
             </button>
 
             {svcOpen && (
