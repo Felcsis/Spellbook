@@ -448,7 +448,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
                 boxShadow: "inset 0 1px 3px rgba(255,225,100,0.5), inset 0 -1px 3px rgba(80,38,0,0.5)",
                 border: "1px solid rgba(200,140,20,0.4)",
                 display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#5a3200", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", fontWeight: 900, letterSpacing: "0.01em", textShadow: "0 0.5px 0 rgba(255,210,80,0.5)" }}>Ft</span>
+                <span style={{ color: "#5a3200", fontSize: "0.9rem", textShadow: "0 0.5px 0 rgba(255,210,80,0.5)" }}>✦</span>
               </div>
             </div>
             <div style={{ flex: 1 }}>
