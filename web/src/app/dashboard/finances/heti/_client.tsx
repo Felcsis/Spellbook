@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
-import { userColor, buildVisitGroups } from "../_client";
+import { buildVisitGroups } from "../_client";
+import { EntryList } from "../_entry-list";
 
-const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 }
@@ -44,16 +44,16 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const month   = mon.getMonth() + 1;
   const STAFF_RATE = 0.6;
 
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { data: monthEntries = [], isLoading } = api.finance.list.useQuery({
+    year, month,
+    filterUserId: !isAdmin ? userId : undefined,
+  });
 
-  const { data: monthEntries = [], isLoading } = api.finance.list.useQuery({ year, month });
-
-  // If week spans two months, also fetch the second month
   const month2 = sun.getMonth() + 1;
   const year2  = sun.getFullYear();
   const needSecond = month2 !== month || year2 !== year;
   const { data: monthEntries2 = [] } = api.finance.list.useQuery(
-    { year: year2, month: month2 },
+    { year: year2, month: month2, filterUserId: !isAdmin ? userId : undefined },
     { enabled: needSecond }
   );
 
@@ -110,84 +110,15 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
         {!isAdmin && revenue > 0 && <StatBox label="Neked jár (60%)" value={Math.round(revenue * STAFF_RATE)} color="#a78bfa" sub="heti bér" large />}
       </div>
 
-      {/* Entry list by day */}
-      {isLoading ? (
-        <div style={{ textAlign: "center", color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", padding: "3rem", fontStyle: "italic" }}>Betöltés...</div>
-      ) : sortedDates.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "1.1rem", fontStyle: "italic" }}>
-          Ebben a hétben még nincsenek bejegyzések. ✦
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {sortedDates.map(ds => {
-            const dayGroups = byDate[ds]!;
-            const dayRev  = dayGroups.reduce((s, g) => s + g.totalRevenue, 0);
-            const dayCost = dayGroups.reduce((s, g) => s + g.totalMaterial, 0);
-            const isToday = ds === todayStr;
-            return (
-              <div key={ds}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                  <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.18em", color: isToday ? "var(--color-teal)" : "var(--text-muted)", textTransform: "uppercase" }}>
-                    {isToday ? "Ma — " : ""}{new Date(ds + "T12:00:00").toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" })}
-                  </div>
-                  <div style={{ flex: 1, height: 1, background: "var(--bg-active)" }} />
-                  {dayRev > 0  && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#527666", fontWeight: 700 }}>{fmt(dayRev)}</span>}
-                  {dayCost > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#a06830" }}>−{fmt(dayCost)}</span>}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  {dayGroups.map(group => {
-                    const revEntry    = group.entries.find(e => e.type === "revenue");
-                    const card        = revEntry ? (revEntry as { guestCard?: { guest: { name: string }; services: { name: string; price: number }[]; materials: { name: string; colorCode?: string | null; grams: number; lineTotal: number }[] } }).guestCard : undefined;
-                    const isExpanded  = expandedId === group.key;
-                    const creatorName = revEntry?.createdBy?.name;
-                    const uCol        = userColor(creatorName);
-                    const hasMultiple = group.entries.length > 1 || (card && (card.services.length > 1 || card.materials.length > 0));
-                    return (
-                      <div key={group.key} style={{ background: "var(--bg-panel)", border: `1px solid ${isExpanded ? uCol + "55" : uCol + "22"}`, borderLeft: `3px solid ${uCol}`, borderRadius: 12, overflow: "hidden" }}>
-                        <div onClick={() => setExpandedId(isExpanded ? null : group.key)}
-                          style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.75rem 1.1rem", cursor: "pointer" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.06)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                          <span style={{ color: "#527666", fontSize: "0.85rem", opacity: 0.7 }}>◈</span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {card && <span style={{ color: "#a78bfa", marginRight: "0.4rem", fontSize: "0.75rem" }}>♦</span>}
-                              {card ? card.guest.name : (revEntry?.description ?? group.entries[0]!.description)}
-                            </div>
-                            {creatorName && <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: uCol, fontStyle: "italic" }}>{creatorName}</div>}
-                          </div>
-                          {isAdmin ? (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#527666", fontWeight: 700 }}>{fmt(group.totalRevenue)}</span>
-                              {group.totalMaterial > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "#a06830" }}>−{fmt(group.totalMaterial)} anyag</span>}
-                            </div>
-                          ) : (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "var(--text-muted)" }}>{fmt(group.totalRevenue)}</span>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: uCol, fontWeight: 700 }}>{fmt(Math.round(group.totalRevenue * STAFF_RATE))} neked</span>
-                            </div>
-                          )}
-                          {hasMultiple && <span style={{ color: "rgba(82,118,102,0.5)", fontSize: "0.65rem", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>}
-                        </div>
-                        {isExpanded && card && (
-                          <div style={{ padding: "0 1.1rem 0.9rem 2.5rem", borderTop: "1px solid rgba(82,118,102,0.1)" }}>
-                            {card.services.length > 0 && card.services.map((s, i) => (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(82,118,102,0.08)", borderRadius: 7, marginBottom: "0.2rem", marginTop: i === 0 ? "0.65rem" : 0 }}>
-                                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#527666", flex: 1 }}>{s.name}</span>
-                                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "rgba(82,118,102,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <EntryList
+        byDate={byDate}
+        sortedDates={sortedDates}
+        todayStr={todayStr}
+        isAdmin={isAdmin}
+        ownerId={userId}
+        isLoading={isLoading}
+        emptyMessage="Ebben a hétben még nincsenek bejegyzések. ✦"
+      />
     </div>
   );
 }

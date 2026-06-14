@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { EntryList } from "./_entry-list";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
@@ -371,6 +372,23 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
           )}
         </div>
 
+        {/* ── Visit total ── */}
+        {total > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.7rem 1rem", background: "rgba(82,118,102,0.06)", border: "1px solid rgba(82,118,102,0.22)", borderRadius: 12 }}>
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #c8a244 0%, #a06830 100%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 10px rgba(200,162,68,0.4)" }}>
+              <span style={{ color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.38rem", fontWeight: 900, letterSpacing: "-0.02em" }}>Ft</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.2rem" }}>Végösszeg</div>
+              <div style={{ display: "flex", gap: "0.9rem", flexWrap: "wrap", alignItems: "center" }}>
+                {autoTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#527666" }}>◈ Munkadíj: {fmt(autoTotal)}</span>}
+                {matTotal > 0  && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#a06830" }}>✦ Anyag: {fmt(matTotal)}</span>}
+              </div>
+            </div>
+            <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.45rem", color: "#527666", fontWeight: 700, letterSpacing: "-0.01em" }}>{fmt(total)}</div>
+          </div>
+        )}
+
         {/* ── Date + amount + save ── */}
         <div style={{ display: "flex", gap: "0.65rem", alignItems: "flex-end", flexWrap: "wrap", paddingTop: "0.25rem", borderTop: "1px solid var(--bg-active)" }}>
           <div style={{ flex: "0 0 auto" }}>
@@ -605,18 +623,14 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
   const month = now.getMonth() + 1;
   const todayStr = toDateStr(now);
 
-  const [showOther,   setShowOther]   = useState(false);
-  const [expandedId,  setExpandedId]  = useState<string | null>(null);
-  const [editDateKey, setEditDateKey] = useState<string | null>(null);
-  const [editDateVal, setEditDateVal] = useState("");
+  const [showOther, setShowOther] = useState(false);
 
   const utils = api.useUtils();
   const inv = () => { void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); };
-  const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month });
+  const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: !isAdmin ? userId : undefined });
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
-  const updateDate = api.finance.updateDate.useMutation({ onSuccess: () => { inv(); setEditDateKey(null); } });
+  const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
 
-  const STAFF_RATE = 0.6;
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
 
@@ -648,132 +662,18 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
         ◈ {MONTHS[month - 1]} bejegyzései
       </div>
 
-      {isLoading ? (
-        <div style={{ textAlign: "center", color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", padding: "3rem" }}>Betöltés...</div>
-      ) : sortedDates.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "3rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-soft)", fontStyle: "italic", fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>
-          Ebben a hónapban még nincsenek bejegyzések. ✦
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {sortedDates.map(ds => {
-            const dayGroups = byDate[ds]!;
-            const dayRev  = dayGroups.reduce((s, g) => s + g.totalRevenue, 0);
-            const dayCost = dayGroups.reduce((s, g) => s + g.totalMaterial, 0);
-            const isToday = ds === todayStr;
-            return (
-              <div key={ds}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                  <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.18em", color: isToday ? "var(--color-teal)" : "var(--text-muted)", textTransform: "uppercase" }}>
-                    {isToday ? "Ma — " : ""}{new Date(ds + "T12:00:00").toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" })}
-                  </div>
-                  <div style={{ flex: 1, height: 1, background: "var(--bg-active)" }} />
-                  {dayRev > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#527666", fontWeight: 700 }}>{fmt(dayRev)}</span>}
-                  {dayCost > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#a06830" }}>−{fmt(dayCost)}</span>}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  {dayGroups.map(group => {
-                    const revEntry   = group.entries.find(e => e.type === "revenue");
-                    const card       = revEntry ? (revEntry as { guestCard?: { guest: { name: string }; services: { name: string; price: number; duration: number; gender?: string | null; categoryName?: string | null }[]; materials: { name: string; brand?: string | null; colorCode?: string | null; grams: number; lineTotal: number }[] } }).guestCard : undefined;
-                    const isExpanded = expandedId === group.key;
-                    const creatorName = revEntry?.createdBy?.name;
-                    const uCol       = userColor(creatorName);
-                    const hasMultiple = group.entries.length > 1 || (card && (card.services.length > 1 || card.materials.length > 0));
-                    const canDelete  = group.entries.every(e => !(e as { workDayId?: string | null }).workDayId);
-                    return (
-                      <div key={group.key} style={{ background: "var(--bg-panel)", border: `1px solid ${isExpanded ? uCol + "55" : uCol + "22"}`, borderLeft: `3px solid ${uCol}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
-                        <div onClick={() => setExpandedId(isExpanded ? null : group.key)}
-                          style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.75rem 1.1rem", cursor: "pointer", transition: "background 0.2s" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.06)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                          <span style={{ color: "#527666", fontSize: "0.85rem", flexShrink: 0, opacity: 0.7 }}>◈</span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {card && <span style={{ color: "#a78bfa", marginRight: "0.4rem", fontSize: "0.75rem" }}>♦</span>}
-                              {card ? card.guest.name : (revEntry?.description ?? group.entries[0]!.description)}
-                            </div>
-                            {creatorName && <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: uCol, fontStyle: "italic", fontWeight: 600 }}>{creatorName}</div>}
-                          </div>
-                          {isAdmin ? (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#527666", fontWeight: 700 }}>{fmt(group.totalRevenue)}</span>
-                              {group.totalMaterial > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "#a06830" }}>−{fmt(group.totalMaterial)} anyag</span>}
-                            </div>
-                          ) : (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem" }}>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: "var(--text-muted)" }}>{fmt(group.totalRevenue)}</span>
-                              {group.totalMaterial > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#a06830" }}>−{fmt(group.totalMaterial)} anyag</span>}
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: uCol, fontWeight: 700 }}>{fmt(Math.round(group.totalRevenue * STAFF_RATE))} neked</span>
-                            </div>
-                          )}
-                          {hasMultiple && <span style={{ color: "rgba(82,118,102,0.5)", fontSize: "0.65rem", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>▾</span>}
-                          {isAdmin && (
-                            <button onClick={e => { e.stopPropagation(); setEditDateVal(new Date(group.entries[0]!.date).toISOString().slice(0,10)); setEditDateKey(editDateKey === group.key ? null : group.key); }}
-                              style={{ background: "none", border: "none", color: editDateKey === group.key ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s", flexShrink: 0 }}
-                              title="Dátum szerkesztése">✎</button>
-                          )}
-                          {isAdmin && canDelete && (
-                            <button onClick={e => { e.stopPropagation(); group.entries.forEach(en => del.mutate({ id: en.id })); }}
-                              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s, background 0.2s", flexShrink: 0 }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>✕</button>
-                          )}
-                        </div>
-                        {editDateKey === group.key && (
-                          <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 1.1rem", borderTop: "1px solid rgba(82,118,102,0.12)", background: "rgba(82,118,102,0.04)" }}>
-                            <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.12em", color: "var(--text-muted)", textTransform: "uppercase" }}>Új dátum</span>
-                            <input type="date" value={editDateVal} onChange={e => setEditDateVal(e.target.value)} style={{ ...inputStyle, width: "auto", padding: "0.3rem 0.65rem", fontSize: "0.9rem", colorScheme: "light" }} />
-                            <button onClick={() => updateDate.mutate({ entryIds: group.entries.map(e => e.id), date: editDateVal, guestCardId: group.cardId ?? undefined })} disabled={updateDate.isPending}
-                              style={{ padding: "0.3rem 0.9rem", borderRadius: 7, border: "1px solid var(--color-teal)", background: "var(--color-teal)", color: "var(--bg-base)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", fontWeight: 700 }}>
-                              {updateDate.isPending ? "…" : "Mentés"}
-                            </button>
-                            <button onClick={() => setEditDateKey(null)} style={{ padding: "0.3rem 0.7rem", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem" }}>Mégsem</button>
-                          </div>
-                        )}
-                        {isExpanded && card && (
-                          <div style={{ padding: "0 1.1rem 0.9rem 2.5rem", borderTop: "1px solid rgba(82,118,102,0.1)" }}>
-                            {card.services.length > 0 && (
-                              <div style={{ marginTop: "0.65rem" }}>
-                                <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>Elvégzett szolgáltatások</div>
-                                {card.services.map((s, i) => {
-                                  const gBadge = s.gender === "nő" ? { label: "Női", bg: "rgba(232,180,200,0.15)", color: "#e8b4c8", border: "rgba(232,180,200,0.3)" }
-                                    : s.gender === "férfi" ? { label: "Férfi", bg: "rgba(122,158,200,0.12)", color: "#7a9ec8", border: "rgba(122,158,200,0.3)" }
-                                    : s.gender === "gyermek" ? { label: "Gyermek", bg: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "rgba(167,139,250,0.3)" }
-                                    : null;
-                                  return (
-                                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(82,118,102,0.08)", border: "1px solid rgba(82,118,102,0.15)", borderRadius: 7, flexWrap: "wrap", marginBottom: "0.25rem" }}>
-                                      {gBadge && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", padding: "0.12rem 0.4rem", borderRadius: 4, background: gBadge.bg, color: gBadge.color, border: `1px solid ${gBadge.border}` }}>{gBadge.label}</span>}
-                                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#527666", flex: 1 }}>{s.name}</span>
-                                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "rgba(82,118,102,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            {card.materials.length > 0 && (
-                              <div style={{ marginTop: "0.65rem" }}>
-                                <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(200,162,68,0.5)", textTransform: "uppercase", marginBottom: "0.35rem" }}>✦ Anyagköltség: {fmt(group.totalMaterial)}</div>
-                                {card.materials.map((m, i) => (
-                                  <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", padding: "0.2rem 0.65rem", background: "rgba(200,162,68,0.05)", borderRadius: 6 }}>
-                                    <span style={{ color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                                    {m.colorCode && <span style={{ color: "#c8a244", fontWeight: 600, fontSize: "0.82rem" }}>{m.colorCode}</span>}
-                                    <span style={{ color: "var(--text-muted)" }}>{m.grams}g</span>
-                                    <span style={{ color: "#a06830", fontWeight: 700, fontSize: "0.82rem" }}>{fmt(m.lineTotal)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <EntryList
+        byDate={byDate}
+        sortedDates={sortedDates}
+        todayStr={todayStr}
+        isAdmin={isAdmin}
+        ownerId={userId}
+        isLoading={isLoading}
+        onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
+        onUpdateDate={(ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId })}
+        isSavingDate={updateDate.isPending}
+        emptyMessage="Ebben a hónapban még nincsenek bejegyzések. ✦"
+      />
     </div>
   );
 }
