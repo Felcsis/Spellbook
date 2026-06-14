@@ -62,24 +62,32 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const revenue  = entries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
   const material = entries.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
   const wage     = entries.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
-  const profit   = revenue - material - wage;
   const staffNet = Math.round(revenue * STAFF_RATE);
 
 
-  // Per-staff breakdown
-  type StaffStat = { name: string; isOwner: boolean; revenue: number; material: number; wage: number };
+  // Per-staff breakdown — use workDay.user.id when available for correct attribution
+  type StaffStat = { id: string; name: string; isOwner: boolean; revenue: number; material: number; wage: number };
   const staffStats: Record<string, StaffStat> = {};
   if (isAdmin) {
     entries.forEach(e => {
+      const workDayUser = (e.workDay as { user?: { id: string; name: string } | null } | null)?.user;
       const by = e.createdBy as { id: string; name: string } | undefined;
-      const name = by?.name ?? "?";
-      const isOwner = by?.id === userId;
-      if (!staffStats[name]) staffStats[name] = { name, isOwner, revenue: 0, material: 0, wage: 0 };
-      if (e.type === "revenue")  staffStats[name]!.revenue  += e.amount;
-      if (e.type === "material") staffStats[name]!.material += e.amount;
-      if (e.type === "wage")     staffStats[name]!.wage     += e.amount;
+      const id   = workDayUser?.id   ?? by?.id   ?? "?";
+      const name = workDayUser?.name ?? by?.name ?? "?";
+      const isOwner = id === userId;
+      if (!staffStats[id]) staffStats[id] = { id, name, isOwner, revenue: 0, material: 0, wage: 0 };
+      if (e.type === "revenue")  staffStats[id]!.revenue  += e.amount;
+      if (e.type === "material") staffStats[id]!.material += e.amount;
+      if (e.type === "wage")     staffStats[id]!.wage     += e.amount;
     });
   }
+
+  // Staff wage total: actual wages or 60% estimate — owner excluded
+  const isOwnView = filterUserId === userId;
+  const staffWageTotal = Object.values(staffStats)
+    .filter(st => !st.isOwner)
+    .reduce((s, st) => s + (st.wage > 0 ? st.wage : Math.round(st.revenue * STAFF_RATE)), 0);
+  const profit = revenue - material;
 
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material" || e.type === "wage");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
@@ -126,8 +134,8 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
         <StatBox label={MONTHS[month-1] ?? ""} value={revenue} color="#527666" sub="bevétel" large />
         {isAdmin ? <>
           <StatBox label="Anyagköltség" value={material} color="#a06830" sub="kiadás" />
-          <StatBox label={wage > 0 ? "Bérek" : "Várható bér (60%)"} value={wage > 0 ? wage : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />
-          <StatBox label="Nyereség"     value={profit}   color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
+          {!isOwnView && <StatBox label={staffWageTotal > 0 && wage > 0 ? "Bérek" : "Várható bér (60%)"} value={staffWageTotal > 0 ? staffWageTotal : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
+          <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
         </> : <>
           <StatBox label={wage > 0 ? "Béred" : "Neked jár (60%)"} value={wage > 0 ? wage : staffNet} color="#a78bfa" sub="havi bér" large />
         </>}
@@ -168,7 +176,7 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
                     )}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.45rem 0.65rem", marginTop: "0.2rem", background: `${uC}0d`, borderRadius: 8, border: `1px solid ${uC}22` }}>
                       <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: uC, textTransform: "uppercase", fontWeight: 700 }}>
-                        {st.isOwner ? "● Neked marad" : "● Szalonnak marad"}
+                        {st.isOwner ? "● Neked marad" : "● Szalonnak marad (40%)"}
                       </span>
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: myProfit >= 0 ? "#527666" : "#c47878", fontWeight: 700 }}>{fmt(myProfit)}</span>
                     </div>

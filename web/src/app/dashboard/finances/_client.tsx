@@ -67,9 +67,13 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
   const utils = api.useUtils();
   const { data: categories = [] }  = api.services.listCategories.useQuery();
   const { data: allGuests = [] }   = api.guests.listGuests.useQuery();
-  const createFinance  = api.finance.create.useMutation();
-  const createGuest    = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
-  const createCard     = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
+  const { data: allUsers = [] }    = api.calendar.users.useQuery();
+  const createFinance      = api.finance.create.useMutation();
+  const incrementEarnings  = api.calendar.incrementEarnings.useMutation();
+  const createGuest        = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
+  const createCard         = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
+
+  const [selectedWorkerId, setSelectedWorkerId] = useState(userId);
 
   // Services
   const [selSvcs,   setSelSvcs]  = useState<SelSvc[]>([]);
@@ -89,6 +93,13 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
   const [matSearch, setMatSearch] = useState("");
   const [matOpen,   setMatOpen]   = useState(false);
   const [activeMat, setActiveMat] = useState(0);
+
+  // Previous recipe
+  const [prevOpen, setPrevOpen] = useState(false);
+  const { data: guestCards = [] } = api.guests.listCards.useQuery(
+    { guestId },
+    { enabled: !!guestId }
+  );
 
   // Date + amount
   const [date,      setDate]      = useState(() => new Date().toISOString().slice(0, 10));
@@ -138,8 +149,25 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
     setSelSvcs([]); setSvcSearch(""); setSvcOpen(false);
     setGuestSearch(""); setGuestId(""); setShowNewGuest(false); setNewGuestName("");
     setShowMats(false); setMatRows([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
-    setManualAmt(""); setIsManual(false);
+    setManualAmt(""); setIsManual(false); setPrevOpen(false);
     setDate(new Date().toISOString().slice(0, 10));
+  }
+
+  function loadPrevCard(card: typeof guestCards[0]) {
+    setSelSvcs(card.services.map(s => ({
+      id: s.id, name: s.name, price: s.price,
+      duration: s.duration ?? 0, categoryName: s.categoryName ?? "",
+      gender: s.gender ?? undefined,
+    })));
+    const mats = card.materials.map(m => ({
+      name: m.name, brand: m.brand ?? "", colorCode: m.colorCode ?? "",
+      grams: String(m.grams), unitPrice: m.unitPrice, lineTotal: m.lineTotal,
+    }));
+    if (mats.length > 0) {
+      setMatRows(mats);
+      setShowMats(true);
+    }
+    setPrevOpen(false);
   }
 
   async function handleSave() {
@@ -157,7 +185,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
       if (finalGuestId) {
         const card = await createCard.mutateAsync({
           guestId: finalGuestId,
-          workerId: userId,
+          workerId: selectedWorkerId || userId,
           date,
           services: selSvcs.map(s => ({ name: s.name, price: s.price, duration: s.duration, gender: s.gender, categoryName: s.categoryName })),
           materials: validMats.map(r => ({
@@ -168,12 +196,8 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
         cardId = card.id;
       }
 
-      // 2. Revenue entry — linked to guest card if any
-      const genderLabel = (g?: string) => g === "nő" ? "Női" : g === "férfi" ? "Férfi" : g === "gyermek" ? "Gyermek" : "";
-      const desc = selSvcs.length > 0
-        ? selSvcs.map(s => [genderLabel(s.gender), s.name, s.categoryName].filter(Boolean).join(" ")).join(", ")
-        : "Bevétel";
-      await createFinance.mutateAsync({ type: "revenue", description: desc, amount: total, date, guestCardId: cardId });
+      // 2. WorkDay bejegyzés (naptárba kerül) + bevétel finance entry
+      await incrementEarnings.mutateAsync({ date, userId: selectedWorkerId || userId, amount: total });
 
       // 3. Material entry if any
       if (showMats && validMats.length > 0) {
@@ -196,7 +220,23 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
     <>
       {anyOpen && <div onClick={closeAll} style={{ position: "fixed", inset: 0, zIndex: 150 }} />}
     <div style={{ background: "var(--bg-panel)", border: "1px solid rgba(82,118,102,0.28)", borderRadius: 18, padding: "1.5rem 1.75rem", marginBottom: "2rem" }}>
-      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.65)", textTransform: "uppercase", marginBottom: "1.25rem" }}>◈ Látogatás rögzítése</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.65)", textTransform: "uppercase" }}>◈ Látogatás rögzítése</div>
+        {allUsers.length > 1 && (
+          <div style={{ display: "flex", gap: "0.35rem" }}>
+            {allUsers.map(u => {
+              const uc  = USER_COLORS[u.name ?? ""] ?? "var(--color-teal)";
+              const sel = selectedWorkerId === u.id;
+              return (
+                <button key={u.id} type="button" onClick={() => setSelectedWorkerId(u.id)}
+                  style={{ padding: "0.3rem 0.85rem", borderRadius: 7, cursor: "pointer", border: `1px solid ${sel ? uc : "var(--border)"}`, background: sel ? `${uc}22` : "transparent", color: sel ? uc : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", transition: "all 0.2s", fontWeight: sel ? 600 : 400 }}>
+                  {u.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
@@ -359,6 +399,42 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
           )}
         </div>
 
+        {/* ── Előző recept ── */}
+        {guestId && guestCards.length > 0 && (
+          <div style={{ position: "relative" }}>
+            <button type="button"
+              onClick={() => setPrevOpen(p => !p)}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: prevOpen ? "rgba(167,139,250,0.1)" : "transparent", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 9, padding: "0.45rem 0.9rem", cursor: "pointer", transition: "all 0.2s", color: "#a78bfa", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(167,139,250,0.1)"; }}
+              onMouseLeave={e => { if (!prevOpen) (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+              <span style={{ fontSize: "0.85rem" }}>◈</span>
+              Előző recept betöltése
+              <span style={{ fontSize: "0.7rem", transition: "transform 0.2s", transform: prevOpen ? "rotate(180deg)" : "none", display: "inline-block" }}>▾</span>
+            </button>
+            {prevOpen && (
+              <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, marginTop: "0.3rem", background: "var(--bg-modal)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 12, boxShadow: "0 12px 40px rgba(0,0,0,0.6)", overflow: "hidden" }}>
+                {guestCards.map(card => {
+                  const d = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+                  const svcNames = card.services.map((s: { name: string }) => s.name).join(", ");
+                  const hasMat = card.materials.length > 0;
+                  return (
+                    <div key={card.id}
+                      onMouseDown={() => loadPrevCard(card)}
+                      style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 1rem", cursor: "pointer", borderBottom: "1px solid var(--bg-highlight)", transition: "background 0.15s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(167,139,250,0.07)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", minWidth: 120 }}>{d}</span>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{svcNames || "—"}</span>
+                      {hasMat && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: "var(--text-muted)", padding: "0.15rem 0.45rem", border: "1px solid var(--border)", borderRadius: 4 }}>✦ RECEPT</span>}
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.88rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(card.total)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Szín recept toggle ── */}
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
@@ -494,6 +570,9 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
   const utils = api.useUtils();
   const [type, setType] = useState<"material" | "wage">("material");
   const [date, setDate] = useState(() => new Date(year, month - 1, new Date().getDate()).toISOString().slice(0, 10));
+  const { data: allUsers = [] } = api.admin.listUsers.useQuery(undefined, { enabled: isAdmin });
+  const staffUsers = allUsers.filter(u => u.role !== "admin");
+  const [wageWorkerId, setWageWorkerId] = useState("");
 
   type SelMat = { id: string; name: string; unitPrice: number; qty: string };
   const [matSearch,    setMatSearch]    = useState("");
@@ -526,7 +605,7 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
       const desc = selectedMats.map(m => { const q = parseFloat(m.qty); return isNaN(q) ? m.name : `${m.name} (${q}×)`; }).join(", ");
       create.mutate({ type, description: desc, amount: matTotal, date });
     } else {
-      create.mutate({ type, description: wageDesc, amount: parseFloat(wageAmt), date });
+      create.mutate({ type, description: wageDesc, amount: parseFloat(wageAmt), date, workerUserId: wageWorkerId || undefined });
     }
   }
 
@@ -617,6 +696,24 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
           {/* Wage */}
           {type === "wage" && (
             <>
+              {isAdmin && staffUsers.length > 0 && (
+                <div>
+                  <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>Kinek?</label>
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {staffUsers.map(u => {
+                      const colors: Record<string, string> = { Gitta: "#9878b8", Lili: "#c47a8a" };
+                      const uc = colors[u.name ?? ""] ?? "var(--color-teal)";
+                      const sel = wageWorkerId === u.id;
+                      return (
+                        <button key={u.id} type="button" onClick={() => setWageWorkerId(sel ? "" : u.id)}
+                          style={{ padding: "0.4rem 1rem", borderRadius: 8, cursor: "pointer", border: `1px solid ${sel ? uc : "var(--border)"}`, background: sel ? `${uc}22` : "transparent", color: sel ? uc : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "1rem", transition: "all 0.2s" }}>
+                          {u.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div>
                 <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.35rem" }}>Leírás</label>
                 <input value={wageDesc} onChange={e => setWageDesc(e.target.value)} placeholder="pl. Bér — október" required style={inputStyle} />
@@ -650,7 +747,7 @@ function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; ye
 export const USER_COLORS: Record<string, string> = {
   "Felicia": "#c9906a",
   "Gitta":   "#9878b8",
-  "Lili":    "#e8a0b8",
+  "Lili":    "#c47a8a",
 };
 export function userColor(name: string | null | undefined) {
   return USER_COLORS[name ?? ""] ?? "var(--color-teal)";
@@ -719,12 +816,6 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
             {isAdmin ? "Látogatás és anyagköltség rögzítése" : "Saját bevételeid rögzítése"}
           </p>
         </div>
-        <button onClick={() => setShowOther(true)}
-          style={{ padding: "0.7rem 1.25rem", borderRadius: 10, border: "1px solid rgba(160,104,48,0.35)", background: "rgba(160,104,48,0.08)", color: "#a06830", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.15em", cursor: "pointer", flexShrink: 0, transition: "all 0.2s" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(160,104,48,0.15)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(160,104,48,0.08)"; }}>
-          {isAdmin ? "✦ Anyag / Bér" : "✦ Anyagköltség rögzítése"}
-        </button>
       </div>
 
       {/* Visit entry form */}

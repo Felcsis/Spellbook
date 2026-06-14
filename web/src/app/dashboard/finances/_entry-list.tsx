@@ -87,10 +87,9 @@ function VisitGroupRow({
   const serviceNames = card?.services.map(s => s.name) ?? [];
   const matNames     = card?.materials.map(m => m.name) ?? [];
 
-  // Financial summary
-  const staffWage   = isAdmin && !isOwner ? Math.round(group.totalRevenue * STAFF_RATE) : 0;
-  const netRevenue  = group.totalRevenue - group.totalMaterial;
-  const salonNet    = netRevenue - staffWage;
+  // Financial summary — 60/40 split is on gross revenue, materials are Felicia's own cost
+  const staffWage = isAdmin && !isOwner ? Math.round(group.totalRevenue * STAFF_RATE) : 0;
+  const salonNet  = group.totalRevenue - staffWage;
 
   const canDelete = !!onDelete && group.entries.every(e => !e.workDayId);
   const isEditingDate = editDateKey === group.key;
@@ -277,7 +276,7 @@ function VisitGroupRow({
             {/* Net result */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0.65rem", marginTop: "0.2rem", background: isAdmin ? `${uCol}0d` : "rgba(167,139,250,0.08)", borderRadius: 8, border: `1px solid ${isAdmin ? uCol + "22" : "rgba(167,139,250,0.2)"}` }}>
               <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: isAdmin ? uCol : "#a78bfa", textTransform: "uppercase", fontWeight: 700 }}>
-                {isAdmin ? (isOwner ? "● Neked marad" : "● Szalonnak marad") : "● Neked jár (60%)"}
+                {isAdmin ? (isOwner ? "● Neked marad" : "● Szalonnak marad (40%)") : "● Neked jár (60%)"}
               </span>
               <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: isAdmin ? (salonNet >= 0 ? "#527666" : "#c47878") : "#a78bfa", fontWeight: 700 }}>
                 {isAdmin ? fmt(salonNet) : fmt(Math.round(group.totalRevenue * STAFF_RATE))}

@@ -42,7 +42,7 @@ export default function EvesClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const yearRev    = yearData.reduce((s, m) => s + m.revenue, 0);
   const yearMat    = yearData.reduce((s, m) => s + m.material, 0);
   const yearWage   = yearData.reduce((s, m) => s + m.wage, 0);
-  const yearProfit = yearRev - yearMat - yearWage;
+  const yearProfit = yearRev - yearMat;
   const maxRev     = Math.max(...yearData.map(m => m.revenue), 1);
 
   const workerYearStats = perUserData
@@ -128,7 +128,7 @@ export default function EvesClient({ isAdmin = true, userId = "" }: { isAdmin?: 
             {yearData.map(m => {
               const pct    = maxRev > 0 ? (m.revenue / maxRev) * 100 : 0;
               const matPct = m.revenue > 0 ? (m.material / m.revenue) * 100 : 0;
-              const profit = m.revenue - m.material - m.wage;
+              const profit = m.revenue - m.material;
               const isCurrentMonth = m.month === now.getMonth() + 1 && year === now.getFullYear();
               return (
                 <div key={m.month}

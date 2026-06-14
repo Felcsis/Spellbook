@@ -16,15 +16,15 @@ export const financeRouter = createTRPCRouter({
           date: { gte: from, lt: to },
           ...(targetId && {
             OR: [
-              { createdById: targetId },
               { workDay: { userId: targetId } },
+              { workDayId: null, createdById: targetId },
             ],
           }),
         },
         orderBy: { date: "desc" },
         include: {
           createdBy: { select: { id: true, name: true } },
-          workDay:   { include: { user: { select: { name: true } } } },
+          workDay:   { include: { user: { select: { id: true, name: true } } } },
           guestCard: {
             include: {
               guest:     { select: { name: true } },
@@ -82,7 +82,7 @@ export const financeRouter = createTRPCRouter({
       const rows = await ctx.db.financeEntry.findMany({
         where: {
           date: { gte: from, lt: to },
-          ...(targetId && { OR: [{ createdById: targetId }, { workDay: { userId: targetId } }] }),
+          ...(targetId && { OR: [{ workDay: { userId: targetId } }, { workDayId: null, createdById: targetId }] }),
         },
         select: { type: true, amount: true, date: true },
       });
@@ -94,6 +94,28 @@ export const financeRouter = createTRPCRouter({
         if (e.type === "wage")     months[m]!.wage     += e.amount;
       });
       return months;
+    }),
+
+  perUserYear: protectedProcedure
+    .input(z.object({ year: z.number() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.session.user.role !== "admin") return [];
+      const from = new Date(input.year, 0, 1);
+      const to   = new Date(input.year + 1, 0, 1);
+      const rows = await ctx.db.financeEntry.findMany({
+        where: { date: { gte: from, lt: to } },
+        select: { type: true, amount: true, createdById: true, createdBy: { select: { id: true, name: true } }, workDay: { select: { userId: true, user: { select: { id: true, name: true } } } } },
+      });
+      const byUser: Record<string, { id: string; name: string; revenue: number; material: number; wage: number }> = {};
+      rows.forEach(e => {
+        const id   = e.workDay?.user?.id   ?? e.createdById ?? "?";
+        const name = e.workDay?.user?.name ?? e.createdBy?.name ?? "?";
+        if (!byUser[id]) byUser[id] = { id, name, revenue: 0, material: 0, wage: 0 };
+        if (e.type === "revenue")  byUser[id]!.revenue  += e.amount;
+        if (e.type === "material") byUser[id]!.material += e.amount;
+        if (e.type === "wage")     byUser[id]!.wage     += e.amount;
+      });
+      return Object.values(byUser).sort((a, b) => b.revenue - a.revenue);
     }),
 
   delete: protectedProcedure

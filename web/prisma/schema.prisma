@@ -197,6 +197,13 @@ model Expense {
     @@index([date])
 }
 
+model SalonSetting {
+    id                   String   @id @default("singleton")
+    googleRefreshToken   String?
+    googleCalendarId     String?
+    updatedAt            DateTime @updatedAt
+}
+
 model VerificationToken {
     identifier String
     token      String   @unique

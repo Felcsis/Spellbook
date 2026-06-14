@@ -71,15 +71,21 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const revenue     = visible.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
   const material    = visible.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
   const wage        = visible.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
-  const profit      = revenue - material - wage;
 
+  function entryOwner(e: { createdBy?: { id: string } | null; workDay?: { user?: { id: string } | null } | null }) {
+    return e.workDay?.user?.id ?? e.createdBy?.id ?? "";
+  }
   const workerStats = allUsers
     .map(u => {
-      const rev   = allUnfiltered.filter(e => e.type === "revenue" && e.createdBy?.id === u.id).reduce((s, e) => s + e.amount, 0);
-      const wages = allUnfiltered.filter(e => e.type === "wage"    && e.createdBy?.id === u.id).reduce((s, e) => s + e.amount, 0);
+      const rev   = allUnfiltered.filter(e => e.type === "revenue" && entryOwner(e) === u.id).reduce((s, e) => s + e.amount, 0);
+      const wages = allUnfiltered.filter(e => e.type === "wage"    && entryOwner(e) === u.id).reduce((s, e) => s + e.amount, 0);
       return { id: u.id, name: u.name ?? "?", revenue: rev, wages, earn: wages > 0 ? wages : Math.round(rev * STAFF_RATE) };
     })
     .filter(w => w.revenue > 0 || w.wages > 0);
+
+  const isOwnView = filterUserId === userId;
+  const staffWageTotal = workerStats.filter(w => w.id !== userId).reduce((s, w) => s + w.earn, 0);
+  const profit = revenue - material;
 
   const { byDate, sortedDates } = buildVisitGroups(visible);
   const todayStr = toDateStr(now);
@@ -138,8 +144,8 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && workerStats.length > 0) ? "0.75rem" : "2rem" }}>
         <StatBox label="Heti bevétel" value={revenue} color="#527666" sub={`${monLabel} – ${sunLabel}`} large />
         {isAdmin && material > 0 && <StatBox label="Anyagköltség" value={material} color="#a06830" sub="kiadás" />}
-        {isAdmin && revenue > 0  && <StatBox label={wage > 0 ? "Bérek" : "Várható bér (60%)"} value={wage > 0 ? wage : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
-        {isAdmin && revenue > 0  && <StatBox label="Profit" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}%` : ""} large />}
+        {isAdmin && !isOwnView && revenue > 0 && <StatBox label={wage > 0 ? "Bérek" : "Várható bér (60%)"} value={staffWageTotal > 0 ? staffWageTotal : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
+        {isAdmin && revenue > 0 && <StatBox label="Profit" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}%` : ""} large />}
         {!isAdmin && (wage > 0 || revenue > 0) && <StatBox label={wage > 0 ? "Béred" : "Neked jár (60%)"} value={wage > 0 ? wage : Math.round(revenue * STAFF_RATE)} color="#a78bfa" sub="heti bér" large />}
       </div>
 
