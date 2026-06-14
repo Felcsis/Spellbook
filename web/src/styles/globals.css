@@ -28,10 +28,10 @@
   --bg-active:       rgba(160,120,120,0.13);
   --bg-today:        rgba(160,120,120,0.09);
 
-  --text-primary:    #2e2418;
-  --text-muted:      rgba(46,36,24,0.58);
-  --text-soft:       rgba(46,36,24,0.42);
-  --text-dim:        rgba(46,36,24,0.27);
+  --text-primary:    #1a1008;
+  --text-muted:      rgba(26,16,8,0.80);
+  --text-soft:       rgba(26,16,8,0.62);
+  --text-dim:        rgba(26,16,8,0.46);
   --border:          rgba(160,120,120,0.2);
   --border-strong:   rgba(160,120,120,0.38);
   --shadow-card:     0 2px 14px rgba(100,70,70,0.08);
@@ -59,10 +59,10 @@
   --bg-active:       rgba(192,152,152,0.16);
   --bg-today:        rgba(192,152,152,0.1);
 
-  --text-primary:    #f0e4da;
-  --text-muted:      rgba(240,228,218,0.56);
-  --text-soft:       rgba(240,228,218,0.42);
-  --text-dim:        rgba(240,228,218,0.27);
+  --text-primary:    #f5ede6;
+  --text-muted:      rgba(245,237,230,0.82);
+  --text-soft:       rgba(245,237,230,0.64);
+  --text-dim:        rgba(245,237,230,0.46);
   --border:          rgba(192,152,152,0.2);
   --border-strong:   rgba(192,152,152,0.38);
   --shadow-card:     0 2px 18px rgba(0,0,0,0.5);
