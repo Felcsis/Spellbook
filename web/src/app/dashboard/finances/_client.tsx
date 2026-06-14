@@ -436,8 +436,20 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
         {/* ── Visit total ── */}
         {total > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.7rem 1rem", background: "rgba(82,118,102,0.06)", border: "1px solid rgba(82,118,102,0.22)", borderRadius: 12 }}>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #c8a244 0%, #a06830 100%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 10px rgba(200,162,68,0.4)" }}>
-              <span style={{ color: "#fff", fontFamily: "var(--font-cinzel)", fontSize: "0.38rem", fontWeight: 900, letterSpacing: "-0.02em" }}>Ft</span>
+            {/* Coin icon */}
+            <div style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, position: "relative",
+              background: "radial-gradient(circle at 38% 32%, #f5d060 0%, #d4941e 52%, #8a5c10 100%)",
+              boxShadow: "0 4px 12px rgba(140,88,10,0.55), inset 0 1.5px 3px rgba(255,230,120,0.65), inset 0 -2px 4px rgba(80,40,0,0.45)",
+              border: "1.5px solid #b07818",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {/* Inner face */}
+              <div style={{ width: 28, height: 28, borderRadius: "50%",
+                background: "radial-gradient(circle at 42% 36%, #f0c840 0%, #c88018 65%, #7a4c0a 100%)",
+                boxShadow: "inset 0 1px 3px rgba(255,225,100,0.5), inset 0 -1px 3px rgba(80,38,0,0.5)",
+                border: "1px solid rgba(200,140,20,0.4)",
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color: "#5a3200", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", fontWeight: 900, letterSpacing: "0.01em", textShadow: "0 0.5px 0 rgba(255,210,80,0.5)" }}>Ft</span>
+              </div>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.2rem" }}>Végösszeg</div>
