@@ -11,10 +11,11 @@ const MaterialInput = z.object({
 });
 
 const ServiceInput = z.object({
-  name:     z.string().min(1),
-  price:    z.number().min(0),
-  duration: z.number().min(0).default(0),
-  gender:   z.string().optional(),
+  name:         z.string().min(1),
+  price:        z.number().min(0),
+  duration:     z.number().min(0).default(0),
+  gender:       z.string().optional(),
+  categoryName: z.string().optional(),
 });
 
 export const guestsRouter = createTRPCRouter({
@@ -88,9 +89,66 @@ export const guestsRouter = createTRPCRouter({
       });
     }),
 
+  updateCard: protectedProcedure
+    .input(z.object({
+      id:        z.string(),
+      date:      z.string().optional(),
+      notes:     z.string().optional(),
+      workerId:  z.string().optional(),
+      services:  z.array(ServiceInput).optional(),
+      materials: z.array(MaterialInput).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.services !== undefined) {
+        await ctx.db.guestCardService.deleteMany({ where: { cardId: input.id } });
+        if (input.services.length > 0)
+          await ctx.db.guestCardService.createMany({ data: input.services.map(s => ({ ...s, cardId: input.id })) });
+      }
+      if (input.materials !== undefined) {
+        await ctx.db.guestCardMaterial.deleteMany({ where: { cardId: input.id } });
+        if (input.materials.length > 0)
+          await ctx.db.guestCardMaterial.createMany({ data: input.materials.map(m => ({ ...m, cardId: input.id })) });
+      }
+
+      const fetched = await ctx.db.guestCard.update({
+        where: { id: input.id },
+        data: {
+          ...(input.date     && { date: new Date(input.date) }),
+          ...(input.workerId && { workerId: input.workerId }),
+          notes: input.notes ?? undefined,
+        },
+        include: { services: true, materials: true },
+      });
+      const svcTotal = fetched.services.reduce((s, x) => s + x.price, 0);
+      const matTotal = fetched.materials.reduce((s, x) => s + x.lineTotal, 0);
+      const total    = svcTotal + matTotal;
+
+      const card = await ctx.db.guestCard.update({
+        where: { id: input.id },
+        data:  { total },
+        include: { guest: true, worker: { select: { id: true, name: true } }, services: true, materials: true },
+      });
+
+      // Sync linked finance entries
+      const date = fetched.date;
+      await ctx.db.financeEntry.deleteMany({ where: { guestCardId: input.id } });
+      if (svcTotal > 0)
+        await ctx.db.financeEntry.create({ data: { type: "revenue",  description: card.services.map(s => s.name).join(", "), amount: svcTotal, date, createdById: ctx.session.user.id, guestCardId: input.id } });
+      if (matTotal > 0)
+        await ctx.db.financeEntry.create({ data: { type: "material", description: card.materials.map(m => `${m.name} (${m.grams}g)`).join(", "), amount: matTotal, date, createdById: ctx.session.user.id, guestCardId: input.id } });
+
+      return card;
+    }),
+
   deleteCard: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(({ ctx, input }) => ctx.db.guestCard.delete({ where: { id: input.id } })),
+
+  updateGuest: protectedProcedure
+    .input(z.object({ id: z.string(), name: z.string().min(1).optional(), phone: z.string().optional(), notes: z.string().optional() }))
+    .mutation(({ ctx, input }) =>
+      ctx.db.guest.update({ where: { id: input.id }, data: { name: input.name, phone: input.phone ?? null, notes: input.notes ?? null } })
+    ),
 
   deleteGuest: protectedProcedure
     .input(z.object({ id: z.string() }))

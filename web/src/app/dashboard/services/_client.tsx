@@ -365,15 +365,15 @@ function MaterialRow({ mat, isAdmin }: { mat: Material; isAdmin: boolean }) {
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.65rem 1rem", background: mat.active ? "rgba(251,191,36,0.04)" : "var(--bg-panel)", border: "1px solid rgba(251,191,36,0.12)", borderRadius: 8, opacity: mat.active ? 1 : 0.45, transition: "opacity 0.2s" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.65rem 1rem", background: mat.active ? "rgba(196,146,110,0.04)" : "var(--bg-panel)", border: "1px solid rgba(196,146,110,0.15)", borderRadius: 8, opacity: mat.active ? 1 : 0.45, transition: "opacity 0.2s" }}>
       <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: mat.active ? cream : dimmed, fontSize: "1rem" }}>{mat.name}</div>
       {mat.unit && <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.82rem" }}>{mat.unit}</div>}
-      <div style={{ fontFamily: "var(--font-cormorant)", color: "#fbbf24", fontSize: "1rem", minWidth: 80, textAlign: "right" }}>
+      <div style={{ fontFamily: "var(--font-cormorant)", color: "#c4926e", fontSize: "1rem", minWidth: 80, textAlign: "right" }}>
         {mat.price.toLocaleString("hu-HU")} Ft
       </div>
       {isAdmin && (
         <div style={{ display: "flex", gap: "0.4rem" }}>
-          <button onClick={() => toggle.mutate({ id: mat.id, active: !mat.active })} title={mat.active ? "Inaktiválás" : "Aktiválás"} style={{ background: "none", border: "none", cursor: "pointer", color: mat.active ? "#fbbf24" : dimmed, fontSize: "1rem" }}>
+          <button onClick={() => toggle.mutate({ id: mat.id, active: !mat.active })} title={mat.active ? "Inaktiválás" : "Aktiválás"} style={{ background: "none", border: "none", cursor: "pointer", color: mat.active ? "#c4926e" : dimmed, fontSize: "1rem" }}>
             {mat.active ? "✦" : "✧"}
           </button>
           <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", color: dimmed, fontSize: "0.9rem" }}>✎</button>

@@ -224,7 +224,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
             <div style={{ width: 1, background: "var(--border)" }} />
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: dayProfit >= 0 ? "#7a9e8caa" : "#f87171aa", marginBottom: "0.2rem" }}>PROFIT</div>
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{dayProfit >= 0 ? <span style={{ color: "#c9a060", textShadow: "0 0 6px #c9a06066", marginRight: "0.3rem", fontSize: "1.1em" }}>●</span> : "−"}{fmt(Math.abs(dayProfit))}</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{dayProfit >= 0 ? <span style={{ color: "#c4926e", textShadow: "0 0 6px #c4926e66", marginRight: "0.3rem", fontSize: "1.1em" }}>●</span> : "−"}{fmt(Math.abs(dayProfit))}</div>
             </div>
           </div>
         )}
@@ -234,7 +234,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
           <div style={{ marginBottom: "1rem" }}>
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "#7a9e8caa", textTransform: "uppercase", marginBottom: "0.5rem" }}>◈ Munkadíjak</div>
             {workEntries.map(e => {
-              const col      = userColors[e.userId] ?? "#c9a84c";
+              const col      = userColors[e.userId] ?? "#c4926e";
               const isEditing = editingEntryId === e.id;
               return (
                 <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 0.9rem", background: isEditing ? `${col}22` : `${col}12`, border: `1px solid ${isEditing ? col + "88" : col + "30"}`, borderRadius: "10px", marginBottom: "0.35rem", transition: "all 0.2s" }}>
@@ -268,7 +268,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
           <div style={{ marginBottom: "1rem" }}>
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.16em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.5rem" }}>♦ Vendég kártyák</div>
             {guestCards.map(card => {
-              const col = userColors[card.worker.id] ?? "#c9a84c";
+              const col = userColors[card.worker.id] ?? "#c4926e";
               return (
                 <div key={card.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.9rem", background: "rgba(192,152,152,0.07)", border: "1px solid rgba(192,152,152,0.18)", borderRadius: "10px", marginBottom: "0.35rem" }}>
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
@@ -353,7 +353,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
               <label style={labelStyle}>Ki dolgozott?</label>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 {users.map(u => {
-                  const col = userColors[u.id] ?? "#c9a84c";
+                  const col = userColors[u.id] ?? "#c4926e";
                   return (
                     <button key={u.id} type="button" onClick={() => setUserId(u.id)}
                       style={{ padding: "0.45rem 0.9rem", borderRadius: "8px", cursor: "pointer", border: userId === u.id ? `1px solid ${col}88` : "1px solid var(--bg-active)", background: userId === u.id ? `${col}18` : "transparent", color: userId === u.id ? col : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "1rem", transition: "all 0.2s" }}>
@@ -373,7 +373,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
                   {Array.from(selectedSvc).map(id => {
                     const svc = allServicesMap[id]; if (!svc) return null;
-                    const col = userColors[userId] ?? "#c9a84c";
+                    const col = userColors[userId] ?? "#c4926e";
                     return (
                       <div key={id} style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.28rem 0.65rem", borderRadius: "7px", background: `${col}18`, border: `1px solid ${col}55` }}>
                         <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: col }}>{svc.name}</span>
@@ -407,7 +407,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                 <div style={{ position: "absolute", left: 0, right: 0, zIndex: 100, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "12px", marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
                   {filteredSvcs.map((svc, i) => {
                     const already = selectedSvc.has(svc.id);
-                    const col = userColors[userId] ?? "#c9a84c";
+                    const col = userColors[userId] ?? "#c4926e";
                     const showCat = i === 0 || filteredSvcs[i - 1]?.categoryName !== svc.categoryName;
                     return (
                       <div key={svc.id}>
@@ -607,7 +607,7 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
             <div style={{ textAlign: "right" }}>
               {revenue > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(revenue)}</div>}
               {costs > 0   && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: "#c49060" }}>−{fmt(costs)}</div>}
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: profit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{profit >= 0 ? <span style={{ color: "#c9a060", textShadow: "0 0 5px #c9a06055", marginRight: "0.15rem" }}>●</span> : "−"}{fmt(Math.abs(profit))}</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: profit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{profit >= 0 ? <span style={{ color: "#c4926e", textShadow: "0 0 5px #c4926e55", marginRight: "0.15rem" }}>●</span> : "−"}{fmt(Math.abs(profit))}</div>
             </div>
           )}
         </div>
@@ -616,7 +616,7 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
       {/* Content */}
       <div style={{ padding: "0.55rem", flex: 1, display: "flex", flexDirection: "column" }}>
         {workEntries.map(e => (
-          <WorkerChip key={e.id} entry={e} color={userColors[e.userId] ?? "#c9a84c"} expanded={expandedId === e.id} onClick={() => setExpandedId(expandedId === e.id ? null : e.id)} />
+          <WorkerChip key={e.id} entry={e} color={userColors[e.userId] ?? "#c4926e"} expanded={expandedId === e.id} onClick={() => setExpandedId(expandedId === e.id ? null : e.id)} />
         ))}
         {costEntries.map(e => {
           const col = e.type === "material" ? "#c49060" : "#9278b0";
@@ -687,7 +687,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
               {/* Work entries */}
               {wEntries.map(e => {
-                const col = userColors[e.userId] ?? "#c9a84c";
+                const col = userColors[e.userId] ?? "#c4926e";
                 const exp = expandedEntry === e.id;
                 return (
                   <div key={e.id} onClick={ev => { ev.stopPropagation(); setExpandedEntry(exp ? null : e.id); }}
@@ -724,7 +724,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 
               {/* Profit badge */}
               {(revenue > 0 || costs > 0) && (
-                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: profit >= 0 ? "rgba(122,158,140,0.65)" : "rgba(196,120,120,0.65)", fontWeight: 700 }}>{profit >= 0 ? <span style={{ color: "#c9a060", marginRight: "0.15rem" }}>●</span> : "−"}{fmt(Math.abs(profit))}</div>
+                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: profit >= 0 ? "rgba(122,158,140,0.65)" : "rgba(196,120,120,0.65)", fontWeight: 700 }}>{profit >= 0 ? <span style={{ color: "#c4926e", marginRight: "0.15rem" }}>●</span> : "−"}{fmt(Math.abs(profit))}</div>
               )}
             </div>
           );

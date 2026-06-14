@@ -10,6 +10,7 @@ const NAV_ADMIN = [
   { key: "services",     icon: "✂", label: "Szolgáltatások & Anyagtár", href: "/dashboard/services" },
   { key: "clients",      icon: "♦", label: "Recept könyv",   href: "/dashboard/guests" },
   { key: "finances",     icon: "✧", label: "Pénzügyek",      href: "/dashboard/finances" },
+  { key: "expenses",     icon: "📋", label: "Kiadások",       href: "/dashboard/expenses" },
   { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
   { key: "admin",        icon: "⚙", label: "Admin",          href: "/dashboard/admin" },
 ];

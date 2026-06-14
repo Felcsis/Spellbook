@@ -28,8 +28,8 @@ export const financeRouter = createTRPCRouter({
           guestCard: {
             include: {
               guest:     { select: { name: true } },
-              services:  { select: { name: true, price: true, duration: true, gender: true } },
-              materials: { select: { name: true, brand: true, colorCode: true, grams: true } },
+              services:  { select: { name: true, price: true, duration: true, gender: true, categoryName: true } },
+              materials: { select: { name: true, brand: true, colorCode: true, grams: true, lineTotal: true } },
             },
           },
         },
@@ -58,6 +58,42 @@ export const financeRouter = createTRPCRouter({
           ...(input.guestCardId && { guestCardId: input.guestCardId }),
         },
       });
+    }),
+
+  updateDate: protectedProcedure
+    .input(z.object({
+      entryIds:   z.array(z.string()),
+      date:       z.string(),
+      guestCardId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const d = new Date(input.date);
+      await ctx.db.financeEntry.updateMany({ where: { id: { in: input.entryIds } }, data: { date: d } });
+      if (input.guestCardId) await ctx.db.guestCard.update({ where: { id: input.guestCardId }, data: { date: d } });
+    }),
+
+  yearSummary: protectedProcedure
+    .input(z.object({ year: z.number(), filterUserId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const from    = new Date(input.year, 0, 1);
+      const to      = new Date(input.year + 1, 0, 1);
+      const isAdmin = ctx.session.user.role === "admin";
+      const targetId = isAdmin ? input.filterUserId : ctx.session.user.id;
+      const rows = await ctx.db.financeEntry.findMany({
+        where: {
+          date: { gte: from, lt: to },
+          ...(targetId && { OR: [{ createdById: targetId }, { workDay: { userId: targetId } }] }),
+        },
+        select: { type: true, amount: true, date: true },
+      });
+      const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, revenue: 0, material: 0, wage: 0 }));
+      rows.forEach(e => {
+        const m = new Date(e.date).getMonth();
+        if (e.type === "revenue")  months[m]!.revenue  += e.amount;
+        if (e.type === "material") months[m]!.material += e.amount;
+        if (e.type === "wage")     months[m]!.wage     += e.amount;
+      });
+      return months;
     }),
 
   delete: protectedProcedure
