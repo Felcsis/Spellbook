@@ -72,10 +72,9 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
   const createCard     = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
 
   // Services
-  const [activeCat,  setActiveCat]  = useState<string | null>(null);
-  const [selSvcs,    setSelSvcs]    = useState<SelSvc[]>([]);
-  const [svcSearch,  setSvcSearch]  = useState("");
-  const [svcOpen,    setSvcOpen]    = useState(false);
+  const [selSvcs,   setSelSvcs]  = useState<SelSvc[]>([]);
+  const [svcSearch, setSvcSearch] = useState("");
+  const [svcOpen,   setSvcOpen]  = useState(false);
 
   // Guest
   const [guestSearch,   setGuestSearch]   = useState("");
@@ -97,19 +96,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
   const [isManual,  setIsManual]  = useState(false);
   const [saving,    setSaving]    = useState(false);
 
-  function closeAll() { setSvcOpen(false); setGuestOpen(false); setMatOpen(false); setActiveCat(null); }
-
-  // Build flat service list
-  const allSvcs: SelSvc[] = [];
-  categories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
-    allSvcs.push({ id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: c.name })
-  ));
-
-  const displayedCatSvcs = activeCat
-    ? allSvcs.filter(s => s.categoryName === activeCat)
-    : svcSearch.trim()
-      ? allSvcs.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(svcSearch.toLowerCase()))
-      : [];
+  function closeAll() { setSvcOpen(false); setGuestOpen(false); setMatOpen(false); }
 
   const filtGuests = guestSearch.trim()
     ? allGuests.filter(g => g.name.toLowerCase().includes(guestSearch.toLowerCase()))
@@ -148,7 +135,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
   }
 
   function reset() {
-    setActiveCat(null); setSelSvcs([]); setSvcSearch(""); setSvcOpen(false);
+    setSelSvcs([]); setSvcSearch(""); setSvcOpen(false);
     setGuestSearch(""); setGuestId(""); setShowNewGuest(false); setNewGuestName("");
     setShowMats(false); setMatRows([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
     setManualAmt(""); setIsManual(false);
@@ -213,45 +200,30 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-        {/* ── Category tabs ── */}
-        <div>
-          <span style={lbl}>Szolgáltatások</span>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-            {categories.map(c => {
-              const sel = activeCat === c.name;
-              return (
-                <button key={c.id} type="button" onClick={() => { setActiveCat(sel ? null : c.name); setSvcSearch(""); setSvcOpen(true); }}
-                  style={{ padding: "0.38rem 0.85rem", borderRadius: 8, border: sel ? "1px solid rgba(82,118,102,0.6)" : "1px solid var(--border)", background: sel ? "rgba(82,118,102,0.15)" : "var(--bg-card)", color: sel ? "#527666" : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", cursor: "pointer", transition: "all 0.18s" }}>
-                  {c.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* ── Service picker ── */}
         <div>
-          <span style={lbl}>Elvégzett szolgáltatás</span>
+          <span style={lbl}>Szolgáltatások</span>
+
+          {/* Selected services */}
           {selSvcs.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.5rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.55rem" }}>
               {selSvcs.map(s => (
                 <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.65rem", background: "rgba(82,118,102,0.1)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 8, flexWrap: "wrap" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#527666", flex: 1, minWidth: 120 }}>{s.name}</span>
                   <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(82,118,102,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
                   {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>{s.duration} perc</span>}
-                  {/* Női / Férfi / Gyermek toggle */}
                   {(["nő", "férfi", "gyermek"] as const).map(g => {
-                    const colors: Record<string, { border: string; bg: string; text: string }> = {
+                    const gColors: Record<string, { border: string; bg: string; text: string }> = {
                       nő:      { border: "rgba(232,180,200,0.7)", bg: "rgba(232,180,200,0.15)", text: "#e8b4c8" },
                       férfi:   { border: "rgba(122,158,200,0.7)", bg: "rgba(122,158,200,0.12)", text: "#7a9ec8" },
                       gyermek: { border: "rgba(167,139,250,0.7)", bg: "rgba(167,139,250,0.12)", text: "#a78bfa" },
                     };
-                    const c = colors[g]!;
+                    const gc = gColors[g]!;
                     const active = s.gender === g;
                     return (
                       <button key={g} type="button"
                         onClick={() => setSelSvcs(p => p.map(x => x.id === s.id ? { ...x, gender: active ? undefined : g } : x))}
-                        style={{ padding: "0.18rem 0.55rem", borderRadius: 5, border: `1px solid ${active ? c.border : "var(--border)"}`, background: active ? c.bg : "transparent", color: active ? c.text : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.15s" }}>
+                        style={{ padding: "0.18rem 0.55rem", borderRadius: 5, border: `1px solid ${active ? gc.border : "var(--border)"}`, background: active ? gc.bg : "transparent", color: active ? gc.text : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.15s" }}>
                         {g === "nő" ? "Női" : g === "férfi" ? "Férfi" : "Gyermek"}
                       </button>
                     );
@@ -261,28 +233,64 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
               ))}
             </div>
           )}
+
+          {/* + button + dropdown */}
           <div style={{ position: "relative" }}>
-            <input value={svcSearch}
-              onChange={e => { setSvcSearch(e.target.value); setSvcOpen(true); setActiveCat(null); }}
-              onFocus={() => setSvcOpen(true)}
-              onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
-              placeholder={activeCat ? `Keress a ${activeCat} kategóriában…` : "Keress szolgáltatást, vagy válassz részleget fentebb…"}
-              style={{ ...inputStyle, borderColor: "rgba(82,118,102,0.25)" }} />
-            {(svcOpen && displayedCatSvcs.length > 0) && (
-              <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 220, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
-                {displayedCatSvcs.map(s => {
-                  const already = !!selSvcs.find(x => x.id === s.id);
-                  return (
-                    <div key={s.id} onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, s]); setSvcSearch(""); } }}
-                      style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
-                      onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.1)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                      {already && <span style={{ color: "#527666", fontSize: "0.65rem" }}>✓</span>}
-                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#527666", fontWeight: 700 }}>{fmt(s.price)}</span>
-                    </div>
-                  );
-                })}
+            <button type="button" onClick={() => { setSvcOpen(p => !p); setSvcSearch(""); }}
+              style={{ display: "flex", alignItems: "center", gap: "0.45rem", padding: "0.45rem 0.95rem", borderRadius: 9, border: `1px solid ${svcOpen ? "rgba(82,118,102,0.5)" : "rgba(82,118,102,0.25)"}`, background: svcOpen ? "rgba(82,118,102,0.1)" : "var(--bg-card)", color: svcOpen ? "#527666" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.18s" }}>
+              <span style={{ fontSize: "1rem", lineHeight: 1, color: svcOpen ? "#527666" : "rgba(82,118,102,0.5)", fontWeight: 300 }}>＋</span>
+              Szolgáltatás hozzáadása
+            </button>
+
+            {svcOpen && (
+              <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 14, marginTop: "0.3rem", boxShadow: "0 16px 48px rgba(0,0,0,0.65)", overflow: "hidden" }}>
+                {/* Search inside panel */}
+                <div style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid rgba(82,118,102,0.1)" }}>
+                  <input
+                    value={svcSearch}
+                    onChange={e => setSvcSearch(e.target.value)}
+                    placeholder="Keress a szolgáltatások között…"
+                    autoFocus
+                    style={{ ...inputStyle, width: "100%", fontSize: "0.9rem", borderColor: "rgba(82,118,102,0.2)" }}
+                  />
+                </div>
+
+                {/* Services grouped by category */}
+                <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  {categories.map(cat => {
+                    const catSvcs = (cat.services as { id: string; name: string; price: number; duration: number }[]).filter(s =>
+                      !svcSearch.trim() || s.name.toLowerCase().includes(svcSearch.toLowerCase()) || cat.name.toLowerCase().includes(svcSearch.toLowerCase())
+                    );
+                    if (catSvcs.length === 0) return null;
+                    return (
+                      <div key={cat.id}>
+                        <div style={{ padding: "0.5rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(82,118,102,0.45)", textTransform: "uppercase" }}>
+                          {cat.name}
+                        </div>
+                        {catSvcs.map(s => {
+                          const already = !!selSvcs.find(x => x.id === s.id);
+                          return (
+                            <div key={s.id}
+                              onMouseDown={() => {
+                                if (already) {
+                                  setSelSvcs(p => p.filter(x => x.id !== s.id));
+                                } else {
+                                  setSelSvcs(p => [...p, { id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: cat.name }]);
+                                }
+                              }}
+                              style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.9rem", cursor: "pointer", transition: "background 0.12s", background: already ? "rgba(82,118,102,0.08)" : "transparent" }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(82,118,102,0.12)" : "rgba(82,118,102,0.06)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(82,118,102,0.08)" : "transparent"; }}>
+                              <span style={{ width: 14, flexShrink: 0, color: "#527666", fontSize: "0.7rem", textAlign: "center" }}>{already ? "✓" : ""}</span>
+                              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "#527666" : "var(--text-primary)", flex: 1 }}>{s.name}</span>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: already ? "#527666" : "var(--text-soft)", fontWeight: 700, flexShrink: 0 }}>{fmt(s.price)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
