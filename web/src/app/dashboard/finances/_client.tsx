@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
 import { EntryList } from "./_entry-list";
 
@@ -52,6 +52,16 @@ const MAT_OPTIONS = [
 
 type SelSvc = { id: string; name: string; price: number; duration: number; categoryName: string; gender?: string };
 type MatRow = { name: string; brand: string; colorCode: string; grams: string; unitPrice: number; lineTotal: number };
+
+const COLOR_KEYWORDS = ["festés","festek","szőkít","toner","féltartós","tartós festék","melír","balayage","ombre","pigment","highlight","szín"];
+
+function needsMaterial(svcs: SelSvc[]) {
+  return svcs.some(s =>
+    COLOR_KEYWORDS.some(kw =>
+      s.name.toLowerCase().includes(kw) || s.categoryName.toLowerCase().includes(kw)
+    )
+  );
+}
 
 function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }) {
   const utils = api.useUtils();
@@ -109,10 +119,18 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
     ? MAT_OPTIONS.filter(m => m.name.toLowerCase().includes(matSearch.toLowerCase()))
     : MAT_OPTIONS;
 
-  const autoTotal = selSvcs.reduce((s, x) => s + x.price, 0);
-  const matTotal  = matRows.reduce((s, r) => s + r.lineTotal, 0);
-  const total     = isManual ? (parseFloat(manualAmt) || 0) : autoTotal;
-  const canSave   = total > 0;
+  const autoTotal    = selSvcs.reduce((s, x) => s + x.price, 0);
+  const matTotal     = matRows.reduce((s, r) => s + r.lineTotal, 0);
+  const total        = isManual ? (parseFloat(manualAmt) || 0) : autoTotal;
+  const requiresMat  = needsMaterial(selSvcs);
+  const validMats    = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0);
+  const matOk        = !requiresMat || validMats.length > 0;
+  const canSave      = total > 0 && matOk;
+
+  // Auto-open material section when color service is selected
+  useEffect(() => {
+    if (requiresMat) setShowMats(true);
+  }, [requiresMat]);
 
   function updateMat(i: number, field: keyof MatRow, val: string | number) {
     setMatRows(prev => {
@@ -313,10 +331,23 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
 
         {/* ── Szín recept toggle ── */}
         <div>
-          <button type="button" onClick={() => setShowMats(p => !p)}
-            style={{ background: showMats ? "rgba(200,162,68,0.1)" : "transparent", border: `1px solid ${showMats ? "rgba(200,162,68,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "#c8a244" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
-            ✦ {showMats ? "Szín recept ▾" : "Szín recept hozzáadása"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+            <button type="button"
+              onClick={() => { if (!requiresMat) setShowMats(p => !p); }}
+              style={{ background: showMats ? "rgba(200,162,68,0.1)" : "transparent", border: `1px solid ${requiresMat && !matOk ? "#c47878" : showMats ? "rgba(200,162,68,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "#c8a244" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: requiresMat ? "default" : "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
+              ✦ {showMats ? "Szín recept ▾" : "Szín recept hozzáadása"}
+            </button>
+            {requiresMat && !matOk && (
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", color: "#c47878", animation: "fadeInUp 0.3s ease" }}>
+                ⚠ Festéshez szín recept kötelező
+              </span>
+            )}
+            {requiresMat && matOk && (
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", color: "#527666" }}>
+                ✓ Szín recept kitöltve
+              </span>
+            )}
+          </div>
 
           {showMats && (
             <div style={{ marginTop: "0.65rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
