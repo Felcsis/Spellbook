@@ -50,7 +50,7 @@ const MAT_OPTIONS = [
 ];
 
 // ── Single visit card ─────────────────────────────────────────────────────────
-function VisitCard({ card, onDelete, onEdit }: { card: GuestCardData; onDelete: () => void; onEdit: () => void }) {
+function VisitCard({ card, onDelete, onEdit, isAdmin }: { card: GuestCardData; onDelete: () => void; onEdit: () => void; isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
 
   const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
@@ -118,11 +118,13 @@ function VisitCard({ card, onDelete, onEdit }: { card: GuestCardData; onDelete: 
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.4rem", borderTop: "1px solid var(--bg-highlight)" }}>
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
-                Törlés
-              </button>
+              {isAdmin && (
+                <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
+                  Törlés
+                </button>
+              )}
               <button onClick={e => { e.stopPropagation(); onEdit(); }}
                 style={{ background: "none", border: "none", color: "rgba(122,158,140,0.5)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
@@ -394,10 +396,11 @@ function EditCardModal({ card, onClose }: { card: GuestCardData; onClose: () => 
 }
 
 // ── Guest row in receptkönyv ───────────────────────────────────────────────────
-function GuestRow({ guest, onDeleteCard, onNewCard }: {
+function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
   guest: GuestWithCards;
   onDeleteCard: (id: string) => void;
   onNewCard: (guestId: string, guestName: string) => void;
+  isAdmin: boolean;
 }) {
   const utils = api.useUtils();
   const [open,        setOpen]        = useState(false);
@@ -440,10 +443,12 @@ function GuestRow({ guest, onDeleteCard, onNewCard }: {
         {totalSpent > 0 && (
           <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: gold, fontWeight: 700, flexShrink: 0 }}>{fmt(totalSpent)}</div>
         )}
-        <button type="button" onClick={e => { e.stopPropagation(); setEditGuest(v => !v); setOpen(true); }}
-          style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 7, color: editGuest ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.08em", padding: "0.28rem 0.55rem", flexShrink: 0, transition: "all 0.2s" }}>
-          ✎
-        </button>
+        {isAdmin && (
+          <button type="button" onClick={e => { e.stopPropagation(); setEditGuest(v => !v); setOpen(true); }}
+            style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 7, color: editGuest ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.08em", padding: "0.28rem 0.55rem", flexShrink: 0, transition: "all 0.2s" }}>
+            ✎
+          </button>
+        )}
         <button type="button"
           onClick={e => { e.stopPropagation(); onNewCard(guest.id, guest.name); }}
           style={{ background: "var(--bg-highlight)", border: "1px solid var(--border)", borderRadius: 7, color: gold, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", padding: "0.3rem 0.65rem", flexShrink: 0, transition: "all 0.2s" }}
@@ -490,7 +495,7 @@ function GuestRow({ guest, onDeleteCard, onNewCard }: {
             <div style={{ fontFamily: "var(--font-cormorant)", color: dim, textAlign: "center", padding: "1rem", fontStyle: "italic" }}>Még nincs mentett kártya</div>
           ) : (
             guest.cards.map(card => (
-              <VisitCard key={card.id} card={card}
+              <VisitCard key={card.id} card={card} isAdmin={isAdmin}
                 onDelete={() => { if (confirm("Törlöd ezt a kártyát?")) onDeleteCard(card.id); }}
                 onEdit={() => setEditingCard(card)} />
             ))
@@ -844,7 +849,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function GuestsClient() {
+export default function GuestsClient({ isAdmin = false }: { isAdmin?: boolean }) {
   const utils = api.useUtils();
   const { data: guests = [], isLoading } = api.guests.guestBook.useQuery();
   const deleteCard = api.guests.deleteCard.useMutation({ onSuccess: () => { void utils.guests.guestBook.invalidate(); void utils.calendar.month.invalidate(); } });
@@ -860,9 +865,10 @@ export default function GuestsClient() {
     setShowNew(true);
   }
 
-  const filtered = search.trim()
+  const filtered = (search.trim()
     ? guests.filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
-    : guests;
+    : guests
+  ).slice().sort((a, b) => a.name.localeCompare(b.name, "hu"));
 
   return (
     <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 760 }}>
@@ -901,7 +907,7 @@ export default function GuestsClient() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {filtered.map(guest => (
-            <GuestRow key={guest.id} guest={guest as GuestWithCards}
+            <GuestRow key={guest.id} guest={guest as GuestWithCards} isAdmin={isAdmin}
               onDeleteCard={id => deleteCard.mutate({ id })}
               onNewCard={(gId, gName) => openNewCard(gId, gName)} />
           ))}

@@ -63,6 +63,23 @@ export const guestsRouter = createTRPCRouter({
       })
     ),
 
+  // My cards — for staff finance view (filtered by workerId + date range)
+  myCards: protectedProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .query(({ ctx, input }) => {
+      const from = new Date(input.year, input.month - 1, 1);
+      const to   = new Date(input.year, input.month, 1);
+      return ctx.db.guestCard.findMany({
+        where: { workerId: ctx.session.user.id, date: { gte: from, lt: to } },
+        include: {
+          guest:    { select: { name: true } },
+          services: true,
+          materials: true,
+        },
+        orderBy: { date: "desc" },
+      });
+    }),
+
   createCard: protectedProcedure
     .input(z.object({
       guestId:   z.string(),
@@ -142,7 +159,10 @@ export const guestsRouter = createTRPCRouter({
 
   deleteCard: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ ctx, input }) => ctx.db.guestCard.delete({ where: { id: input.id } })),
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.financeEntry.deleteMany({ where: { guestCardId: input.id } });
+      return ctx.db.guestCard.delete({ where: { id: input.id } });
+    }),
 
   updateGuest: protectedProcedure
     .input(z.object({ id: z.string(), name: z.string().min(1).optional(), phone: z.string().optional(), notes: z.string().optional() }))

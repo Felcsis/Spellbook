@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { userColor, buildVisitGroups } from "../_client";
-import { EntryList } from "../_entry-list";
+import { EntryList, StaffCardList } from "../_entry-list";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 function fmt(n: number) {
@@ -56,6 +56,8 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
   const activeFilter = !isAdmin ? userId : filterUserId;
   const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: activeFilter });
+  const { data: myCards = [], isLoading: cardsLoading } = api.guests.myCards.useQuery({ year, month }, { enabled: !isAdmin });
+  const { data: expenseList = [] } = api.expenses.list.useQuery({ year, month }, { enabled: isAdmin });
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
   const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
 
@@ -87,7 +89,8 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const staffWageTotal = Object.values(staffStats)
     .filter(st => !st.isOwner)
     .reduce((s, st) => s + (st.wage > 0 ? st.wage : Math.round(st.revenue * STAFF_RATE)), 0);
-  const profit = revenue - material;
+  const overheadTotal = expenseList.reduce((s, e) => s + e.amount, 0);
+  const profit = revenue - material - staffWageTotal - overheadTotal;
 
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material" || e.type === "wage");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
@@ -135,6 +138,7 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
         {isAdmin ? <>
           <StatBox label="Anyagköltség" value={material} color="#a06830" sub="kiadás" />
           {!isOwnView && <StatBox label={staffWageTotal > 0 && wage > 0 ? "Bérek" : "Várható bér (60%)"} value={staffWageTotal > 0 ? staffWageTotal : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
+          {isAdmin && overheadTotal > 0 && <StatBox label="Kiadások" value={overheadTotal} color="#e87171" sub="rezsi, bérleti díj…" />}
           <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
         </> : <>
           <StatBox label={wage > 0 ? "Béred" : "Neked jár (60%)"} value={wage > 0 ? wage : staffNet} color="#a78bfa" sub="havi bér" large />
@@ -188,19 +192,23 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
         </div>
       )}
 
-      <EntryList
-        byDate={byDate}
-        sortedDates={sortedDates}
-        todayStr={todayStr}
-        isAdmin={isAdmin}
-        ownerId={userId}
-        filterUserId={filterUserId}
-        isLoading={isLoading}
-        onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
-        onUpdateDate={(ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId })}
-        isSavingDate={updateDate.isPending}
-        emptyMessage="Ebben a hónapban még nincsenek tételek. ✦"
-      />
+      {isAdmin ? (
+        <EntryList
+          byDate={byDate}
+          sortedDates={sortedDates}
+          todayStr={todayStr}
+          isAdmin={isAdmin}
+          ownerId={userId}
+          filterUserId={filterUserId}
+          isLoading={isLoading}
+          onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
+          onUpdateDate={(ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId })}
+          isSavingDate={updateDate.isPending}
+          emptyMessage="Ebben a hónapban még nincsenek tételek. ✦"
+        />
+      ) : (
+        <StaffCardList cards={myCards} isLoading={cardsLoading} emptyMessage="Ebben a hónapban még nincsenek látogatásaid. ✦" />
+      )}
     </div>
   );
 }

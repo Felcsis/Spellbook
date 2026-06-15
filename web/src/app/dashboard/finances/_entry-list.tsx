@@ -48,7 +48,7 @@ const STAFF_RATE = 0.6;
 const gBadgeConfig: Record<string, { label: string; bg: string; color: string; border: string }> = {
   nő:      { label: "Női",    bg: "rgba(232,180,200,0.15)", color: "#e8b4c8", border: "rgba(232,180,200,0.3)" },
   férfi:   { label: "Férfi",  bg: "rgba(122,158,200,0.12)", color: "#7a9ec8", border: "rgba(122,158,200,0.3)" },
-  gyermek: { label: "Gyermek",bg: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "rgba(167,139,250,0.3)" },
+  gyermek: { label: "Gyermek",bg: "rgba(124,92,190,0.12)", color: "#7c5cbe", border: "rgba(124,92,190,0.3)" },
 };
 
 // ── Single group row ──────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ function VisitGroupRow({
   const staffWage = isAdmin && !isOwner ? Math.round(group.totalRevenue * STAFF_RATE) : 0;
   const salonNet  = group.totalRevenue - staffWage;
 
-  const canDelete = !!onDelete && group.entries.every(e => !e.workDayId);
+  const canDelete = !!onDelete && (isAdmin || group.entries.every(e => !e.workDayId));
   const isEditingDate = editDateKey === group.key;
 
   return (
@@ -106,7 +106,7 @@ function VisitGroupRow({
         {/* Main info */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
-            {card && <span style={{ color: "#a78bfa", fontSize: "0.72rem", flexShrink: 0 }}>♦</span>}
+            {card && <span style={{ color: "#7c5cbe", fontSize: "0.72rem", flexShrink: 0 }}>♦</span>}
             <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.02rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>
               {mainLabel}
             </span>
@@ -139,15 +139,20 @@ function VisitGroupRow({
         {/* Amount */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem", flexShrink: 0 }}>
           <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#527666", fontWeight: 700 }}>
-            {fmt(group.totalRevenue)}
+            {fmt(group.totalRevenue + group.totalMaterial)}
           </span>
+          {group.totalMaterial > 0 && (
+            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "var(--text-soft)", opacity: 0.7 }}>
+              munka: {fmt(group.totalRevenue)} + anyag: {fmt(group.totalMaterial)}
+            </span>
+          )}
           {isAdmin && !isOwner && staffWage > 0 && (
             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: uCol, opacity: 0.7 }}>
               → {fmt(salonNet)} marad
             </span>
           )}
           {!isAdmin && (
-            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#a78bfa", fontWeight: 700 }}>
+            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#7c5cbe", fontWeight: 700 }}>
               {fmt(Math.round(group.totalRevenue * STAFF_RATE))} bér
             </span>
           )}
@@ -274,17 +279,178 @@ function VisitGroupRow({
             )}
 
             {/* Net result */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0.65rem", marginTop: "0.2rem", background: isAdmin ? `${uCol}0d` : "rgba(167,139,250,0.08)", borderRadius: 8, border: `1px solid ${isAdmin ? uCol + "22" : "rgba(167,139,250,0.2)"}` }}>
-              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: isAdmin ? uCol : "#a78bfa", textTransform: "uppercase", fontWeight: 700 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0.65rem", marginTop: "0.2rem", background: isAdmin ? `${uCol}0d` : "rgba(124,92,190,0.08)", borderRadius: 8, border: `1px solid ${isAdmin ? uCol + "22" : "rgba(124,92,190,0.2)"}` }}>
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: isAdmin ? uCol : "#7c5cbe", textTransform: "uppercase", fontWeight: 700 }}>
                 {isAdmin ? (isOwner ? "● Neked marad" : "● Szalonnak marad (40%)") : "● Neked jár (60%)"}
               </span>
-              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: isAdmin ? (salonNet >= 0 ? "#527666" : "#c47878") : "#a78bfa", fontWeight: 700 }}>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: isAdmin ? (salonNet >= 0 ? "#527666" : "#c47878") : "#7c5cbe", fontWeight: 700 }}>
                 {isAdmin ? fmt(salonNet) : fmt(Math.round(group.totalRevenue * STAFF_RATE))}
               </span>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Staff card list (guest-card based, for non-admin finance views) ───────────
+type StaffCard = {
+  id: string;
+  date: string | Date;
+  total: number;
+  guest: { name: string };
+  services: { id: string; name: string; price: number; duration: number; gender?: string | null; categoryName?: string | null }[];
+  materials: { id: string; name: string; brand?: string | null; colorCode?: string | null; grams: number; lineTotal: number }[];
+};
+
+function StaffCardRow({ card }: { card: StaffCard }) {
+  const [open, setOpen] = useState(false);
+  const svcTotal  = card.services.reduce((s, x) => s + x.price, 0);
+  const myWage    = Math.round(svcTotal * STAFF_RATE);
+  const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" });
+
+  return (
+    <div style={{ background: "var(--bg-panel)", border: `1px solid ${open ? "#7c5cbe55" : "#7c5cbe22"}`, borderLeft: "3px solid #7c5cbe", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
+      {/* Collapsed */}
+      <div onClick={() => setOpen(o => !o)}
+        style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1rem", cursor: "pointer" }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(124,92,190,0.04)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
+            <span style={{ color: "#7c5cbe", fontSize: "0.72rem" }}>♦</span>
+            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.02rem", color: "var(--text-primary)", fontWeight: 600 }}>
+              {card.guest.name}
+            </span>
+          </div>
+          {card.services.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+              {card.services.map((s, i) => (
+                <span key={i} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "#7c5cbe", background: "rgba(124,92,190,0.1)", border: "1px solid rgba(124,92,190,0.22)", borderRadius: 4, padding: "0.05rem 0.35rem" }}>
+                  {s.name}
+                </span>
+              ))}
+              {card.materials.length > 0 && (
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "#c8a244", background: "rgba(200,162,68,0.08)", border: "1px solid rgba(200,162,68,0.22)", borderRadius: 4, padding: "0.05rem 0.35rem" }}>
+                  ✦ recept
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.1rem", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#527666", fontWeight: 700 }}>{fmt(svcTotal)}</span>
+          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#7c5cbe", fontWeight: 700 }}>{fmt(myWage)} bér</span>
+        </div>
+        <span style={{ color: "rgba(124,92,190,0.5)", fontSize: "0.65rem", transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block", transition: "transform 0.2s" }}>▾</span>
+      </div>
+
+      {/* Expanded */}
+      {open && (
+        <div style={{ borderTop: "1px solid rgba(124,92,190,0.1)", padding: "0.75rem 1rem 1rem" }}>
+          {/* Services */}
+          {card.services.length > 0 && (
+            <div style={{ marginBottom: "0.65rem" }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "rgba(124,92,190,0.5)", textTransform: "uppercase", marginBottom: "0.4rem" }}>Elvégzett munkák</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                {card.services.map((s, i) => {
+                  const badge = s.gender ? gBadgeConfig[s.gender] : null;
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(124,92,190,0.06)", border: "1px solid rgba(124,92,190,0.15)", borderRadius: 7 }}>
+                      {badge && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", padding: "0.1rem 0.35rem", borderRadius: 4, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, flexShrink: 0 }}>{badge.label}</span>}
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
+                      {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.88rem", color: "#527666", fontWeight: 700 }}>{fmt(s.price)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Recipe */}
+          {card.materials.length > 0 && (
+            <div style={{ marginBottom: "0.75rem" }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "rgba(200,162,68,0.55)", textTransform: "uppercase", marginBottom: "0.4rem" }}>✦ Szín recept</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                {card.materials.map((m, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0.65rem", background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.15)", borderRadius: 6 }}>
+                    <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
+                    {m.brand && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>{m.brand}</span>}
+                    {m.colorCode && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "#c8a244", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
+                    <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{m.grams}g</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Financial summary for staff */}
+          <div style={{ borderTop: "1px solid rgba(124,92,190,0.12)", paddingTop: "0.6rem", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.22rem 0.5rem" }}>
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>◈ Munkadíj</span>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.92rem", color: "#527666", fontWeight: 700 }}>{fmt(svcTotal)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0.65rem", marginTop: "0.2rem", background: "rgba(124,92,190,0.08)", borderRadius: 8, border: "1px solid rgba(124,92,190,0.2)" }}>
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: "#7c5cbe", textTransform: "uppercase", fontWeight: 700 }}>● Neked jár (60%)</span>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#7c5cbe", fontWeight: 700 }}>{fmt(myWage)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function StaffCardList({ cards, isLoading, emptyMessage }: {
+  cards: StaffCard[];
+  isLoading?: boolean;
+  emptyMessage?: string;
+}) {
+  if (isLoading) {
+    return <div style={{ textAlign: "center", color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", padding: "3rem", fontStyle: "italic" }}>Betöltés...</div>;
+  }
+  if (cards.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "1.1rem", fontStyle: "italic" }}>
+        {emptyMessage ?? "Nincsenek bejegyzések. ✦"}
+      </div>
+    );
+  }
+
+  // Group by date
+  const byDate: Record<string, StaffCard[]> = {};
+  cards.forEach(c => {
+    const ds = new Date(c.date).toISOString().slice(0, 10);
+    (byDate[ds] ??= []).push(c);
+  });
+  const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {sortedDates.map(ds => {
+        const dayCards = byDate[ds]!;
+        const dayRev   = dayCards.reduce((s, c) => s + c.services.reduce((ss, sv) => ss + sv.price, 0), 0);
+        const dayWage  = Math.round(dayRev * STAFF_RATE);
+        const isToday  = ds === todayStr;
+        return (
+          <div key={ds}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.16em", color: isToday ? "var(--color-teal)" : "var(--text-muted)", textTransform: "uppercase", flexShrink: 0 }}>
+                {isToday ? "Ma — " : ""}{new Date(ds + "T12:00:00").toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" })}
+              </div>
+              <div style={{ flex: 1, height: 1, background: "var(--bg-active)" }} />
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#527666", fontWeight: 700, flexShrink: 0 }}>{fmt(dayRev)}</span>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#7c5cbe", flexShrink: 0 }}>{fmt(dayWage)} bér</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {dayCards.map(card => <StaffCardRow key={card.id} card={card} />)}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

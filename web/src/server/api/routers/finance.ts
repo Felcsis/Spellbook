@@ -121,8 +121,13 @@ export const financeRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const entry = await ctx.db.financeEntry.findUnique({ where: { id: input.id } });
-      if (entry?.workDayId) throw new Error("Naptárból hozzáadott tétel — a naptárban töröld.");
+      const isAdmin = ctx.session.user.role === "admin";
+      const entry = await ctx.db.financeEntry.findUnique({ where: { id: input.id }, select: { workDayId: true } });
+      if (!entry) return;
+      if (entry.workDayId) {
+        if (!isAdmin) throw new Error("Naptárból hozzáadott tétel — a naptárban töröld.");
+        return ctx.db.workDay.delete({ where: { id: entry.workDayId } });
+      }
       return ctx.db.financeEntry.delete({ where: { id: input.id } });
     }),
 });

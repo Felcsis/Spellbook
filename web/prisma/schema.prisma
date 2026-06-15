@@ -213,15 +213,17 @@ model VerificationToken {
 }
 
 model ServiceCategory {
-    id        String    @id @default(cuid())
-    name      String
-    order     Int       @default(0)
-    createdAt DateTime  @default(now())
-    user      User      @relation(fields: [userId], references: [id])
-    userId    String
-    services  Service[]
+    id            String    @id @default(cuid())
+    name          String
+    order         Int       @default(0)
+    priceListType String    @default("master")
+    createdAt     DateTime  @default(now())
+    user          User      @relation(fields: [userId], references: [id])
+    userId        String
+    services      Service[]
 
     @@index([userId])
+    @@index([priceListType])
 }
 
 model Service {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { buildVisitGroups, userColor } from "../_client";
-import { EntryList } from "../_entry-list";
+import { EntryList, StaffCardList } from "../_entry-list";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -37,13 +37,21 @@ export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const year  = d.getFullYear();
   const month = d.getMonth() + 1;
 
+  const utils = api.useUtils();
+  const inv = () => { void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); };
+
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
   const activeFilter = !isAdmin ? userId : filterUserId;
 
   const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: activeFilter });
+  const del = api.finance.delete.useMutation({ onSuccess: inv });
 
   // Unfiltered — for per-worker breakdown (admin only)
   const { data: allEntries = [] } = api.finance.list.useQuery({ year, month }, { enabled: isAdmin });
+
+  // Staff: guest cards for this month, filtered to the selected day
+  const { data: myMonthCards = [], isLoading: cardsLoading } = api.guests.myCards.useQuery({ year, month }, { enabled: !isAdmin });
+  const myDayCards = myMonthCards.filter(c => toDateStr(new Date(c.date)) === date);
 
   const dayEntries    = entries.filter(e => toDateStr(new Date(e.date)) === date);
   const allDayEntries = allEntries.filter(e => toDateStr(new Date(e.date)) === date);
@@ -68,7 +76,7 @@ export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
 
   const isOwnView = filterUserId === userId;
   const staffWageTotal = workerStats.filter(w => w.id !== userId).reduce((s, w) => s + w.earn, 0);
-  const profit = revenue - material;
+  const profit = revenue - material - staffWageTotal;
 
   const { byDate, sortedDates } = buildVisitGroups(visible);
   const todayStr = toDateStr(now);
@@ -161,15 +169,20 @@ export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
         </div>
       )}
 
-      <EntryList
-        byDate={byDate}
-        sortedDates={sortedDates}
-        todayStr={todayStr}
-        isAdmin={isAdmin}
-        ownerId={userId}
-        isLoading={isLoading}
-        emptyMessage="Ezen a napon még nincsenek bejegyzések. ✦"
-      />
+      {isAdmin ? (
+        <EntryList
+          byDate={byDate}
+          sortedDates={sortedDates}
+          todayStr={todayStr}
+          isAdmin={isAdmin}
+          ownerId={userId}
+          isLoading={isLoading}
+          onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
+          emptyMessage="Ezen a napon még nincsenek bejegyzések. ✦"
+        />
+      ) : (
+        <StaffCardList cards={myDayCards} isLoading={cardsLoading} emptyMessage="Ezen a napon még nincsenek látogatásaid. ✦" />
+      )}
     </div>
   );
 }

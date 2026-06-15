@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 
@@ -39,7 +38,6 @@ type GuestCard = {
   services: { name: string; price: number }[];
 };
 type User = { id: string; name: string | null };
-type GoogleEvent = { id: string; summary: string; start: string; end: string; allDay: boolean; description: string; htmlLink: string };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -583,25 +581,10 @@ function WorkerChip({ entry, color, expanded, onClick }: { entry: WorkDay; color
   );
 }
 
-// ── Google event chip ─────────────────────────────────────────────────────────
-const GCAL_COLOR = "#4285f4";
-function GoogleChip({ event, compact = false }: { event: GoogleEvent; compact?: boolean }) {
-  const timeStr = event.allDay ? "Egész nap" : new Date(event.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" });
-  return (
-    <a href={event.htmlLink} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-      <div style={{ padding: compact ? "0.12rem 0.35rem" : "0.22rem 0.5rem", borderRadius: compact ? "4px" : "7px", background: `${GCAL_COLOR}14`, border: `1px solid ${GCAL_COLOR}35`, marginBottom: compact ? "0.15rem" : "0.2rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-        <div style={{ width: compact ? 4 : 5, height: compact ? 4 : 5, borderRadius: "50%", background: GCAL_COLOR, flexShrink: 0 }} />
-        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: compact ? "0.78rem" : "0.82rem", color: GCAL_COLOR, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{event.summary}</span>
-        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", color: `${GCAL_COLOR}99`, flexShrink: 0 }}>{timeStr}</span>
-      </div>
-    </a>
-  );
-}
-
 // ── Day column ────────────────────────────────────────────────────────────────
-function DayColumn({ date, workEntries, costEntries, guestCards = [], googleEvents = [], userColors, isToday, onOpen, compact = false }: {
+function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors, isToday, onOpen, compact = false }: {
   date: Date; workEntries: WorkDay[]; costEntries: FinanceEntry[]; guestCards?: GuestCard[];
-  googleEvents?: GoogleEvent[]; userColors: Record<string, string>; isToday: boolean; onOpen: (ds: string) => void; compact?: boolean;
+  userColors: Record<string, string>; isToday: boolean; onOpen: (ds: string) => void; compact?: boolean;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const dateStr    = toDateStr(date);
@@ -656,7 +639,6 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], googleEven
             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.66rem", color: "#c09898", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
           </div>
         ))}
-        {googleEvents.map(e => <GoogleChip key={e.id} event={e} />)}
         <div onClick={() => onOpen(dateStr)}
           style={{ marginTop: "auto", padding: "0.22rem", borderRadius: "6px", border: "1px dashed var(--border)", color: "var(--border)", fontSize: "0.72rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", transition: "all 0.2s" }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
@@ -669,10 +651,10 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], googleEven
 }
 
 // ── Month view ────────────────────────────────────────────────────────────────
-function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, byGoogleDate, userColors, today, onOpen }: {
+function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColors, today, onOpen }: {
   year: number; month: number;
   byDate: Record<string, WorkDay[]>; byCostDate: Record<string, FinanceEntry[]>;
-  byGuestCardDate: Record<string, GuestCard[]>; byGoogleDate: Record<string, GoogleEvent[]>;
+  byGuestCardDate: Record<string, GuestCard[]>;
   userColors: Record<string, string>; today: string; onOpen: (d: string) => void;
 }) {
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
@@ -739,9 +721,6 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, byGoogleD
                 </div>
               ))}
 
-              {/* Google Calendar events */}
-              {(byGoogleDate[ds] ?? []).map(e => <GoogleChip key={e.id} event={e} compact />)}
-
               {/* Add */}
               <div onClick={() => onOpen(ds)} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", border: "1px dashed var(--bg-active)", color: "var(--border)", fontSize: "0.6rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", transition: "all 0.18s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
@@ -762,38 +741,17 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, byGoogleD
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CalendarClient() {
   const now = new Date();
-  const searchParams = useSearchParams();
   const [view,   setView]   = useState<View>("month");
   const [anchor, setAnchor] = useState(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
   const [modalDate, setModalDate] = useState<string | null>(null);
-  const [gcalBanner, setGcalBanner] = useState<"connected" | "error" | null>(() => {
-    const p = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("google") : null;
-    return (p === "connected" || p === "error") ? p : null;
-  });
-
-  useEffect(() => {
-    const p = searchParams.get("google");
-    if (p === "connected" || p === "error") {
-      setGcalBanner(p);
-      const url = new URL(window.location.href);
-      url.searchParams.delete("google");
-      window.history.replaceState({}, "", url.toString());
-      const t = setTimeout(() => setGcalBanner(null), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [searchParams]);
 
   const qYear  = anchor.getFullYear();
   const qMonth = anchor.getMonth() + 1;
 
+  const utils = api.useUtils();
   const { data: users = [] }                    = api.calendar.users.useQuery();
   const { data: monthData = { workDays: [], financeEntries: [], guestCards: [] } } =
     api.calendar.month.useQuery({ year: qYear, month: qMonth });
-  const { data: gcalStatus }                    = api.googleCalendar.status.useQuery();
-  const { data: gcalAuth }                      = api.googleCalendar.authUrl.useQuery(undefined, { enabled: !gcalStatus?.connected });
-  const { data: googleEvents = [] }             = api.googleCalendar.events.useQuery({ year: qYear, month: qMonth }, { enabled: !!gcalStatus?.connected });
-  const gcalDisconnect                          = api.googleCalendar.disconnect.useMutation({ onSuccess: () => { void utils.googleCalendar.status.invalidate(); void utils.googleCalendar.events.invalidate(); } });
-  const utils = api.useUtils();
 
   const { workDays, financeEntries, guestCards } = monthData;
 
@@ -803,11 +761,9 @@ export default function CalendarClient() {
   const byDate: Record<string, WorkDay[]>          = {};
   const byCostDate: Record<string, FinanceEntry[]>  = {};
   const byGuestCardDate: Record<string, GuestCard[]> = {};
-  const byGoogleDate: Record<string, GoogleEvent[]>  = {};
   workDays.forEach(w => { const k = toDateStr(new Date(w.date)); (byDate[k] ??= []).push(w as WorkDay); });
   financeEntries.forEach(e => { const k = toDateStr(new Date(e.date)); (byCostDate[k] ??= []).push(e as FinanceEntry); });
   guestCards.forEach(c => { const k = toDateStr(new Date(c.date)); (byGuestCardDate[k] ??= []).push(c as GuestCard); });
-  googleEvents.forEach(e => { const k = (e.start ?? "").slice(0, 10); if (k) (byGoogleDate[k] ??= []).push(e); });
 
   const todayStr = toDateStr(now);
 
@@ -864,17 +820,6 @@ export default function CalendarClient() {
           guestCards={modalGuestCards} users={users} userColors={userColors} onClose={() => setModalDate(null)} />
       )}
 
-      {/* Google Calendar banner */}
-      {gcalBanner && (
-        <div style={{ marginBottom: "1rem", padding: "0.65rem 1rem", borderRadius: "10px", background: gcalBanner === "connected" ? "rgba(66,133,244,0.1)" : "rgba(220,80,80,0.1)", border: `1px solid ${gcalBanner === "connected" ? "rgba(66,133,244,0.35)" : "rgba(220,80,80,0.35)"}`, display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: gcalBanner === "connected" ? "#4285f4" : "#f87171", flexShrink: 0 }} />
-          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: gcalBanner === "connected" ? "#4285f4" : "#f87171" }}>
-            {gcalBanner === "connected" ? "Google Naptár sikeresen csatlakoztatva!" : "Google Naptár csatlakoztatása sikertelen."}
-          </span>
-          <button onClick={() => setGcalBanner(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--text-soft)", fontSize: "0.9rem" }}>✕</button>
-        </div>
-      )}
-
       <div style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite" }}>Munkanaptár ✦</h1>
         <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)" }}>Ki mikor dolgozott, mennyit keresett, és mi a napi profit</p>
@@ -901,7 +846,7 @@ export default function CalendarClient() {
           <button onClick={() => navigate(1)} style={navBtnStyle}>›</button>
         </div>
 
-        {/* Monthly summary + Google Calendar button */}
+        {/* Monthly summary */}
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
           {users.map((u, i) => {
             const col = USER_COLORS[i % USER_COLORS.length]!;
@@ -920,34 +865,13 @@ export default function CalendarClient() {
               <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: totalProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{fmt(totalProfit)}</span>
             </div>
           )}
-          {/* Google Calendar connect/disconnect */}
-          {gcalStatus?.connected ? (
-            <button
-              onClick={() => { if (confirm("Lecsatlakoztatod a Google Naptárt?")) gcalDisconnect.mutate(); }}
-              style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.32rem 0.7rem", background: "rgba(66,133,244,0.1)", border: "1px solid rgba(66,133,244,0.3)", borderRadius: "7px", cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#4285f4"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(66,133,244,0.3)"; }}
-            >
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#4285f4" }} />
-              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.1em", color: "#4285f4" }}>Google Naptár</span>
-            </button>
-          ) : gcalAuth?.url ? (
-            <a href={gcalAuth.url}
-              style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.32rem 0.7rem", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "7px", textDecoration: "none", transition: "all 0.2s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#4285f4"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
-            >
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--text-soft)" }} />
-              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.1em", color: "var(--text-soft)" }}>Google Naptár</span>
-            </a>
-          ) : null}
         </div>
       </div>
 
       {/* Calendar body */}
       {view === "month" && (
         <MonthView year={qYear} month={qMonth} byDate={byDate} byCostDate={byCostDate}
-          byGuestCardDate={byGuestCardDate} byGoogleDate={byGoogleDate} userColors={userColors} today={todayStr} onOpen={setModalDate} />
+          byGuestCardDate={byGuestCardDate} userColors={userColors} today={todayStr} onOpen={setModalDate} />
       )}
       {(view === "week" || view === "3day" || view === "day") && (
         <div style={{ display: "flex", gap: "0.6rem" }}>
@@ -956,7 +880,6 @@ export default function CalendarClient() {
               workEntries={byDate[toDateStr(date)] ?? []}
               costEntries={byCostDate[toDateStr(date)] ?? []}
               guestCards={byGuestCardDate[toDateStr(date)] ?? []}
-              googleEvents={byGoogleDate[toDateStr(date)] ?? []}
               userColors={userColors} isToday={toDateStr(date) === todayStr}
               onOpen={setModalDate} compact={view === "week"} />
           ))}

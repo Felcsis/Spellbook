@@ -10,8 +10,9 @@ type Service = {
   description: string | null; active: boolean; order: number;
 };
 type Category = {
-  id: string; name: string; order: number; services: Service[];
+  id: string; name: string; order: number; priceListType: string; services: Service[];
 };
+type PriceList = "master" | "beginner";
 
 // ── Style helpers ──────────────────────────────────────────────────────────
 const gold   = "var(--color-teal)";
@@ -143,18 +144,18 @@ function ServiceModal({ categoryId, service, onClose }: { categoryId: string; se
 }
 
 // ── Add category modal ─────────────────────────────────────────────────────
-function CategoryModal({ onClose }: { onClose: () => void }) {
+function CategoryModal({ priceListType, onClose }: { priceListType: PriceList; onClose: () => void }) {
   const utils = api.useUtils();
   const [name, setName] = useState("");
   const create = api.services.createCategory.useMutation({ onSuccess: () => { void utils.services.listCategories.invalidate(); onClose(); } });
   return (
     <Modal title="Új kategória" onClose={onClose}>
       <Field label="Kategória neve">
-        <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="pl. Hajkezelések" autoFocus onKeyDown={e => e.key === "Enter" && create.mutate({ name })} />
+        <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="pl. Hajkezelések" autoFocus onKeyDown={e => e.key === "Enter" && create.mutate({ name, priceListType })} />
       </Field>
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
         <Btn variant="ghost" onClick={onClose}>Mégsem</Btn>
-        <Btn onClick={() => create.mutate({ name })} disabled={!name.trim() || create.isPending}>Létrehozás</Btn>
+        <Btn onClick={() => create.mutate({ name, priceListType })} disabled={!name.trim() || create.isPending}>Létrehozás</Btn>
       </div>
     </Modal>
   );
@@ -442,9 +443,12 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
 
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
-  const { data: categories, isLoading } = api.services.listCategories.useQuery();
-  const [tab, setTab]     = useState<"services" | "materials">("services");
-  const [addCat, setAddCat] = useState(false);
+  const { data: categories = [], isLoading } = api.services.listCategories.useQuery();
+  const [tab,       setTab]       = useState<"services" | "materials">("services");
+  const [priceList, setPriceList] = useState<PriceList>(isAdmin ? "master" : "beginner");
+  const [addCat,    setAddCat]    = useState(false);
+
+  const visibleCats = categories.filter(c => c.priceListType === priceList);
 
   return (
     <div style={{ maxWidth: 760 }}>
@@ -461,8 +465,8 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
         {tab === "services" && isAdmin && <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>}
       </div>
 
-      {/* Tab switcher */}
-      <div style={{ display: "flex", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 10, padding: 3, gap: 3, marginBottom: "2rem", width: "fit-content" }}>
+      {/* Main tab switcher */}
+      <div style={{ display: "flex", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 10, padding: 3, gap: 3, marginBottom: tab === "services" ? "1rem" : "2rem", width: "fit-content" }}>
         {([["services", "✂ Szolgáltatások"], ["materials", "✦ Anyagtár"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{ padding: "0.5rem 1.25rem", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.12em", background: tab === key ? "var(--border)" : "transparent", color: tab === key ? gold : dimmed, transition: "all 0.2s" }}>
@@ -471,14 +475,33 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
         ))}
       </div>
 
+      {/* Price list sub-tabs — admin only */}
+      {tab === "services" && isAdmin && (
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem" }}>
+          {([["master", "◈ Mester árlista"], ["beginner", "✦ Fodrász árlista"]] as [PriceList, string][]).map(([key, label]) => (
+            <button key={key} onClick={() => setPriceList(key)}
+              style={{ padding: "0.42rem 1rem", borderRadius: 8, border: priceList === key ? `1px solid ${key === "master" ? "rgba(74,124,126,0.5)" : "rgba(196,146,110,0.5)"}` : "1px solid var(--border)", background: priceList === key ? (key === "master" ? "rgba(74,124,126,0.1)" : "rgba(196,146,110,0.1)") : "transparent", color: priceList === key ? (key === "master" ? gold : "#c4926e") : dimmed, fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {tab === "services" && !isAdmin && (
+        <div style={{ marginBottom: "2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#c4926e", textTransform: "uppercase" }}>
+          ✦ Fodrász árlista
+        </div>
+      )}
+
       {/* Services tab */}
       {tab === "services" && (
         isLoading ? (
           <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>Betöltés...</div>
-        ) : !categories?.length ? (
+        ) : visibleCats.length === 0 ? (
           <div style={{ background: panelBg, border, borderRadius: 14, padding: "3rem", textAlign: "center", backdropFilter: "blur(12px)" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>✂</div>
-            <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>Még nincs árlista</div>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{priceList === "master" ? "✂" : "✦"}</div>
+            <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>
+              {priceList === "master" ? "Még nincs mester árlista" : "Még nincs fodrász árlista"}
+            </div>
             {isAdmin && (
               <>
                 <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "1rem", marginBottom: "1.5rem" }}>Hozd létre az első kategóriát, majd adj hozzá szolgáltatásokat.</div>
@@ -487,14 +510,14 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
             )}
           </div>
         ) : (
-          categories.map(cat => <CategoryBlock key={cat.id} cat={cat} isAdmin={isAdmin} />)
+          visibleCats.map(cat => <CategoryBlock key={cat.id} cat={cat} isAdmin={isAdmin} />)
         )
       )}
 
       {/* Materials tab */}
       {tab === "materials" && <MaterialsPanel isAdmin={isAdmin} />}
 
-      {isAdmin && addCat && <CategoryModal onClose={() => setAddCat(false)} />}
+      {isAdmin && addCat && <CategoryModal priceListType={priceList} onClose={() => setAddCat(false)} />}
     </div>
   );
 }

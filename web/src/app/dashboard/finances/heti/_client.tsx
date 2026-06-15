@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { buildVisitGroups, userColor } from "../_client";
-import { EntryList } from "../_entry-list";
+import { EntryList, StaffCardList } from "../_entry-list";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -45,8 +45,12 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const month   = mon.getMonth() + 1;
   const STAFF_RATE = 0.6;
 
+  const utils = api.useUtils();
+  const inv = () => { void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); };
+
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
   const activeFilter = !isAdmin ? userId : filterUserId;
+  const del = api.finance.delete.useMutation({ onSuccess: inv });
 
   const { data: monthEntries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: activeFilter });
 
@@ -61,6 +65,11 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   // Unfiltered — for per-worker breakdown
   const { data: allMonth1 = [] } = api.finance.list.useQuery({ year, month }, { enabled: isAdmin });
   const { data: allMonth2 = [] } = api.finance.list.useQuery({ year: year2, month: month2 }, { enabled: isAdmin && needSecond });
+
+  // Staff: guest cards filtered to this week
+  const { data: myCards1 = [], isLoading: cards1Loading } = api.guests.myCards.useQuery({ year, month }, { enabled: !isAdmin });
+  const { data: myCards2 = [] } = api.guests.myCards.useQuery({ year: year2, month: month2 }, { enabled: !isAdmin && needSecond });
+  const myWeekCards = [...myCards1, ...(needSecond ? myCards2 : [])].filter(c => { const d = new Date(c.date); return d >= mon && d <= sun; });
 
   const inWeek         = (e: { date: string | Date }) => { const d = new Date(e.date); return d >= mon && d <= sun; };
   const allEntries     = needSecond ? [...monthEntries, ...monthEntries2] : monthEntries;
@@ -85,7 +94,7 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
 
   const isOwnView = filterUserId === userId;
   const staffWageTotal = workerStats.filter(w => w.id !== userId).reduce((s, w) => s + w.earn, 0);
-  const profit = revenue - material;
+  const profit = revenue - material - staffWageTotal;
 
   const { byDate, sortedDates } = buildVisitGroups(visible);
   const todayStr = toDateStr(now);
@@ -171,15 +180,20 @@ export default function HetiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
         </div>
       )}
 
-      <EntryList
-        byDate={byDate}
-        sortedDates={sortedDates}
-        todayStr={todayStr}
-        isAdmin={isAdmin}
-        ownerId={userId}
-        isLoading={isLoading}
-        emptyMessage="Ebben a hétben még nincsenek bejegyzések. ✦"
-      />
+      {isAdmin ? (
+        <EntryList
+          byDate={byDate}
+          sortedDates={sortedDates}
+          todayStr={todayStr}
+          isAdmin={isAdmin}
+          ownerId={userId}
+          isLoading={isLoading}
+          onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
+          emptyMessage="Ebben a hétben még nincsenek bejegyzések. ✦"
+        />
+      ) : (
+        <StaffCardList cards={myWeekCards} isLoading={cards1Loading} emptyMessage="Ebben a hétben még nincsenek látogatásaid. ✦" />
+      )}
     </div>
   );
 }

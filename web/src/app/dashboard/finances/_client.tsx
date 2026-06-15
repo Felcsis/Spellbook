@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
-import { EntryList } from "./_entry-list";
+import { EntryList, StaffCardList } from "./_entry-list";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
@@ -63,7 +63,7 @@ function needsMaterial(svcs: SelSvc[]) {
   );
 }
 
-function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }) {
+function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId: string; isAdmin: boolean }) {
   const utils = api.useUtils();
   const { data: categories = [] }  = api.services.listCategories.useQuery();
   const { data: allGuests = [] }   = api.guests.listGuests.useQuery();
@@ -74,11 +74,15 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
   const createCard         = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
 
   const [selectedWorkerId, setSelectedWorkerId] = useState(userId);
+  function switchWorker(id: string) { setSelectedWorkerId(id); setSelSvcs([]); setIsManual(false); setManualAmt(""); }
 
   // Services
   const [selSvcs,   setSelSvcs]  = useState<SelSvc[]>([]);
   const [svcSearch, setSvcSearch] = useState("");
   const [svcOpen,   setSvcOpen]  = useState(false);
+
+  const targetPriceList = (isAdmin && selectedWorkerId === userId) ? "master" : "beginner";
+  const visibleCategories = categories.filter((c: { priceListType?: string }) => c.priceListType === targetPriceList);
 
   // Guest
   const [guestSearch,   setGuestSearch]   = useState("");
@@ -228,7 +232,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
               const uc  = USER_COLORS[u.name ?? ""] ?? "var(--color-teal)";
               const sel = selectedWorkerId === u.id;
               return (
-                <button key={u.id} type="button" onClick={() => setSelectedWorkerId(u.id)}
+                <button key={u.id} type="button" onClick={() => switchWorker(u.id)}
                   style={{ padding: "0.3rem 0.85rem", borderRadius: 7, cursor: "pointer", border: `1px solid ${sel ? uc : "var(--border)"}`, background: sel ? `${uc}22` : "transparent", color: sel ? uc : "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", transition: "all 0.2s", fontWeight: sel ? 600 : 400 }}>
                   {u.name}
                 </button>
@@ -274,7 +278,7 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
             </div>
           )}
 
-          {/* Quick filter buttons + main + button */}
+          {/* Quick filter buttons */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.45rem" }}>
             {[
               { label: "Vágás",          kw: "vágás" },
@@ -296,30 +300,24 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
             })}
           </div>
 
-          {/* + button + dropdown */}
+          {/* Search input + dropdown */}
           <div style={{ position: "relative" }}>
-            <button type="button" onClick={() => { setSvcOpen(p => !p); setSvcSearch(""); }}
-              style={{ display: "flex", alignItems: "center", gap: "0.45rem", padding: "0.45rem 0.95rem", borderRadius: 9, border: `1px solid ${svcOpen && !svcSearch ? "rgba(82,118,102,0.5)" : "rgba(82,118,102,0.25)"}`, background: svcOpen && !svcSearch ? "rgba(82,118,102,0.1)" : "var(--bg-card)", color: svcOpen && !svcSearch ? "#527666" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.18s" }}>
-              <span style={{ fontSize: "1rem", lineHeight: 1, color: svcOpen && !svcSearch ? "#527666" : "rgba(82,118,102,0.5)", fontWeight: 300 }}>＋</span>
-              Mind
-            </button>
+            <input
+              type="text"
+              value={svcSearch}
+              onChange={e => { setSvcSearch(e.target.value); setSvcOpen(true); }}
+              onFocus={() => setSvcOpen(true)}
+              onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
+              placeholder="Keress a szolgáltatások között…"
+              style={{ ...inputStyle, fontSize: "0.95rem", borderColor: svcOpen ? "rgba(82,118,102,0.45)" : "var(--border)" }}
+            />
 
             {svcOpen && (
               <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 14, marginTop: "0.3rem", boxShadow: "0 16px 48px rgba(0,0,0,0.65)", overflow: "hidden" }}>
-                {/* Search inside panel */}
-                <div style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid rgba(82,118,102,0.1)" }}>
-                  <input
-                    value={svcSearch}
-                    onChange={e => setSvcSearch(e.target.value)}
-                    placeholder="Keress a szolgáltatások között…"
-                    autoFocus
-                    style={{ ...inputStyle, width: "100%", fontSize: "0.9rem", borderColor: "rgba(82,118,102,0.2)" }}
-                  />
-                </div>
 
                 {/* Services grouped by category */}
                 <div style={{ maxHeight: 320, overflowY: "auto" }}>
-                  {categories.map(cat => {
+                  {visibleCategories.map(cat => {
                     const catSvcs = (cat.services as { id: string; name: string; price: number; duration: number }[]).filter(s =>
                       !svcSearch.trim() || s.name.toLowerCase().includes(svcSearch.toLowerCase()) || cat.name.toLowerCase().includes(svcSearch.toLowerCase())
                     );
@@ -369,8 +367,18 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
                   onFocus={() => setGuestOpen(true)}
                   onBlur={() => setTimeout(() => setGuestOpen(false), 150)}
                   placeholder="Vendég keresése…"
-                  style={{ ...inputStyle, borderColor: guestId ? "rgba(167,139,250,0.5)" : "var(--border)" }} />
-                {guestId && <span style={{ position: "absolute", right: "0.85rem", top: "50%", transform: "translateY(-50%)", color: "#a78bfa", fontSize: "0.8rem" }}>✓</span>}
+                  style={{ ...inputStyle, borderColor: guestId ? "rgba(124,92,190,0.5)" : "var(--border)", paddingRight: guestId ? "3.5rem" : undefined }} />
+                {guestId && (
+                  <div style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <span style={{ color: "#7c5cbe", fontSize: "0.8rem" }}>✓</span>
+                    <button type="button" onClick={() => { setGuestId(""); setGuestSearch(""); setPrevOpen(false); }}
+                      style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.75rem", padding: "0.1rem 0.25rem", lineHeight: 1 }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}>
+                      ✕
+                    </button>
+                  </div>
+                )}
                 {guestOpen && filtGuests.length > 0 && (
                   <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 12, marginTop: "0.25rem", maxHeight: 160, overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}>
                     {filtGuests.map(g => (
@@ -554,10 +562,18 @@ function VisitEntry({ onSaved, userId }: { onSaved: () => void; userId: string }
               placeholder="0"
               style={{ ...inputStyle, borderColor: total > 0 ? "rgba(82,118,102,0.4)" : "var(--border)" }} />
           </div>
-          <button onClick={handleSave} disabled={saving || !canSave}
-            style={{ flex: "0 0 auto", padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: canSave ? "linear-gradient(120deg,#4a7a6a 0%,#527666 50%,#4a7a6a 100%)" : "var(--bg-card)", backgroundSize: "200% auto", color: canSave ? "#fff" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.15em", cursor: canSave ? "pointer" : "not-allowed", animation: canSave ? "shimmer 3s linear infinite" : "none", opacity: saving ? 0.7 : 1, transition: "all 0.2s", alignSelf: "flex-end" }}>
-            {saving ? "Mentés..." : "Rögzítés ◈"}
-          </button>
+          <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
+            <button type="button" onClick={reset}
+              style={{ flex: "0 0 auto", padding: "0.7rem 1rem", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#c47878"; (e.currentTarget as HTMLElement).style.color = "#c47878"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-soft)"; }}>
+              Törlés
+            </button>
+            <button onClick={handleSave} disabled={saving || !canSave}
+              style={{ flex: "0 0 auto", padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: canSave ? "linear-gradient(120deg,#4a7a6a 0%,#527666 50%,#4a7a6a 100%)" : "var(--bg-card)", backgroundSize: "200% auto", color: canSave ? "#fff" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.15em", cursor: canSave ? "pointer" : "not-allowed", animation: canSave ? "shimmer 3s linear infinite" : "none", opacity: saving ? 0.7 : 1, transition: "all 0.2s", alignSelf: "flex-end" }}>
+              {saving ? "Mentés..." : "Rögzítés ◈"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -801,6 +817,9 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
   const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
 
+  // Staff sees their own guest cards (with full details) instead of raw finance entries
+  const { data: myCards = [], isLoading: cardsLoading } = api.guests.myCards.useQuery({ year, month }, { enabled: !isAdmin });
+
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
 
@@ -819,25 +838,29 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
       </div>
 
       {/* Visit entry form */}
-      <VisitEntry userId={userId} onSaved={inv} />
+      <VisitEntry userId={userId} isAdmin={isAdmin} onSaved={inv} />
 
       {/* Current month entry list */}
       <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.75rem" }}>
         ◈ {MONTHS[month - 1]} bejegyzései
       </div>
 
-      <EntryList
-        byDate={byDate}
-        sortedDates={sortedDates}
-        todayStr={todayStr}
-        isAdmin={isAdmin}
-        ownerId={userId}
-        isLoading={isLoading}
-        onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
-        onUpdateDate={(ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId })}
-        isSavingDate={updateDate.isPending}
-        emptyMessage="Ebben a hónapban még nincsenek bejegyzések. ✦"
-      />
+      {isAdmin ? (
+        <EntryList
+          byDate={byDate}
+          sortedDates={sortedDates}
+          todayStr={todayStr}
+          isAdmin={isAdmin}
+          ownerId={userId}
+          isLoading={isLoading}
+          onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
+          onUpdateDate={(ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId })}
+          isSavingDate={updateDate.isPending}
+          emptyMessage="Ebben a hónapban még nincsenek bejegyzések. ✦"
+        />
+      ) : (
+        <StaffCardList cards={myCards} isLoading={cardsLoading} emptyMessage="Ebben a hónapban még nincsenek látogatásaid. ✦" />
+      )}
     </div>
   );
 }
