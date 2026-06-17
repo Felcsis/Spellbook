@@ -63,6 +63,22 @@ export const guestsRouter = createTRPCRouter({
       })
     ),
 
+  // My cards — yearly stats for staff (services breakdown)
+  myCardsYear: protectedProcedure
+    .input(z.object({ year: z.number() }))
+    .query(({ ctx, input }) => {
+      const from = new Date(input.year, 0, 1);
+      const to   = new Date(input.year + 1, 0, 1);
+      return ctx.db.guestCard.findMany({
+        where: { workerId: ctx.session.user.id, date: { gte: from, lt: to } },
+        select: {
+          total: true,
+          services: { select: { name: true, price: true, categoryName: true } },
+          materials: { select: { lineTotal: true } },
+        },
+      });
+    }),
+
   // My cards — for staff finance view (filtered by workerId + date range)
   myCards: protectedProcedure
     .input(z.object({ year: z.number(), month: z.number() }))
@@ -150,9 +166,9 @@ export const guestsRouter = createTRPCRouter({
       const date = fetched.date;
       await ctx.db.financeEntry.deleteMany({ where: { guestCardId: input.id } });
       if (svcTotal > 0)
-        await ctx.db.financeEntry.create({ data: { type: "revenue",  description: card.services.map(s => s.name).join(", "), amount: svcTotal, date, createdById: ctx.session.user.id, guestCardId: input.id } });
+        await ctx.db.financeEntry.create({ data: { type: "revenue",  description: card.services.map(s => s.name).join(", "), amount: svcTotal, date, createdById: card.workerId, guestCardId: input.id } });
       if (matTotal > 0)
-        await ctx.db.financeEntry.create({ data: { type: "material", description: card.materials.map(m => `${m.name} (${m.grams}g)`).join(", "), amount: matTotal, date, createdById: ctx.session.user.id, guestCardId: input.id } });
+        await ctx.db.financeEntry.create({ data: { type: "material", description: card.materials.map(m => `${m.name} (${m.grams}g)`).join(", "), amount: matTotal, date, createdById: card.workerId, guestCardId: input.id } });
 
       return card;
     }),
