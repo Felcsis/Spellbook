@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -49,8 +51,100 @@ const MAT_OPTIONS = [
   { name: "Pigment eltávolító", unitPrice: 5000, unit: "csomag" },
 ];
 
+// ── PDF export ────────────────────────────────────────────────────────────────
+function exportCardPdf(guestName: string, card: GuestCardData) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  // Header
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(40, 40, 40);
+  doc.text("Salon Spellbook", pageW / 2, 20, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Vendég: ${guestName}`, 20, 32);
+  doc.text(`Dátum: ${dateLabel}`, 20, 39);
+  doc.text(`Fodrász: ${card.worker.name ?? "—"}`, 20, 46);
+
+  doc.setDrawColor(180, 180, 180);
+  doc.line(20, 51, pageW - 20, 51);
+
+  let y = 58;
+
+  // Services
+  if (card.services.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Elvégzett szolgáltatások", 20, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Szolgáltatás", "Ár (Ft)"]],
+      body: card.services.map(s => [s.name + (s.gender ? ` (${s.gender})` : ""), s.price.toLocaleString("hu-HU")]),
+      foot: [["Összesen", card.services.reduce((s, x) => s + x.price, 0).toLocaleString("hu-HU") + " Ft"]],
+      styles: { font: "helvetica", fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [60, 100, 100], textColor: 255 },
+      footStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: "bold" },
+      columnStyles: { 1: { halign: "right" } },
+      margin: { left: 20, right: 20 },
+    });
+    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  }
+
+  // Color recipe
+  if (card.materials.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Szin recept", 20, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Anyag", "Márka", "Kód", "Gramm", "Ár (Ft)"]],
+      body: card.materials.map(m => [m.name, m.brand ?? "—", m.colorCode ?? "—", `${m.grams}g`, m.lineTotal.toLocaleString("hu-HU")]),
+      foot: [["", "", "", "Összesen", card.materials.reduce((s, m) => s + m.lineTotal, 0).toLocaleString("hu-HU") + " Ft"]],
+      styles: { font: "helvetica", fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [80, 60, 100], textColor: 255 },
+      footStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: "bold" },
+      columnStyles: { 4: { halign: "right" } },
+      margin: { left: 20, right: 20 },
+    });
+    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  }
+
+  // Notes
+  if (card.notes) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Megjegyzes: ${card.notes}`, 20, y);
+    y += 8;
+  }
+
+  // Grand total
+  const total = card.total;
+  doc.setDrawColor(180, 180, 180);
+  doc.line(20, y, pageW - 20, y);
+  y += 7;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(40, 40, 40);
+  doc.text("Vegosszeg:", 20, y);
+  doc.text(`${total.toLocaleString("hu-HU")} Ft`, pageW - 20, y, { align: "right" });
+
+  const fileName = `${guestName.replace(/\s+/g, "_")}_${new Date(card.date).toISOString().slice(0, 10)}.pdf`;
+  doc.save(fileName);
+}
+
 // ── Single visit card ─────────────────────────────────────────────────────────
-function VisitCard({ card, onDelete, onEdit, isAdmin }: { card: GuestCardData; onDelete: () => void; onEdit: () => void; isAdmin: boolean }) {
+function VisitCard({ card, onDelete, onEdit, isAdmin, guestName }: { card: GuestCardData; onDelete: () => void; onEdit: () => void; isAdmin: boolean; guestName: string }) {
   const [open, setOpen] = useState(false);
 
   const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
@@ -130,6 +224,12 @@ function VisitCard({ card, onDelete, onEdit, isAdmin }: { card: GuestCardData; o
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(122,158,140,0.5)"; }}>
                 Szerkesztés
+              </button>
+              <button onClick={e => { e.stopPropagation(); exportCardPdf(guestName, card); }}
+                style={{ background: "none", border: "none", color: "rgba(201,168,76,0.5)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c9a84c"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(201,168,76,0.5)"; }}>
+                PDF mentés
               </button>
             </div>
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", color: dim }}>
@@ -495,7 +595,7 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
             <div style={{ fontFamily: "var(--font-cormorant)", color: dim, textAlign: "center", padding: "1rem", fontStyle: "italic" }}>Még nincs mentett kártya</div>
           ) : (
             guest.cards.map(card => (
-              <VisitCard key={card.id} card={card} isAdmin={isAdmin}
+              <VisitCard key={card.id} card={card} isAdmin={isAdmin} guestName={guest.name}
                 onDelete={() => { if (confirm("Törlöd ezt a kártyát?")) onDeleteCard(card.id); }}
                 onEdit={() => setEditingCard(card)} />
             ))
@@ -870,6 +970,110 @@ export default function GuestsClient({ isAdmin = false }: { isAdmin?: boolean })
     : guests
   ).slice().sort((a, b) => a.name.localeCompare(b.name, "hu"));
 
+  function exportAllPdf() {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const sorted = [...guests].sort((a, b) => a.name.localeCompare(b.name, "hu"));
+
+    type RowStyle = { fontStyle?: "bold" | "italic" | "normal"; fillColor?: [number,number,number]; textColor?: [number,number,number] | number; fontSize?: number };
+    type Row = { content: string; styles?: RowStyle }[];
+
+    const body: Row[] = [];
+
+    sorted.forEach((guest) => {
+      const totalSpent = guest.cards.reduce((s: number, c: GuestCardData) => s + c.total, 0);
+      const meta = [
+        guest.phone ? `Tel: ${guest.phone}` : null,
+        `${guest.cards.length} látogatás`,
+        `Összköltés: ${totalSpent.toLocaleString("hu-HU")} Ft`,
+      ].filter(Boolean).join("   |   ");
+
+      // Guest name row
+      body.push([
+        { content: guest.name, styles: { fontStyle: "bold", fillColor: [30, 50, 50], textColor: [255, 255, 255], fontSize: 11 } },
+        { content: meta,       styles: { fillColor: [30, 50, 50], textColor: [180, 220, 210] as [number,number,number], fontSize: 8 } },
+        { content: "",         styles: { fillColor: [30, 50, 50] } },
+      ]);
+
+      if (guest.notes) {
+        body.push([
+          { content: `Megjegyzés: ${guest.notes}`, styles: { fontStyle: "italic", fillColor: [40, 55, 55], textColor: [160, 200, 180] as [number,number,number], fontSize: 8 } },
+          { content: "", styles: { fillColor: [40, 55, 55] } },
+          { content: "", styles: { fillColor: [40, 55, 55] } },
+        ]);
+      }
+
+      if (guest.cards.length === 0) {
+        body.push([
+          { content: "Még nincs rögzített kártya.", styles: { fontStyle: "italic", textColor: 150, fontSize: 9 } },
+          { content: "" }, { content: "" },
+        ]);
+      } else {
+        (guest.cards as GuestCardData[]).forEach((card) => {
+          const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+
+          // Date row
+          body.push([
+            { content: `${dateLabel}  —  ${card.worker.name ?? ""}`, styles: { fontStyle: "bold", fillColor: [50, 70, 70], textColor: [220, 240, 230] as [number,number,number], fontSize: 9 } },
+            { content: "", styles: { fillColor: [50, 70, 70] } },
+            { content: "", styles: { fillColor: [50, 70, 70] } },
+          ]);
+
+          // Services
+          card.services.forEach((s) => {
+            body.push([
+              { content: s.name + (s.gender ? ` (${s.gender})` : ""), styles: { fontSize: 9 } },
+              { content: "Szolgáltatás", styles: { fontSize: 8, textColor: 120 } },
+              { content: `${s.price.toLocaleString("hu-HU")} Ft`, styles: { fontSize: 9, fontStyle: "bold" } },
+            ]);
+          });
+
+          // Materials
+          card.materials.forEach((m) => {
+            const detail = [m.brand, m.colorCode, `${m.grams}g`].filter(Boolean).join(" · ");
+            body.push([
+              { content: m.name, styles: { fontSize: 9 } },
+              { content: detail, styles: { fontSize: 8, textColor: 120 } },
+              { content: `${m.lineTotal.toLocaleString("hu-HU")} Ft`, styles: { fontSize: 9 } },
+            ]);
+          });
+
+          if (card.notes) {
+            body.push([
+              { content: `Megjegyzés: ${card.notes}`, styles: { fontStyle: "italic", fontSize: 8, textColor: 130 } },
+              { content: "" }, { content: "" },
+            ]);
+          }
+
+          // Total row
+          body.push([
+            { content: "VÉGÖSSZEG", styles: { fontStyle: "bold", fillColor: [60, 80, 75], textColor: [200, 240, 210] as [number,number,number], fontSize: 9 } },
+            { content: "", styles: { fillColor: [60, 80, 75] } },
+            { content: `${card.total.toLocaleString("hu-HU")} Ft`, styles: { fontStyle: "bold", fillColor: [60, 80, 75], textColor: [200, 240, 210] as [number,number,number], fontSize: 10 } },
+          ]);
+        });
+      }
+
+      // Spacer between guests
+      body.push([{ content: "" }, { content: "" }, { content: "" }]);
+    });
+
+    autoTable(doc, {
+      head: [["Vendég / Szolgáltatás", "Részletek", "Összeg (Ft)"]],
+      body,
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 2.5, overflow: "linebreak" },
+      headStyles: { fillColor: [20, 40, 40], textColor: 255, fontStyle: "bold", fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 90 },
+        1: { cellWidth: 65 },
+        2: { cellWidth: 30, halign: "right" },
+      },
+      margin: { left: 15, right: 15, top: 15 },
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+    doc.save(`receptkonyv_${today}.pdf`);
+  }
+
   return (
     <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 760 }}>
       {showNew && (
@@ -885,10 +1089,20 @@ export default function GuestsClient({ isAdmin = false }: { isAdmin?: boolean })
           <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: 0 }}>Vendég receptkönyv ♦</h1>
           <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-pink)", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>Minden vendég szín receptje és látogatási előzménye</p>
         </div>
+        <div style={{ display: "flex", gap: "0.75rem", flexShrink: 0, alignItems: "center" }}>
+          {guests.length > 0 && (
+            <button onClick={exportAllPdf}
+              style={{ padding: "0.75rem 1.25rem", borderRadius: 10, border: "1px solid rgba(201,168,76,0.4)", background: "rgba(201,168,76,0.08)", color: "#c9a84c", fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.14em", cursor: "pointer", transition: "all 0.2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(201,168,76,0.15)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(201,168,76,0.08)"; }}>
+              📄 PDF exportálás
+            </button>
+          )}
         <button onClick={() => openNewCard()}
           className="btn-gold" style={{ padding: "0.75rem 1.5rem", borderRadius: 10, fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", flexShrink: 0 }}>
           ＋ Új kártya
         </button>
+        </div>
       </div>
 
       {guests.length > 0 && (

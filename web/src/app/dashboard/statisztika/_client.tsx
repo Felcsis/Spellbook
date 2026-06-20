@@ -74,7 +74,7 @@ export default function StatisztikaClient({ userId }: { userId: string }) {
     .map(u => {
       const isOwner = u.id === userId;
       const earn = u.wage > 0 ? u.wage : (isOwner ? u.revenue + u.material : u.wageEstimate);
-      return { ...u, isOwner, earn, totalRev: u.revenue + u.material };
+      return { ...u, isOwner, earn, totalRev: u.revenue }; // csak szolgáltatási bevétel, anyag nélkül
     })
     .filter(u => u.totalRev > 0 || u.wage > 0);
 
@@ -166,21 +166,38 @@ export default function StatisztikaClient({ userId }: { userId: string }) {
           {catData.length > 0 && (
             <Card style={{ flex: "1 1 280px" }}>
               <SectionTitle>Szolgáltatás kategóriák</SectionTitle>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={catData} dataKey="revenue" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
-                    {catData.map((_, i) => (
-                      <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomPieTooltip />} />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(value) => <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", color: "var(--text-muted)", letterSpacing: "0.08em" }}>{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              {/* Négyzet arányú terület a körnek */}
+              <div style={{ width: "100%", aspectRatio: "1", maxHeight: 320, margin: "0 auto" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={catData}
+                      dataKey="revenue"
+                      nameKey="name"
+                      cx="50%" cy="50%"
+                      outerRadius="46%"
+                      innerRadius="24%"
+                      paddingAngle={2}
+                      label={({ percent }: { percent?: number }) => (percent ?? 0) > 0.06 ? `${Math.round((percent ?? 0) * 100)}%` : ""}
+                      labelLine={false}
+                    >
+                      {catData.map((_, i) => (
+                        <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} stroke="transparent" />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomPieTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Legend alul */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem 0.75rem", marginTop: "0.75rem", justifyContent: "center" }}>
+                {catData.map((d, i) => (
+                  <div key={d.name} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: CATEGORY_COLORS[i % CATEGORY_COLORS.length], flexShrink: 0 }} />
+                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", color: "var(--text-muted)", letterSpacing: "0.06em" }}>{d.name}</span>
+                  </div>
+                ))}
+              </div>
             </Card>
           )}
 
@@ -209,15 +226,20 @@ export default function StatisztikaClient({ userId }: { userId: string }) {
           {workerStats.length > 1 && (
             <Card style={{ flex: "1 1 280px" }}>
               <SectionTitle>Dolgozók összehasonlítása</SectionTitle>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.6rem" }}>Termelt bevétel</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {workerStats.map(w => {
                   const uc = WORKER_COLORS[w.name] ?? "#7256a0";
                   const pct = totalRev > 0 ? Math.round((w.totalRev / totalRev) * 100) : 0;
+                  const withMat = w.revenue + w.material;
                   return (
                     <div key={w.id}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
                         <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: uc, fontWeight: 600 }}>{w.name}</span>
-                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--text-soft)" }}>{fmt(w.totalRev)} <span style={{ fontSize: "0.7rem", color: uc }}>({pct}%)</span></span>
+                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "var(--text-soft)" }}>
+                          {fmt(w.totalRev)} <span style={{ fontSize: "0.7rem", color: uc }}>({pct}%)</span>
+                          {w.material > 0 && <span style={{ fontSize: "0.75rem", color: "#a06830", marginLeft: "0.4rem" }}>+{fmt(w.material)} anyag = {fmt(withMat)}</span>}
+                        </span>
                       </div>
                       <div style={{ height: 7, background: "var(--bg-card)", borderRadius: 4, overflow: "hidden" }}>
                         <div style={{ width: `${pct}%`, height: "100%", background: uc, borderRadius: 4, transition: "width 0.6s ease" }} />
@@ -226,22 +248,38 @@ export default function StatisztikaClient({ userId }: { userId: string }) {
                   );
                 })}
               </div>
-              <div style={{ marginTop: "1.25rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                {workerStats.map(w => {
-                  const uc = WORKER_COLORS[w.name] ?? "#7256a0";
-                  const commission = !w.isOwner ? w.revenue - w.wageEstimate : 0;
-                  return (
-                    <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.25rem 0", borderTop: "1px solid var(--border)" }}>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase", margin: "1rem 0 0" }}>Tényleges kereset</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+                {(() => {
+                  const totalCommission = workerStats
+                    .filter(w => !w.isOwner)
+                    .reduce((s, w) => s + w.revenue - (w.wage > 0 ? w.wage : w.wageEstimate), 0);
+                  const row = (label: string, val: number, color: string, sub?: string) => (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.25rem 0", borderTop: "1px solid var(--border)" }}>
                       <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                        {w.name} {w.isOwner ? "bevétele" : "bére"}
+                        {label}{sub && <span style={{ color: "#c9906a", marginLeft: "0.3rem" }}>{sub}</span>}
                       </span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: uc, fontWeight: 700 }}>
-                        {fmt(w.isOwner ? w.totalRev : w.earn)}
-                        {!w.isOwner && commission > 0 && <span style={{ fontSize: "0.7rem", color: "#c9906a", marginLeft: "0.4rem" }}>+{fmt(commission)}</span>}
-                      </span>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color, fontWeight: 700 }}>{fmt(val)}</span>
                     </div>
                   );
-                })}
+                  return workerStats.map(w => {
+                    const uc = WORKER_COLORS[w.name] ?? "#7256a0";
+                    const grossWage = w.wage > 0 ? w.wage : w.wageEstimate;
+                    if (w.isOwner) {
+                      const ownerTotal = w.totalRev + totalCommission;
+                      return (
+                        <div key={w.id}>
+                          {row(`${w.name} bevétele`, ownerTotal, uc, totalCommission > 0 ? `(saját + 40%)` : undefined)}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={w.id}>
+                        {row(`${w.name} bére (60%)`, grossWage, uc)}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </Card>
           )}

@@ -58,17 +58,20 @@ export default function ExpensesClient() {
   const [editId,   setEditId]   = useState<string | null>(null);
 
   // Form state
-  const [title,    setTitle]    = useState("");
-  const [amount,   setAmount]   = useState("");
-  const [date,     setDate]     = useState(() => now.toISOString().slice(0, 10));
-  const [category, setCategory] = useState(CATEGORIES[0]!);
-  const [notes,    setNotes]    = useState("");
-  const [paid,     setPaid]     = useState(true);
+  const [title,        setTitle]        = useState("");
+  const [amount,       setAmount]       = useState("");
+  const [date,         setDate]         = useState(() => now.toISOString().slice(0, 10));
+  const [category,     setCategory]     = useState(CATEGORIES[0]!);
+  const [notes,        setNotes]        = useState("");
+  const [paid,         setPaid]         = useState(true);
+  const [assignedToId, setAssignedToId] = useState<string>("");
 
   const utils = api.useUtils();
   const inv = () => { void utils.expenses.list.invalidate(); };
 
-  const { data: expenses = [], isLoading } = api.expenses.list.useQuery(
+  const { data: users = [] } = api.admin.listStaff.useQuery();
+
+  const { data: expenses = [], isLoading, error: listError } = api.expenses.list.useQuery(
     viewMode === "month" ? { year, month } : { year },
   );
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -82,7 +85,7 @@ export default function ExpensesClient() {
   });
   const del    = api.expenses.delete.useMutation({ onSuccess: inv });
 
-  function resetForm() { setTitle(""); setAmount(""); setDate(now.toISOString().slice(0, 10)); setCategory(CATEGORIES[0]!); setNotes(""); setPaid(true); }
+  function resetForm() { setTitle(""); setAmount(""); setDate(now.toISOString().slice(0, 10)); setCategory(CATEGORIES[0]!); setNotes(""); setPaid(true); setAssignedToId(""); }
 
   function openEdit(e: typeof expenses[number]) {
     setEditId(e.id);
@@ -92,6 +95,7 @@ export default function ExpensesClient() {
     setCategory(e.category);
     setNotes(e.notes ?? "");
     setPaid(e.paid);
+    setAssignedToId(e.assignedTo?.id ?? "");
     setShowForm(false);
   }
 
@@ -99,10 +103,11 @@ export default function ExpensesClient() {
     ev.preventDefault();
     const amt = parseFloat(amount);
     if (!title.trim() || isNaN(amt) || amt <= 0) return;
+    const assignedId = assignedToId || undefined;
     if (editId) {
-      update.mutate({ id: editId, title: title.trim(), amount: amt, date, category, notes: notes || undefined, paid });
+      update.mutate({ id: editId, title: title.trim(), amount: amt, date, category, notes: notes || undefined, paid, assignedToId: assignedId ?? null });
     } else {
-      create.mutate({ title: title.trim(), amount: amt, date, category, notes: notes || undefined, paid });
+      create.mutate({ title: title.trim(), amount: amt, date, category, notes: notes || undefined, paid, assignedToId: assignedId });
     }
   }
 
@@ -117,6 +122,20 @@ export default function ExpensesClient() {
   const byCat: Record<string, number> = {};
   expenses.forEach(e => { byCat[e.category] = (byCat[e.category] ?? 0) + e.amount; });
   const sortedCats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+
+  // Per-user breakdown — show ALL users, even those with 0 Ft
+  const byUserId: Record<string, { name: string; amount: number }> = {};
+  users.forEach(u => { byUserId[u.id] = { name: u.name ?? "?", amount: 0 }; });
+  expenses.forEach(e => {
+    const uid = e.assignedTo?.id ?? e.createdBy?.id;
+    const uname = e.assignedTo?.name ?? e.createdBy?.name ?? "Ismeretlen";
+    if (uid) {
+      if (!byUserId[uid]) byUserId[uid] = { name: uname, amount: 0 };
+      byUserId[uid]!.amount += e.amount;
+    }
+  });
+  const sortedUsers = Object.values(byUserId).sort((a, b) => b.amount - a.amount);
+  const USER_COLORS = ["#e8b4c8", "#7a9ec8", "#c49060", "#7a9e8c"];
 
   return (
     <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 800 }}>
@@ -159,6 +178,13 @@ export default function ExpensesClient() {
               <label style={labelStyle}>Kategória</label>
               <select value={category} onChange={e => setCategory(e.target.value)} style={{ ...inputStyle }}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <label style={labelStyle}>Kinek szól</label>
+              <select value={assignedToId} onChange={e => setAssignedToId(e.target.value)} style={{ ...inputStyle }}>
+                <option value="">— Általános —</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name ?? "?"}</option>)}
               </select>
             </div>
             <div style={{ flex: 2, minWidth: 160 }}>
@@ -254,7 +280,35 @@ export default function ExpensesClient() {
         </div>
       )}
 
+      {/* Per-user breakdown */}
+      {users.length > 0 && (
+        <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 14, padding: "1.1rem 1.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.85rem" }}>Felhasználónként</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {sortedUsers.map(({ name, amount: amt }, i) => {
+              const col = USER_COLORS[i % USER_COLORS.length]!;
+              const pct = total > 0 ? (amt / total) * 100 : 0;
+              return (
+                <div key={name} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: col, flexShrink: 0 }} />
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", minWidth: 160 }}>{name}</span>
+                  <div style={{ flex: 1, height: 8, background: "var(--bg-card)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: col, opacity: 0.7, borderRadius: 4 }} />
+                  </div>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.88rem", color: col, fontWeight: 700, minWidth: 80, textAlign: "right" }}>{fmt(amt)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* List */}
+      {listError && (
+        <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 10, padding: "1rem", marginBottom: "1rem", fontFamily: "var(--font-cormorant)", color: "#f87171", fontSize: "0.95rem" }}>
+          Hiba a kiadások betöltésekor: {listError.message}
+        </div>
+      )}
       {isLoading ? (
         <div style={{ textAlign: "center", color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", padding: "3rem", fontStyle: "italic" }}>Betöltés...</div>
       ) : expenses.length === 0 ? (
@@ -275,6 +329,7 @@ export default function ExpensesClient() {
                     <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: col, padding: "0.1rem 0.4rem", border: `1px solid ${col}44`, borderRadius: 4, textTransform: "uppercase" }}>{e.category}</span>
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{new Date(e.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}</span>
                     {!e.paid && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#fbbf24", padding: "0.1rem 0.4rem", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4 }}>FÜGGŐBEN</span>}
+                    {e.assignedTo && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#e8b4c8", padding: "0.1rem 0.4rem", border: "1px solid rgba(232,180,200,0.35)", borderRadius: 4 }}>👤 {e.assignedTo.name}</span>}
                     {e.notes && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", fontStyle: "italic" }}>{e.notes}</span>}
                   </div>
                 </div>

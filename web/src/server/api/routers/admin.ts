@@ -16,6 +16,14 @@ export const adminRouter = createTRPCRouter({
     });
   }),
 
+  // Mindenki által elérhető — csak nevet és id-t ad vissza
+  listStaff: protectedProcedure.query(({ ctx }) =>
+    ctx.db.user.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    })
+  ),
+
   createUser: protectedProcedure
     .input(z.object({
       name:     z.string().min(1),

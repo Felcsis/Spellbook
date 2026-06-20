@@ -35,11 +35,12 @@ export default function DashboardClient({
 
   const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: !isAdmin ? userId : undefined });
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
+  const { data: expenseList = [] } = api.expenses.list.useQuery({ year, month }, { enabled: isAdmin });
 
   const revenue  = entries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
   const material = entries.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
   const wages    = entries.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
-  const profit   = revenue - material - (wages > 0 ? wages : Math.round(revenue * 0.6));
+  const expenses = expenseList.reduce((s, e) => s + e.amount, 0);
 
   const todayRev = entries
     .filter(e => e.type === "revenue" && toDateStr(new Date(e.date)) === todayStr)
@@ -63,9 +64,10 @@ export default function DashboardClient({
   const dateLabel  = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
 
   const STATS = [
-    { img: "/spellbook/fiola-lila.png", label: "Mai bevétel",  value: todayRev, sub: "mai forgalom" },
-    { img: "/spellbook/ametiszt.png",   label: "Havi bevétel", value: revenue,  sub: monthLabel },
-    { img: "/spellbook/zsak.png",       label: "Anyagköltség", value: material, sub: "kiadás" },
+    { img: "/spellbook/ikon-bajital.png",    label: "Mai bevétel",  value: todayRev, sub: "mai forgalom" },
+    { img: "/spellbook/ikon-ametiszt.png",   label: "Havi bevétel", value: revenue,  sub: monthLabel },
+    { img: "/spellbook/ikon-zsak-arany.png", label: "Anyagköltség", value: material, sub: "kiadás" },
+    { img: "/spellbook/ikon-zsak-lila.png",  label: "Kiadások",     value: expenses, sub: "havi kiadás" },
   ];
 
   return (
@@ -95,7 +97,7 @@ export default function DashboardClient({
       </div>
 
       {/* ── Stat boxes ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.75rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "1.75rem" }}>
         {STATS.map(s => (
           <div key={s.label} style={{
             background: CARD_BG,
@@ -206,7 +208,7 @@ export default function DashboardClient({
                 { label: "Összes bevétel",    value: revenue,  color: "#7ab88a" },
                 { label: "Összes anyagköltség", value: material, color: "#c08848" },
                 { label: "Bérek",             value: wages > 0 ? wages : Math.round(revenue * 0.6), color: "rgba(140,80,220,0.9)" },
-                { label: "Nyereség",          value: profit,   color: profit >= 0 ? "#7ab88a" : "#c47878" },
+                { label: "Kiadások",          value: expenses, color: "#f87171" },
               ].map(row => (
                 <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: CREAM_DIM }}>{row.label}</span>

@@ -58,6 +58,7 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
   const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: activeFilter });
   const { data: myCards = [], isLoading: cardsLoading } = api.guests.myCards.useQuery({ year, month }, { enabled: !isAdmin });
   const { data: expenseList = [] } = api.expenses.list.useQuery({ year, month }, { enabled: isAdmin });
+  const { data: myExpenses = [] } = api.expenses.listMine.useQuery({ year, month }, { enabled: !isAdmin });
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
   const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
 
@@ -68,7 +69,7 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
   const totalIncome = revenue + material;
 
   // Per-staff breakdown — use workDay.user.id when available for correct attribution
-  type StaffStat = { id: string; name: string; isOwner: boolean; svcRev: number; revenue: number; material: number; wage: number; wageEstimate: number };
+  type StaffStat = { id: string; name: string; isOwner: boolean; svcRev: number; revenue: number; material: number; wage: number; wageEstimate: number; expenses: number };
   const staffStats: Record<string, StaffStat> = {};
   if (isAdmin) {
     entries.forEach(e => {
@@ -77,13 +78,20 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
       const id   = workDayUser?.id   ?? by?.id   ?? "?";
       const name = workDayUser?.name ?? by?.name ?? "?";
       const isOwner = id === userId;
-      if (!staffStats[id]) staffStats[id] = { id, name, isOwner, svcRev: 0, revenue: 0, material: 0, wage: 0, wageEstimate: 0 };
+      if (!staffStats[id]) staffStats[id] = { id, name, isOwner, svcRev: 0, revenue: 0, material: 0, wage: 0, wageEstimate: 0, expenses: 0 };
       if (e.type === "revenue")  { staffStats[id]!.svcRev += e.amount; staffStats[id]!.revenue += e.amount; }
       if (e.type === "material") { staffStats[id]!.material += e.amount; staffStats[id]!.revenue += e.amount; }
       if (e.type === "wage")     staffStats[id]!.wage += e.amount;
       if (!isOwner) staffStats[id]!.wageEstimate += entriesWageAmount([e]);
     });
+    // Hozzáadjuk a rájuk rendelt kiadásokat
+    expenseList.forEach(e => {
+      const aid = (e.assignedTo as { id: string } | null)?.id;
+      if (aid && staffStats[aid]) staffStats[aid]!.expenses += e.amount;
+    });
   }
+
+  const myExpenseTotal = myExpenses.reduce((s, e) => s + e.amount, 0);
 
   // Staff wage total: actual wages or 60% estimate — owner excluded
   const isOwnView = filterUserId === userId;
@@ -147,8 +155,10 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
             {isAdmin && canSeeProfit && !filterUserId && totalIncome > 0 && <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={`${Math.round((profit / totalIncome) * 100)}% árrés`} large />}
             {fw && fw.material > 0 && <StatBox label="Anyagköltség" value={fw.material} color="#a06830" sub="kiadás" />}
             {fw && fw.wageEstimate > 0 && <StatBox label={fw.wage > 0 ? "Bér" : "60% bér"} value={fw.wage > 0 ? fw.wage : fw.wageEstimate} color={fwColor} sub={fw.wage > 0 ? "rögzített" : "számított"} />}
+            {fw && fw.expenses > 0 && <StatBox label="Kiadásaid" value={fw.expenses} color="#f87171" sub="levonva béredből" />}
             {fw && fwCommission > 0 && <StatBox label="40% →Felicia" value={fwCommission} color="#c9906a" sub="jutalék" />}
-            {!isAdmin && <StatBox label={wage > 0 ? "Béred" : "Neked jár"} value={wage > 0 ? wage : staffNet} color="#a78bfa" sub="havi bér" large />}
+            {!isAdmin && <StatBox label={wage > 0 ? "Béred" : "Neked jár"} value={Math.max(0, (wage > 0 ? wage : staffNet) - myExpenseTotal)} color="#a78bfa" sub="havi nettó" large />}
+            {!isAdmin && myExpenseTotal > 0 && <StatBox label="Kiadásaid" value={myExpenseTotal} color="#f87171" sub="levonva" />}
           </div>
         );
       })()}
@@ -181,6 +191,8 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
                     </div>
                     {!st.isOwner && st.material > 0 && row("✦ Anyagköltség", st.material, "#a06830")}
                     {!st.isOwner && row(`♦ ${st.name} bére (60%)`, st.wage > 0 ? st.wage : st.wageEstimate, uC)}
+                    {!st.isOwner && st.expenses > 0 && row(`− Kiadás (${st.name})`, st.expenses, "#f87171")}
+                    {!st.isOwner && st.expenses > 0 && row(`= Nettó bér`, Math.max(0, (st.wage > 0 ? st.wage : st.wageEstimate) - st.expenses), uC)}
                     {!st.isOwner && commission > 0 && row("40% →Felicia", commission, "#c9906a")}
                   </div>
                 </div>

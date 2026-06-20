@@ -71,7 +71,8 @@ model User {
     serviceCategories  ServiceCategory[]
     services           Service[]
     guestCards         GuestCard[]
-    expenses           Expense[]
+    expenses           Expense[]  @relation("ExpenseCreatedBy")
+    assignedExpenses   Expense[]  @relation("ExpenseAssignedTo")
 }
 
 model WorkDay {
@@ -185,18 +186,21 @@ model Material {
 }
 
 model Expense {
-    id          String   @id @default(cuid())
-    title       String
-    amount      Float
-    date        DateTime @db.Date
-    category    String   @default("egyéb")
-    notes       String?
-    paid        Boolean  @default(true)
-    createdAt   DateTime @default(now())
-    createdBy   User     @relation(fields: [createdById], references: [id])
-    createdById String
+    id           String   @id @default(cuid())
+    title        String
+    amount       Float
+    date         DateTime @db.Date
+    category     String   @default("egyéb")
+    notes        String?
+    paid         Boolean  @default(true)
+    createdAt    DateTime @default(now())
+    createdBy    User     @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+    createdById  String
+    assignedTo   User?    @relation("ExpenseAssignedTo", fields: [assignedToId], references: [id])
+    assignedToId String?
 
     @@index([date])
+    @@index([assignedToId])
 }
 
 model SalonSetting {
