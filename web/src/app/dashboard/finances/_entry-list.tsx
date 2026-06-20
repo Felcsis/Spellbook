@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { userColor } from "./_client";
+import { entriesWageAmount, servicesWageAmount } from "~/lib/wage";
 
 export function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -31,7 +32,10 @@ type EntryItem = {
   workDayId?: string | null;
   createdBy?: { id: string; name: string | null } | null;
   guestCard?: GuestCard | null;
-  workDay?: { user?: { name?: string | null } | null } | null;
+  workDay?: {
+    user?: { name?: string | null } | null;
+    services?: { priceSnap: number; service?: { name?: string | null } | null }[] | null;
+  } | null;
 };
 
 type VisitGroup = {
@@ -43,8 +47,6 @@ type VisitGroup = {
   totalMaterial: number;
 };
 
-const STAFF_RATE = 0.6;
-
 const gBadgeConfig: Record<string, { label: string; bg: string; color: string; border: string }> = {
   nő:      { label: "Női",    bg: "rgba(232,180,200,0.15)", color: "#e8b4c8", border: "rgba(232,180,200,0.3)" },
   férfi:   { label: "Férfi",  bg: "rgba(122,158,200,0.12)", color: "#7a9ec8", border: "rgba(122,158,200,0.3)" },
@@ -53,7 +55,7 @@ const gBadgeConfig: Record<string, { label: string; bg: string; color: string; b
 
 // ── Single group row ──────────────────────────────────────────────────────────
 function VisitGroupRow({
-  group, isAdmin, ownerId, filterUserId,
+  group, isAdmin, ownerId, canSeeProfit, filterUserId,
   editDateKey, editDateVal,
   onEditDateOpen, onEditDateChange, onEditDateSave, onEditDateCancel, isSavingDate,
   onDelete,
@@ -61,6 +63,7 @@ function VisitGroupRow({
   group: VisitGroup;
   isAdmin: boolean;
   ownerId: string;
+  canSeeProfit: boolean;
   filterUserId?: string;
   editDateKey: string | null;
   editDateVal: string;
@@ -87,8 +90,8 @@ function VisitGroupRow({
   const serviceNames = card?.services.map(s => s.name) ?? [];
   const matNames     = card?.materials.map(m => m.name) ?? [];
 
-  // Financial summary — 60/40 split is on gross revenue, materials are Felicia's own cost
-  const staffWage = isAdmin && !isOwner ? Math.round(group.totalRevenue * STAFF_RATE) : 0;
+  // Financial summary — default is 60%, configured exception services pay 100%.
+  const staffWage = isAdmin && !isOwner ? entriesWageAmount(group.entries) : 0;
   const salonNet  = group.totalRevenue - staffWage;
 
   const canDelete = !!onDelete && (isAdmin || group.entries.every(e => !e.workDayId));
@@ -146,14 +149,14 @@ function VisitGroupRow({
               munka: {fmt(group.totalRevenue)} + anyag: {fmt(group.totalMaterial)}
             </span>
           )}
-          {isAdmin && !isOwner && staffWage > 0 && (
+          {isAdmin && canSeeProfit && !isOwner && staffWage > 0 && (
             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: uCol, opacity: 0.7 }}>
               → {fmt(salonNet)} marad
             </span>
           )}
           {!isAdmin && (
             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "#7c5cbe", fontWeight: 700 }}>
-              {fmt(Math.round(group.totalRevenue * STAFF_RATE))} bér
+              {fmt(entriesWageAmount(group.entries))} bér
             </span>
           )}
         </div>
@@ -272,21 +275,23 @@ function VisitGroupRow({
             {isAdmin && !isOwner && staffWage > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.22rem 0.5rem" }}>
                 <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>
-                  ♦ {creatorName ?? "Staff"} bére (60%)
+                  ♦ {creatorName ?? "Staff"} bére
                 </span>
                 <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.88rem", color: uCol, fontWeight: 700 }}>− {fmt(staffWage)}</span>
               </div>
             )}
 
             {/* Net result */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0.65rem", marginTop: "0.2rem", background: isAdmin ? `${uCol}0d` : "rgba(124,92,190,0.08)", borderRadius: 8, border: `1px solid ${isAdmin ? uCol + "22" : "rgba(124,92,190,0.2)"}` }}>
-              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: isAdmin ? uCol : "#7c5cbe", textTransform: "uppercase", fontWeight: 700 }}>
-                {isAdmin ? (isOwner ? "● Neked marad" : "● Szalonnak marad (40%)") : "● Neked jár (60%)"}
-              </span>
-              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: isAdmin ? (salonNet >= 0 ? "#527666" : "#c47878") : "#7c5cbe", fontWeight: 700 }}>
-                {isAdmin ? fmt(salonNet) : fmt(Math.round(group.totalRevenue * STAFF_RATE))}
-              </span>
-            </div>
+            {(!isAdmin || canSeeProfit) && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0.65rem", marginTop: "0.2rem", background: isAdmin ? `${uCol}0d` : "rgba(124,92,190,0.08)", borderRadius: 8, border: `1px solid ${isAdmin ? uCol + "22" : "rgba(124,92,190,0.2)"}` }}>
+                <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: isAdmin ? uCol : "#7c5cbe", textTransform: "uppercase", fontWeight: 700 }}>
+                  {isAdmin ? (isOwner ? "● Neked marad" : "● Szalonnak marad") : "● Neked jár"}
+                </span>
+                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: isAdmin ? (salonNet >= 0 ? "#527666" : "#c47878") : "#7c5cbe", fontWeight: 700 }}>
+                  {isAdmin ? fmt(salonNet) : fmt(entriesWageAmount(group.entries))}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -307,7 +312,7 @@ type StaffCard = {
 function StaffCardRow({ card }: { card: StaffCard }) {
   const [open, setOpen] = useState(false);
   const svcTotal  = card.services.reduce((s, x) => s + x.price, 0);
-  const myWage    = Math.round(svcTotal * STAFF_RATE);
+  const myWage    = servicesWageAmount(card.services);
   const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" });
 
   return (
@@ -393,7 +398,7 @@ function StaffCardRow({ card }: { card: StaffCard }) {
               <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.92rem", color: "#527666", fontWeight: 700 }}>{fmt(svcTotal)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.35rem 0.65rem", marginTop: "0.2rem", background: "rgba(124,92,190,0.08)", borderRadius: 8, border: "1px solid rgba(124,92,190,0.2)" }}>
-              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: "#7c5cbe", textTransform: "uppercase", fontWeight: 700 }}>● Neked jár (60%)</span>
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: "#7c5cbe", textTransform: "uppercase", fontWeight: 700 }}>● Neked jár</span>
               <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#7c5cbe", fontWeight: 700 }}>{fmt(myWage)}</span>
             </div>
           </div>
@@ -433,7 +438,7 @@ export function StaffCardList({ cards, isLoading, emptyMessage }: {
       {sortedDates.map(ds => {
         const dayCards = byDate[ds]!;
         const dayRev   = dayCards.reduce((s, c) => s + c.services.reduce((ss, sv) => ss + sv.price, 0), 0);
-        const dayWage  = Math.round(dayRev * STAFF_RATE);
+        const dayWage  = dayCards.reduce((s, c) => s + servicesWageAmount(c.services), 0);
         const isToday  = ds === todayStr;
         return (
           <div key={ds}>
@@ -457,7 +462,7 @@ export function StaffCardList({ cards, isLoading, emptyMessage }: {
 
 // ── Full entry list (date-grouped) ────────────────────────────────────────────
 export function EntryList({
-  byDate, sortedDates, todayStr, isAdmin, ownerId, filterUserId, isLoading,
+  byDate, sortedDates, todayStr, isAdmin, ownerId, canSeeProfit = false, filterUserId, isLoading,
   onDelete, onUpdateDate, isSavingDate, emptyMessage,
 }: {
   byDate: Record<string, VisitGroup[]>;
@@ -465,6 +470,7 @@ export function EntryList({
   todayStr: string;
   isAdmin: boolean;
   ownerId: string;
+  canSeeProfit?: boolean;
   filterUserId?: string;
   isLoading?: boolean;
   onDelete?: (ids: string[]) => void;
@@ -520,6 +526,7 @@ export function EntryList({
                   group={group}
                   isAdmin={isAdmin}
                   ownerId={ownerId}
+                  canSeeProfit={canSeeProfit}
                   filterUserId={filterUserId}
                   editDateKey={editDateKey}
                   editDateVal={editDateVal}

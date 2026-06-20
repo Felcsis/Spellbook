@@ -23,15 +23,16 @@ export const servicesRouter = createTRPCRouter({
 
   // Az alábbiak csak adminnak
   createCategory: protectedProcedure
-    .input(z.object({ name: z.string().min(1) }))
+    .input(z.object({ name: z.string().min(1), priceListType: z.enum(["master", "beginner"]).default("master") }))
     .mutation(async ({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);
       const last = await ctx.db.serviceCategory.findFirst({
+        where:   { priceListType: input.priceListType },
         orderBy: { order: "desc" },
         select:  { order: true },
       });
       return ctx.db.serviceCategory.create({
-        data: { name: input.name, order: (last?.order ?? -1) + 1, userId: ctx.session.user.id },
+        data: { name: input.name, priceListType: input.priceListType, order: (last?.order ?? -1) + 1, userId: ctx.session.user.id },
       });
     }),
 

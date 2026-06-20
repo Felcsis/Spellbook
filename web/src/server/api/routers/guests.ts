@@ -108,11 +108,12 @@ export const guestsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const svcTotal = input.services.reduce((s, x) => s + x.price, 0);
       const matTotal = input.materials.reduce((s, x) => s + x.lineTotal, 0);
-      return ctx.db.guestCard.create({
+      const date = new Date(input.date);
+      const card = await ctx.db.guestCard.create({
         data: {
           guestId:  input.guestId,
           workerId: input.workerId,
-          date:     new Date(input.date),
+          date,
           notes:    input.notes,
           total:    svcTotal + matTotal,
           services:  { create: input.services },
@@ -120,6 +121,11 @@ export const guestsRouter = createTRPCRouter({
         },
         include: { guest: true, worker: { select: { id: true, name: true } }, services: true, materials: true },
       });
+      if (svcTotal > 0)
+        await ctx.db.financeEntry.create({ data: { type: "revenue",  description: card.services.map(s => s.name).join(", "), amount: svcTotal, date, createdById: card.workerId, guestCardId: card.id } });
+      if (matTotal > 0)
+        await ctx.db.financeEntry.create({ data: { type: "material", description: card.materials.map(m => `${m.name} (${m.grams}g)`).join(", "), amount: matTotal, date, createdById: card.workerId, guestCardId: card.id } });
+      return card;
     }),
 
   updateCard: protectedProcedure

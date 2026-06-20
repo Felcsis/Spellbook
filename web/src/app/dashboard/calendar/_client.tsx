@@ -221,11 +221,6 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#c49060aa", marginBottom: "0.2rem" }}>KIADÁS</div>
               <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: "#c49060", fontWeight: 700 }}>{fmt(dayCosts)}</div>
             </div>
-            <div style={{ width: 1, background: "var(--border)" }} />
-            <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: dayProfit >= 0 ? "#7a9e8caa" : "#f87171aa", marginBottom: "0.2rem" }}>PROFIT</div>
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: dayProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{dayProfit >= 0 ? <span style={{ color: "#c4926e", textShadow: "0 0 6px #c4926e66", marginRight: "0.3rem", fontSize: "1.1em" }}>●</span> : "−"}{fmt(Math.abs(dayProfit))}</div>
-            </div>
           </div>
         )}
 
@@ -606,11 +601,10 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
             {date.getDate()}
             {!compact && <span style={{ fontSize: "0.78rem", color: "rgba(44,36,32,0.35)", marginLeft: "0.35rem" }}>{MONTHS[date.getMonth()]}</span>}
           </div>
-          {profit !== 0 && (
+          {revenue > 0 && (
             <div style={{ textAlign: "right" }}>
-              {revenue > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(revenue)}</div>}
-              {costs > 0   && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: "#c49060" }}>−{fmt(costs)}</div>}
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: profit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{profit >= 0 ? <span style={{ color: "#c4926e", textShadow: "0 0 5px #c4926e55", marginRight: "0.15rem" }}>●</span> : "−"}{fmt(Math.abs(profit))}</div>
+              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(revenue)}</div>
+              {costs > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: "#c49060" }}>−{fmt(costs)}</div>}
             </div>
           )}
         </div>
@@ -726,9 +720,8 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--border)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--bg-active)"; }}>+</div>
 
-              {/* Profit badge */}
-              {(revenue > 0 || costs > 0) && (
-                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: profit >= 0 ? "rgba(122,158,140,0.65)" : "rgba(196,120,120,0.65)", fontWeight: 700 }}>{profit >= 0 ? <span style={{ color: "#c4926e", marginRight: "0.15rem" }}>●</span> : "−"}{fmt(Math.abs(profit))}</div>
+              {revenue > 0 && (
+                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: "rgba(122,158,140,0.65)", fontWeight: 700 }}>{fmt(revenue)}</div>
               )}
             </div>
           );
@@ -860,9 +853,9 @@ export default function CalendarClient() {
             );
           })}
           {totalRevenue > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.32rem 0.7rem", background: (totalProfit >= 0 ? "rgba(110,231,183," : "rgba(248,113,113,") + "0.1)", border: `1px solid ${totalProfit >= 0 ? "rgba(122,158,140,0.25)" : "rgba(196,120,120,0.25)"}`, borderRadius: "7px" }}>
-              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", color: totalProfit >= 0 ? "#7a9e8c" : "#c47878" }}>PROFIT</span>
-              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: totalProfit >= 0 ? "#7a9e8c" : "#f87171", fontWeight: 700 }}>{fmt(totalProfit)}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.32rem 0.7rem", background: "rgba(110,231,183,0.1)", border: "1px solid rgba(122,158,140,0.25)", borderRadius: "7px" }}>
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", color: "#7a9e8c" }}>BEVÉTEL</span>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(totalRevenue)}</span>
             </div>
           )}
         </div>

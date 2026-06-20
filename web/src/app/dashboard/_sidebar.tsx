@@ -5,27 +5,43 @@ import { ThemeToggle } from "~/app/_theme-toggle";
 import { logout } from "./_actions";
 
 const NAV_ADMIN = [
-  { key: "dashboard",    icon: "◈", label: "Főoldal",        href: "/dashboard" },
-  { key: "appointments", icon: "✦", label: "Időpontok",      href: null },
-  { key: "services",     icon: "✂", label: "Szolgáltatások & Anyagtár", href: "/dashboard/services" },
-  { key: "clients",      icon: "♦", label: "Recept könyv",   href: "/dashboard/guests" },
-  { key: "finances",     icon: "✧", label: "Pénzügyek",      href: "/dashboard/finances" },
-  { key: "expenses",     icon: "📋", label: "Kiadások",       href: "/dashboard/expenses" },
-  { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
-  { key: "admin",        icon: "⚙", label: "Admin",          href: "/dashboard/admin" },
+  { key: "dashboard",    icon: "🔮", label: "Irányítópult",   href: "/dashboard" },
+  { key: "calendar",     icon: "🌙", label: "Munkanaptár",    href: "/dashboard/calendar" },
+  { key: "clients",      icon: "📖", label: "Recept könyv",   href: "/dashboard/guests" },
+  { key: "finances",     icon: "⚗️", label: "Pénzügyek",      href: "/dashboard/finances" },
+  { key: "expenses",     icon: "📜", label: "Kiadások",       href: "/dashboard/expenses" },
+  { key: "services",     icon: "✄", label: "Szolgáltatások", href: "/dashboard/services" },
+  { key: "statisztika",  icon: "📊", label: "Statisztika",    href: "/dashboard/statisztika" },
+  { key: "admin",        icon: "⚙️", label: "Admin",          href: "/dashboard/admin" },
 ];
 
 const NAV_STAFF = [
-  { key: "dashboard",    icon: "◈", label: "Főoldal",        href: "/dashboard" },
-  { key: "calendar",     icon: "◇", label: "Munkanaptár",    href: "/dashboard/calendar" },
-  { key: "finances",     icon: "✧", label: "Pénzügyek",      href: "/dashboard/finances" },
-  { key: "clients",      icon: "♦", label: "Recept könyv",   href: "/dashboard/guests" },
-  { key: "services",     icon: "✦", label: "Árlista",        href: "/dashboard/services" },
+  { key: "dashboard",    icon: "🔮", label: "Irányítópult",   href: "/dashboard" },
+  { key: "calendar",     icon: "🌙", label: "Munkanaptár",    href: "/dashboard/calendar" },
+  { key: "finances",     icon: "⚗️", label: "Pénzügyek",      href: "/dashboard/finances" },
+  { key: "clients",      icon: "📖", label: "Recept könyv",   href: "/dashboard/guests" },
+  { key: "services",     icon: "✄", label: "Árlista",        href: "/dashboard/services" },
 ];
 
 function initials(name?: string | null) {
   return (name ?? "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
+
+const S = {
+  gold:         "#c8a840",
+  goldBright:   "#e8c84a",
+  goldDim:      "rgba(200,168,64,0.50)",
+  goldFaint:    "rgba(200,168,64,0.16)",
+  text:         "rgba(240,228,204,0.80)",
+  textBright:   "#f0e4cc",
+  textDim:      "rgba(240,228,204,0.42)",
+  /* Active = purple, like the spell book mockup */
+  activeColor:  "#c4a0f0",
+  activeBg:     "rgba(110,60,200,0.22)",
+  activeBorder: "rgba(140,80,220,0.55)",
+  activeGlow:   "0 0 18px rgba(110,60,200,0.30), inset 0 0 14px rgba(100,50,180,0.12)",
+  hoverBg:      "rgba(200,168,64,0.08)",
+};
 
 export default function SidebarLayout({
   user,
@@ -40,60 +56,60 @@ export default function SidebarLayout({
   const NAV = user.role === "admin" ? NAV_ADMIN : NAV_STAFF;
 
   return (
-    <div className="flex min-h-screen" style={{ background: "var(--color-bg)", animation: "fadeIn 0.5s ease" }}>
-      {/* Subtle background orbs */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        {[
-          { w: 500, h: 500, top: -120, left: -120,  c: "var(--bg-highlight)", d: "0s" },
-          { w: 420, h: 420, bottom: -80, right: -80, c: "var(--bg-highlight)",  d: "-5s" },
-          { w: 320, h: 320, top: "42%", left: "55%", c: "var(--bg-highlight)",  d: "-9s" },
-        ].map((o, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              width: o.w, height: o.h,
-              top: "top" in o ? (o as { top?: number | string }).top ?? undefined : undefined,
-              left: "left" in o ? (o as { left?: number | string }).left ?? undefined : undefined,
-              bottom: "bottom" in o ? (o as { bottom?: number }).bottom ?? undefined : undefined,
-              right: "right" in o ? (o as { right?: number }).right ?? undefined : undefined,
-              background: `radial-gradient(circle, ${o.c} 0%, transparent 70%)`,
-              filter: "blur(80px)",
-              animation: `orbFloat 16s ease-in-out ${o.d} infinite`,
-            }}
-          />
-        ))}
-      </div>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-bg)" }}>
 
-      {/* Sidebar */}
-      <nav
-        className="relative z-10 flex flex-col"
-        style={{
-          width: 260, flexShrink: 0,
-          background: "var(--bg-sidebar)",
-          borderRight: "1px solid var(--border)",
-          backdropFilter: "blur(20px)",
-          padding: "2rem 1.25rem",
-          boxShadow: "2px 0 24px rgba(74,124,126,0.06)",
-        }}
-      >
+      {/* ── Sidebar ── */}
+      <nav style={{
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        width: 280,
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        padding: "0 1rem 1.25rem",
+        background: "var(--bg-sidebar)",
+        borderRight: "1px solid rgba(200,168,64,0.12)",
+        overflowY: "auto",
+      }}>
+
+        {/* ── Spell Book header ── */}
         <div
-          style={{
-            fontFamily: "var(--font-cinzel)",
-            fontSize: "0.95rem",
-            color: "var(--color-teal)",
-            letterSpacing: "0.14em",
-            paddingBottom: "1.5rem",
-            borderBottom: "1px solid var(--border)",
-            marginBottom: "1rem",
-            cursor: "pointer",
-          }}
+          style={{ textAlign: "center", padding: "1.5rem 0 1.2rem", cursor: "pointer" }}
           onClick={() => router.push("/dashboard")}
         >
-          ✦ Salon Spellbook
+          <div style={{
+            fontSize: "1.8rem", lineHeight: 1, marginBottom: "0.4rem",
+            animation: "float 4s ease-in-out infinite",
+            filter: "drop-shadow(0 0 10px rgba(200,168,64,0.65))",
+            color: S.gold,
+          }}>◆</div>
+          <div style={{
+            fontFamily: "var(--font-cinzel)",
+            fontSize: "0.95rem",
+            letterSpacing: "0.26em",
+            color: S.gold,
+            textTransform: "uppercase",
+            marginBottom: "0.18rem",
+          }}>Spell Book</div>
+          <div style={{
+            fontFamily: "var(--font-cormorant)",
+            fontSize: "0.74rem",
+            color: S.goldDim,
+            fontStyle: "italic",
+            letterSpacing: "0.1em",
+          }}>Hair Magic Studio</div>
         </div>
 
-        <div className="flex flex-col gap-1">
+        {/* Ornamental divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "1rem", padding: "0 0.25rem" }}>
+          <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${S.goldFaint})` }} />
+          <span style={{ color: S.goldDim, fontSize: "0.55rem" }}>✦</span>
+          <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${S.goldFaint})` }} />
+        </div>
+
+        {/* ── Navigation ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.18rem" }}>
           {NAV.map(({ key, icon, label, href }) => {
             const isActive = key === activeKey;
             return (
@@ -101,32 +117,50 @@ export default function SidebarLayout({
                 key={key}
                 onClick={() => href ? router.push(href) : undefined}
                 style={{
-                  display: "flex", alignItems: "center", gap: "0.75rem",
-                  padding: "0.7rem 1rem", borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.7rem",
+                  padding: "0.58rem 1rem",
+                  borderRadius: "7px",
                   cursor: href ? "pointer" : "default",
-                  fontFamily: "var(--font-cormorant)", fontSize: "1.05rem", letterSpacing: "0.04em",
-                  border: isActive ? "1px solid var(--border-strong)" : "1px solid transparent",
-                  background: isActive ? "var(--bg-active)" : "transparent",
-                  color: isActive ? "var(--color-teal)" : href ? "var(--text-muted)" : "var(--text-dim)",
+                  fontFamily: "var(--font-cormorant)",
+                  fontSize: "1.05rem",
+                  letterSpacing: "0.05em",
+                  border: isActive ? `1px solid ${S.activeBorder}` : "1px solid transparent",
+                  background: isActive ? S.activeBg : "transparent",
+                  color: isActive ? S.activeColor : href ? S.text : S.textDim,
                   fontWeight: isActive ? 600 : 400,
-                  boxShadow: isActive ? "var(--shadow-card)" : "none",
-                  transition: "all 0.22s",
+                  boxShadow: isActive ? S.activeGlow : "none",
+                  transition: "all 0.2s",
                   textAlign: "left",
+                  width: "100%",
                 }}
                 onMouseEnter={e => {
                   if (!isActive && href) {
-                    (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)";
-                    (e.currentTarget as HTMLElement).style.color = "var(--color-teal)";
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background = S.hoverBg;
+                    el.style.color = S.goldBright;
+                    el.style.borderColor = S.goldFaint;
                   }
                 }}
                 onMouseLeave={e => {
                   if (!isActive) {
-                    (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.color = href ? "var(--text-muted)" : "var(--text-dim)";
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background = "transparent";
+                    el.style.color = href ? S.text : S.textDim;
+                    el.style.borderColor = "transparent";
                   }
                 }}
               >
-                <span style={{ fontSize: "1.1rem" }}>{icon}</span>
+                <span style={{
+                  fontSize: "1rem",
+                  flexShrink: 0,
+                  filter: isActive ? "drop-shadow(0 0 6px rgba(140,80,240,0.85))" : "none",
+                  transition: "all 0.2s",
+                  opacity: isActive ? 1 : 0.75,
+                }}>
+                  {icon}
+                </span>
                 {label}
               </button>
             );
@@ -134,49 +168,69 @@ export default function SidebarLayout({
         </div>
 
         <div style={{ flex: 1 }} />
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: "0.75rem",
-            padding: "0.9rem 1rem",
-            borderTop: "1px solid var(--border)",
-            marginTop: "1rem",
-          }}
-        >
-          <div
-            style={{
-              width: 40, height: 40, borderRadius: "50%",
-              background: "linear-gradient(135deg, var(--color-teal), var(--color-pink))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-cinzel)", fontSize: "0.85rem",
-              color: "#fff",
-              border: "1px solid var(--border-strong)",
-              flexShrink: 0,
-            }}
-          >
+
+        {/* Thin gold divider above user */}
+        <div style={{ height: 1, background: `linear-gradient(to right, transparent, ${S.goldFaint}, transparent)`, margin: "0.75rem 0.5rem" }} />
+
+        {/* ── User profile ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", padding: "0 0.5rem", marginBottom: "0.6rem" }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: "50%",
+            background: `linear-gradient(135deg, ${S.gold} 0%, #9060a8 100%)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "var(--font-cinzel)", fontSize: "0.72rem",
+            color: "#1a0e06", fontWeight: 600,
+            border: `1px solid ${S.goldFaint}`,
+            flexShrink: 0,
+          }}>
             {initials(user.name)}
           </div>
-          <div>
-            <div style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: "0.88rem", color: S.textBright, fontFamily: "var(--font-cormorant)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {user.name}
             </div>
-            <button
-              onClick={() => logout()}
-              style={{ fontSize: "0.75rem", color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-cormorant)", padding: 0, transition: "color 0.2s" }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = "var(--color-pink)"; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = "var(--text-soft)"; }}
-            >
-              Kilépés
-            </button>
           </div>
-        </div>
-      </nav>
-
-      {/* Main content */}
-      <main className="relative z-10 flex-1 overflow-y-auto p-12">
-        {/* Theme toggle — top right */}
-        <div style={{ position: "absolute", top: "1.5rem", right: "2rem", zIndex: 20 }}>
           <ThemeToggle />
         </div>
+
+        {/* ── Logout button ── */}
+        <button
+          onClick={() => logout()}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+            width: "100%", padding: "0.6rem 1rem",
+            borderRadius: 8,
+            border: "1px solid rgba(200,80,80,0.35)",
+            background: "rgba(200,80,80,0.10)",
+            color: "#e09090",
+            fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em",
+            cursor: "pointer", transition: "all 0.2s",
+          }}
+          onMouseEnter={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = "rgba(200,80,80,0.22)";
+            el.style.borderColor = "rgba(200,80,80,0.60)";
+            el.style.color = "#f0a0a0";
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = "rgba(200,80,80,0.10)";
+            el.style.borderColor = "rgba(200,80,80,0.35)";
+            el.style.color = "#e09090";
+          }}
+        >
+          ↪ Kilépés
+        </button>
+      </nav>
+
+      {/* ── Main content ── */}
+      <main style={{
+        flex: 1,
+        position: "relative",
+        overflowY: "auto",
+        padding: "2.5rem 3rem",
+        background: "var(--color-bg2)",
+      }}>
         {children}
       </main>
     </div>

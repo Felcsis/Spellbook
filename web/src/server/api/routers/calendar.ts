@@ -135,6 +135,44 @@ export const calendarRouter = createTRPCRouter({
       return workDay;
     }),
 
+  incrementEarnings: protectedProcedure
+    .input(z.object({
+      date: z.string(),
+      userId: z.string(),
+      amount: z.number().min(0),
+      createFinanceEntry: z.boolean().optional().default(true),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const isAdmin = ctx.session.user.role === "admin";
+      const targetUserId = isAdmin ? input.userId : ctx.session.user.id;
+      const date = new Date(input.date);
+
+      const existing = await ctx.db.workDay.findUnique({
+        where: { date_userId: { date, userId: targetUserId } },
+        include: { user: { select: { name: true } } },
+      });
+      const newEarnings = (existing?.earnings ?? 0) + input.amount;
+      const userName = existing?.user.name
+        ?? (await ctx.db.user.findUnique({ where: { id: targetUserId }, select: { name: true } }))?.name
+        ?? "Ismeretlen";
+
+      const workDay = await ctx.db.workDay.upsert({
+        where:  { date_userId: { date, userId: targetUserId } },
+        create: { date, userId: targetUserId, earnings: newEarnings },
+        update: { earnings: newEarnings },
+      });
+
+      if (input.createFinanceEntry) {
+        await ctx.db.financeEntry.upsert({
+          where:  { workDayId: workDay.id },
+          create: { type: "revenue", description: `${userName} munkadíja`, amount: newEarnings, date, createdById: targetUserId, workDayId: workDay.id },
+          update: { amount: newEarnings },
+        });
+      }
+
+      return workDay;
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

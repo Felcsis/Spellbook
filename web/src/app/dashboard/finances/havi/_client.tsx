@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { userColor, buildVisitGroups } from "../_client";
 import { EntryList, StaffCardList } from "../_entry-list";
+import { entriesWageAmount } from "~/lib/wage";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 function fmt(n: number) {
@@ -40,13 +41,12 @@ function StatBox({ label, value, color, sub, large }: { label: string; value: nu
   );
 }
 
-export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: boolean; userId?: string }) {
+export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit = false }: { isAdmin?: boolean; userId?: string; canSeeProfit?: boolean }) {
   const now = new Date();
   const [year,         setYear]         = useState(now.getFullYear());
   const [month,        setMonth]        = useState(now.getMonth() + 1);
   const [filterUserId, setFilterUserId] = useState<string | undefined>(undefined);
 
-  const STAFF_RATE   = 0.6;
   const todayStr     = toDateStr(now);
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
@@ -64,11 +64,11 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const revenue  = entries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
   const material = entries.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
   const wage     = entries.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
-  const staffNet = Math.round(revenue * STAFF_RATE);
-
+  const staffNet = entriesWageAmount(entries);
+  const totalIncome = revenue + material;
 
   // Per-staff breakdown — use workDay.user.id when available for correct attribution
-  type StaffStat = { id: string; name: string; isOwner: boolean; revenue: number; material: number; wage: number };
+  type StaffStat = { id: string; name: string; isOwner: boolean; svcRev: number; revenue: number; material: number; wage: number; wageEstimate: number };
   const staffStats: Record<string, StaffStat> = {};
   if (isAdmin) {
     entries.forEach(e => {
@@ -77,10 +77,11 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
       const id   = workDayUser?.id   ?? by?.id   ?? "?";
       const name = workDayUser?.name ?? by?.name ?? "?";
       const isOwner = id === userId;
-      if (!staffStats[id]) staffStats[id] = { id, name, isOwner, revenue: 0, material: 0, wage: 0 };
-      if (e.type === "revenue")  staffStats[id]!.revenue  += e.amount;
-      if (e.type === "material") staffStats[id]!.material += e.amount;
-      if (e.type === "wage")     staffStats[id]!.wage     += e.amount;
+      if (!staffStats[id]) staffStats[id] = { id, name, isOwner, svcRev: 0, revenue: 0, material: 0, wage: 0, wageEstimate: 0 };
+      if (e.type === "revenue")  { staffStats[id]!.svcRev += e.amount; staffStats[id]!.revenue += e.amount; }
+      if (e.type === "material") { staffStats[id]!.material += e.amount; staffStats[id]!.revenue += e.amount; }
+      if (e.type === "wage")     staffStats[id]!.wage += e.amount;
+      if (!isOwner) staffStats[id]!.wageEstimate += entriesWageAmount([e]);
     });
   }
 
@@ -88,9 +89,9 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const isOwnView = filterUserId === userId;
   const staffWageTotal = Object.values(staffStats)
     .filter(st => !st.isOwner)
-    .reduce((s, st) => s + (st.wage > 0 ? st.wage : Math.round(st.revenue * STAFF_RATE)), 0);
+    .reduce((s, st) => s + (st.wage > 0 ? st.wage : st.wageEstimate), 0);
   const overheadTotal = expenseList.reduce((s, e) => s + e.amount, 0);
-  const profit = revenue - material - staffWageTotal - overheadTotal;
+  const profit = revenue - staffWageTotal - overheadTotal;
 
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material" || e.type === "wage");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
@@ -133,27 +134,39 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
       </div>
 
       {/* Stat boxes */}
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
-        <StatBox label={MONTHS[month-1] ?? ""} value={revenue} color="#527666" sub="bevétel" large />
-        {isAdmin ? <>
-          <StatBox label="Anyagköltség" value={material} color="#a06830" sub="kiadás" />
-          {!isOwnView && <StatBox label={staffWageTotal > 0 && wage > 0 ? "Bérek" : "Várható bér (60%)"} value={staffWageTotal > 0 ? staffWageTotal : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
-          {isAdmin && overheadTotal > 0 && <StatBox label="Kiadások" value={overheadTotal} color="#e87171" sub="rezsi, bérleti díj…" />}
-          <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}% árrés` : ""} large />
-        </> : <>
-          <StatBox label={wage > 0 ? "Béred" : "Neked jár (60%)"} value={wage > 0 ? wage : staffNet} color="#a78bfa" sub="havi bér" large />
-        </>}
-      </div>
+      {(() => {
+        const COLORS: Record<string, string> = { Gitta: "#9878b8", Lili: "#c47a8a", Felicia: "#c9906a" };
+        const fw = filterUserId ? Object.values(staffStats).find(st => st.id === filterUserId) : null;
+        const fwColor = fw ? (COLORS[fw.name] ?? "#7256a0") : "#7256a0";
+        const fwCommission = fw ? fw.svcRev - fw.wageEstimate : 0;
+        return (
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && Object.keys(staffStats).length > 0) ? "0.75rem" : "2.5rem" }}>
+            <StatBox label={MONTHS[month-1] ?? ""} value={totalIncome} color="#527666" sub="havi bevétel" large />
+            {isAdmin && !isOwnView && !filterUserId && staffWageTotal > 0 && <StatBox label={wage > 0 ? "Bérek" : "Várható bér"} value={staffWageTotal} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
+            {isAdmin && !filterUserId && overheadTotal > 0 && <StatBox label="Kiadások" value={overheadTotal} color="#e87171" sub="rezsi, bérleti díj…" />}
+            {isAdmin && canSeeProfit && !filterUserId && totalIncome > 0 && <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={`${Math.round((profit / totalIncome) * 100)}% árrés`} large />}
+            {fw && fw.material > 0 && <StatBox label="Anyagköltség" value={fw.material} color="#a06830" sub="kiadás" />}
+            {fw && fw.wageEstimate > 0 && <StatBox label={fw.wage > 0 ? "Bér" : "60% bér"} value={fw.wage > 0 ? fw.wage : fw.wageEstimate} color={fwColor} sub={fw.wage > 0 ? "rögzített" : "számított"} />}
+            {fw && fwCommission > 0 && <StatBox label="40% →Felicia" value={fwCommission} color="#c9906a" sub="jutalék" />}
+            {!isAdmin && <StatBox label={wage > 0 ? "Béred" : "Neked jár"} value={wage > 0 ? wage : staffNet} color="#a78bfa" sub="havi bér" large />}
+          </div>
+        );
+      })()}
 
       {/* Per-staff breakdown */}
-      {isAdmin && !filterUserId && Object.keys(staffStats).length > 0 && (
+      {isAdmin && !isOwnView && !filterUserId && Object.keys(staffStats).length > 0 && (
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.75rem" }}>◈ Személyenkénti bontás</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {Object.values(staffStats).sort((a, b) => b.revenue - a.revenue).map(st => {
-              const staffWage = st.isOwner ? 0 : Math.round(st.revenue * STAFF_RATE);
-              const myProfit  = st.revenue - staffWage;
               const uC        = userColor(st.name);
+              const commission = st.svcRev - st.wageEstimate;
+              const row = (label: string, val: number, color: string) => (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderTop: "1px solid var(--border)" }}>
+                  <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>{label}</span>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color, fontWeight: 700 }}>{fmt(val)}</span>
+                </div>
+              );
               return (
                 <div key={st.name} style={{ background: "var(--bg-panel)", border: `1px solid ${uC}22`, borderRadius: 14, overflow: "hidden" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.6rem 1rem", background: `${uC}10`, borderBottom: `1px solid ${uC}22` }}>
@@ -163,27 +176,12 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
                   </div>
                   <div style={{ padding: "0.5rem 1rem", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0" }}>
-                      <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>◈ Bevétel</span>
+                      <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>◈ Havi bevétel</span>
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#527666", fontWeight: 700 }}>{fmt(st.revenue)}</span>
                     </div>
-                    {st.material > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderTop: "1px solid var(--border)" }}>
-                        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>✦ Anyagköltség</span>
-                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: "#a06830", fontWeight: 700 }}>{fmt(st.material)}</span>
-                      </div>
-                    )}
-                    {!st.isOwner && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderTop: "1px solid var(--border)" }}>
-                        <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>♦ {st.name} bére (60%)</span>
-                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: uC, fontWeight: 700 }}>− {fmt(staffWage)}</span>
-                      </div>
-                    )}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.45rem 0.65rem", marginTop: "0.2rem", background: `${uC}0d`, borderRadius: 8, border: `1px solid ${uC}22` }}>
-                      <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.12em", color: uC, textTransform: "uppercase", fontWeight: 700 }}>
-                        {st.isOwner ? "● Neked marad" : "● Szalonnak marad (40%)"}
-                      </span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: myProfit >= 0 ? "#527666" : "#c47878", fontWeight: 700 }}>{fmt(myProfit)}</span>
-                    </div>
+                    {!st.isOwner && st.material > 0 && row("✦ Anyagköltség", st.material, "#a06830")}
+                    {!st.isOwner && row(`♦ ${st.name} bére (60%)`, st.wage > 0 ? st.wage : st.wageEstimate, uC)}
+                    {!st.isOwner && commission > 0 && row("40% →Felicia", commission, "#c9906a")}
                   </div>
                 </div>
               );
@@ -199,6 +197,7 @@ export default function HaviClient({ isAdmin = true, userId = "" }: { isAdmin?: 
           todayStr={todayStr}
           isAdmin={isAdmin}
           ownerId={userId}
+          canSeeProfit={canSeeProfit}
           filterUserId={filterUserId}
           isLoading={isLoading}
           onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}

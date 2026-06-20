@@ -1,72 +1,76 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-playfair), Georgia, serif;
-  --font-cinzel: var(--font-cinzel), serif;
-  --font-cormorant: var(--font-cormorant), Georgia, serif;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-cinzel: "Cinzel", Georgia, "Times New Roman", serif;
+  --font-cormorant: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-playfair: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
-/* ── Light theme ── */
+/* ── Light theme — Parchment ── */
 :root {
-  --color-bg:        #e4d8cc;
-  --color-bg2:       #ede4da;
-  --color-teal:      #a07878;
-  --color-teal-light:#b89090;
-  --color-teal-dim:  rgba(160,120,120,0.55);
-  --color-pink:      #a07878;
-  --color-cream:     #2e2418;
+  --color-bg:        #f5ecd8;
+  --color-bg2:       #ede0c4;
+  --color-teal:      #7a5020;
+  --color-teal-light:#9a6a32;
+  --color-teal-dim:  rgba(122,80,32,0.55);
+  --color-pink:      #8a5a6a;
+  --color-purple:    #6a4a9a;
+  --color-cream:     #1a0e06;
 
-  --bg-card:         rgba(236,224,212,0.82);
-  --bg-sidebar:      rgba(232,220,208,0.94);
-  --bg-input:        rgba(228,216,204,0.7);
-  --bg-modal:        #ede0d4;
-  --bg-dropdown:     #f0e4da;
-  --bg-panel:        rgba(228,216,204,0.65);
-  --bg-row:          rgba(224,212,200,0.6);
-  --bg-highlight:    rgba(160,120,120,0.07);
-  --bg-active:       rgba(160,120,120,0.13);
-  --bg-today:        rgba(160,120,120,0.09);
+  --bg-card:         rgba(248,238,214,0.90);
+  --bg-sidebar:      #2a1a0c;
+  --bg-input:        rgba(244,234,210,0.95);
+  --bg-modal:        rgba(248,240,220,0.98);
+  --bg-dropdown:     rgba(246,238,218,0.99);
+  --bg-panel:        rgba(244,234,210,0.85);
+  --bg-row:          rgba(242,232,208,0.80);
+  --bg-highlight:    rgba(122,80,32,0.10);
+  --bg-active:       rgba(122,80,32,0.18);
+  --bg-today:        rgba(122,80,32,0.12);
 
-  --text-primary:    #1a1008;
-  --text-muted:      rgba(26,16,8,0.80);
-  --text-soft:       rgba(26,16,8,0.62);
-  --text-dim:        rgba(26,16,8,0.46);
-  --border:          rgba(160,120,120,0.2);
-  --border-strong:   rgba(160,120,120,0.38);
-  --shadow-card:     0 2px 14px rgba(100,70,70,0.08);
-  --shadow-modal:    0 24px 80px rgba(0,0,0,0.16);
+  --text-primary:    #1a0e06;
+  --text-muted:      rgba(26,14,6,0.85);
+  --text-soft:       rgba(26,14,6,0.65);
+  --text-dim:        rgba(26,14,6,0.45);
+  --border:          rgba(122,80,32,0.22);
+  --border-strong:   rgba(122,80,32,0.45);
+  --shadow-card:     0 2px 20px rgba(80,40,10,0.14);
+  --shadow-modal:    0 24px 80px rgba(0,0,0,0.25);
 }
 
-/* ── Dark theme ── */
+/* ── Dark theme — Night grimoire ── */
 [data-theme="dark"] {
-  --color-bg:        #1e1612;
-  --color-bg2:       #261c16;
-  --color-teal:      #c09898;
-  --color-teal-light:#d4b0b0;
-  --color-teal-dim:  rgba(192,152,152,0.55);
-  --color-pink:      #c09898;
-  --color-cream:     #f0e4da;
+  --color-bg:        #0c0806;
+  --color-bg2:       #160e08;
+  --color-teal:      #c8a840;
+  --color-teal-light:#e0c050;
+  --color-teal-dim:  rgba(200,168,64,0.55);
+  --color-pink:      #b07890;
+  --color-purple:    #8060c0;
+  --color-cream:     #f0e4cc;
 
-  --bg-card:         rgba(42,30,24,0.92);
-  --bg-sidebar:      rgba(28,18,14,0.97);
-  --bg-input:        rgba(52,38,30,0.82);
-  --bg-modal:        #2a1e18;
-  --bg-dropdown:     #221814;
-  --bg-panel:        rgba(40,28,22,0.82);
-  --bg-row:          rgba(44,32,26,0.72);
-  --bg-highlight:    rgba(192,152,152,0.1);
-  --bg-active:       rgba(192,152,152,0.16);
-  --bg-today:        rgba(192,152,152,0.1);
+  --bg-card:         rgba(30,18,8,0.92);
+  --bg-sidebar:      #0e0804;
+  --bg-input:        rgba(28,16,8,0.88);
+  --bg-modal:        rgba(18,10,4,0.97);
+  --bg-dropdown:     rgba(16,9,3,0.98);
+  --bg-panel:        rgba(22,12,5,0.80);
+  --bg-row:          rgba(24,14,6,0.72);
+  --bg-highlight:    rgba(200,168,64,0.09);
+  --bg-active:       rgba(200,168,64,0.16);
+  --bg-today:        rgba(200,168,64,0.10);
 
-  --text-primary:    #f5ede6;
-  --text-muted:      rgba(245,237,230,0.82);
-  --text-soft:       rgba(245,237,230,0.64);
-  --text-dim:        rgba(245,237,230,0.46);
-  --border:          rgba(192,152,152,0.2);
-  --border-strong:   rgba(192,152,152,0.38);
-  --shadow-card:     0 2px 18px rgba(0,0,0,0.5);
-  --shadow-modal:    0 24px 80px rgba(0,0,0,0.72);
+  --text-primary:    #f0e4cc;
+  --text-muted:      rgba(240,228,204,0.88);
+  --text-soft:       rgba(240,228,204,0.68);
+  --text-dim:        rgba(240,228,204,0.48);
+  --border:          rgba(200,168,64,0.18);
+  --border-strong:   rgba(200,168,64,0.38);
+  --shadow-card:     0 2px 24px rgba(0,0,0,0.70);
+  --shadow-modal:    0 24px 80px rgba(0,0,0,0.88);
 }
 
 /* legacy aliases */
@@ -82,31 +86,28 @@
 
 /* ── Golden shimmer button ── */
 .btn-gold {
-  background: linear-gradient(120deg, #9e7040 0%, #c49060 25%, #e0b878 50%, #c49060 75%, #9e7040 100%);
+  background: linear-gradient(120deg, #8a5a20 0%, #b88010 25%, #d4a818 50%, #b88010 75%, #8a5a20 100%);
   background-size: 250% auto;
-  animation: shimmer 2.8s linear infinite;
+  animation: shimmer 6s linear infinite;
   color: #fff !important;
   border: none !important;
-  box-shadow: 0 4px 18px rgba(196,144,96,0.38);
+  box-shadow: 0 4px 18px rgba(184,128,16,0.42);
   transition: box-shadow 0.25s, transform 0.15s !important;
   cursor: pointer;
 }
 .btn-gold:hover:not(:disabled) {
-  box-shadow: 0 6px 28px rgba(196,144,96,0.55);
+  box-shadow: 0 6px 28px rgba(184,128,16,0.62);
   transform: translateY(-2px);
 }
-.btn-gold:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
+.btn-gold:disabled { opacity: 0.65; cursor: not-allowed; }
 
 [data-theme="dark"] .btn-gold {
-  background: linear-gradient(120deg, #b88848 0%, #d8a860 25%, #f0c878 50%, #d8a860 75%, #b88848 100%);
+  background: linear-gradient(120deg, #a07820 0%, #c8a030 25%, #e8c040 50%, #c8a030 75%, #a07820 100%);
   background-size: 250% auto;
-  box-shadow: 0 4px 20px rgba(216,168,96,0.4);
+  box-shadow: 0 4px 20px rgba(200,160,48,0.48);
 }
 [data-theme="dark"] .btn-gold:hover:not(:disabled) {
-  box-shadow: 0 6px 30px rgba(216,168,96,0.6);
+  box-shadow: 0 6px 32px rgba(200,160,48,0.68);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -116,11 +117,10 @@ html, body {
   background: var(--color-bg);
   color: var(--text-primary);
   font-family: var(--font-cormorant, Georgia, serif);
-  transition: background 0.3s, color 0.3s;
 }
 
 ::selection {
-  background: rgba(74,124,126,0.25);
+  background: rgba(200,168,64,0.28);
   color: var(--text-primary);
 }
 
@@ -152,8 +152,8 @@ html, body {
   100% { background-position:  200% center; }
 }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(74,124,126,0.25), 0 0 60px rgba(74,124,126,0.1); }
-  50%       { box-shadow: 0 0 40px rgba(74,124,126,0.4), 0 0 90px rgba(74,124,126,0.18); }
+  0%, 100% { box-shadow: 0 0 20px rgba(200,168,64,0.22), 0 0 60px rgba(200,168,64,0.08); }
+  50%       { box-shadow: 0 0 40px rgba(200,168,64,0.40), 0 0 90px rgba(200,168,64,0.16); }
 }
 @keyframes orbFloat {
   0%, 100% { transform: translate(0,0) scale(1); }
@@ -170,4 +170,31 @@ html, body {
 @keyframes borderGlow {
   0%,100% { border-color: var(--border); }
   50%     { border-color: var(--border-strong); }
+}
+@keyframes spellGlow {
+  0%,100% { text-shadow: 0 0 10px rgba(200,168,64,0.35); }
+  50%     { text-shadow: 0 0 22px rgba(200,168,64,0.80), 0 0 45px rgba(200,168,64,0.28); }
+}
+@keyframes inkReveal {
+  from { opacity: 0; letter-spacing: 0.3em; }
+  to   { opacity: 1; letter-spacing: inherit; }
+}
+@keyframes candleFlicker {
+  0%,100% { opacity: 1; }
+  45%     { opacity: 0.88; }
+  50%     { opacity: 0.95; }
+  80%     { opacity: 0.9; }
+}
+@keyframes goldPulse {
+  0%,100% { box-shadow: 0 0 8px rgba(200,168,64,0.20); }
+  50%     { box-shadow: 0 0 18px rgba(200,168,64,0.45); }
+}
+@keyframes layerTwinkle {
+  0%,100% { opacity: 0.25; }
+  50%     { opacity: 1; }
+}
+@keyframes nebulaFloat {
+  0%,100% { transform: scale(1) translate(0, 0); }
+  33%     { transform: scale(1.06) translate(12px, -8px); }
+  66%     { transform: scale(0.95) translate(-8px, 10px); }
 }

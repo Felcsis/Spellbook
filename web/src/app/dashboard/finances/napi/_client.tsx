@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { buildVisitGroups, userColor } from "../_client";
 import { EntryList, StaffCardList } from "../_entry-list";
+import { entriesWageAmount } from "~/lib/wage";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -26,9 +27,7 @@ function StatBox({ label, value, color, sub, large }: { label: string; value: nu
   );
 }
 
-const STAFF_RATE = 0.6;
-
-export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: boolean; userId?: string }) {
+export default function NapiClient({ isAdmin = true, userId = "", canSeeProfit = false }: { isAdmin?: boolean; userId?: string; canSeeProfit?: boolean }) {
   const now = new Date();
   const [date, setDate] = useState(() => toDateStr(now));
   const [filterUserId, setFilterUserId] = useState<string | undefined>(undefined);
@@ -57,10 +56,11 @@ export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   const allDayEntries = allEntries.filter(e => toDateStr(new Date(e.date)) === date);
   const visible       = isAdmin ? dayEntries : dayEntries.filter(e => e.type === "revenue" || e.type === "material" || e.type === "wage");
 
-  const revenue  = visible.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
-  const material = visible.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
-  const wage     = visible.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
-
+  const revenue      = visible.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
+  const material     = visible.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
+  const wage         = visible.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
+  const totalIncome  = revenue + material; // amit a vendégek ténylegesen fizettek
+  const wageEstimate = entriesWageAmount(visible); // csak non-admin saját bérbecsléshez
   // Per-worker breakdown for admin
   // Use workDay.user.id when available (correct attribution), fall back to createdBy.id
   function entryOwner(e: { createdBy?: { id: string } | null; workDay?: { user?: { id: string } | null } | null }) {
@@ -68,15 +68,20 @@ export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
   }
   const workerStats = allUsers
     .map(u => {
-      const rev   = allDayEntries.filter(e => e.type === "revenue" && entryOwner(e) === u.id).reduce((s, e) => s + e.amount, 0);
-      const wages = allDayEntries.filter(e => e.type === "wage"    && entryOwner(e) === u.id).reduce((s, e) => s + e.amount, 0);
-      return { id: u.id, name: u.name ?? "?", revenue: rev, wages, earn: wages > 0 ? wages : Math.round(rev * STAFF_RATE) };
+      const svcRev = allDayEntries.filter(e => e.type === "revenue"  && entryOwner(e) === u.id).reduce((s, e) => s + e.amount, 0);
+      const mat    = allDayEntries.filter(e => e.type === "material" && entryOwner(e) === u.id).reduce((s, e) => s + e.amount, 0);
+      const wages  = allDayEntries.filter(e => e.type === "wage"     && entryOwner(e) === u.id).reduce((s, e) => s + e.amount, 0);
+      const rev    = svcRev + mat;
+      const wageEntries = allDayEntries.filter(e => entryOwner(e) === u.id);
+      const isOwner = u.id === userId;
+      // Az admin (Felicia) 100%-ot kap — nem vonjuk le a 40%-ot
+      return { id: u.id, name: u.name ?? "?", revenue: rev, svcRev, mat, wages, earn: wages > 0 ? wages : (isOwner ? rev : entriesWageAmount(wageEntries)) };
     })
     .filter(w => w.revenue > 0 || w.wages > 0);
 
   const isOwnView = filterUserId === userId;
   const staffWageTotal = workerStats.filter(w => w.id !== userId).reduce((s, w) => s + w.earn, 0);
-  const profit = revenue - material - staffWageTotal;
+  const profit = revenue - staffWageTotal;
 
   const { byDate, sortedDates } = buildVisitGroups(visible);
   const todayStr = toDateStr(now);
@@ -137,31 +142,55 @@ export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
       </div>
 
       {/* Stat boxes */}
-      {(revenue > 0 || isAdmin) && (
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && workerStats.length > 0) ? "0.75rem" : "2rem" }}>
-          <StatBox label="Bevétel" value={revenue} color="#527666" sub={d.toLocaleDateString("hu-HU", { month: "long", day: "numeric" })} large />
-          {isAdmin && material > 0 && <StatBox label="Anyagköltség" value={material} color="#a06830" sub="kiadás" />}
-          {isAdmin && !isOwnView && revenue > 0 && <StatBox label={wage > 0 ? "Bérek" : "Várható bér (60%)"} value={staffWageTotal > 0 ? staffWageTotal : Math.round(revenue * STAFF_RATE)} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
-          {isAdmin && revenue > 0 && <StatBox label="Profit" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={revenue > 0 ? `${Math.round((profit/revenue)*100)}%` : ""} large />}
-          {!isAdmin && (wage > 0 || revenue > 0) && <StatBox label={wage > 0 ? "Béred" : "Neked jár (60%)"} value={wage > 0 ? wage : Math.round(revenue * STAFF_RATE)} color="#a78bfa" sub="ma" large />}
-        </div>
-      )}
+      {(revenue > 0 || isAdmin) && (() => {
+        const fw = filterUserId ? workerStats.find(w => w.id === filterUserId) : null;
+        const colors: Record<string, string> = { Gitta: "#9878b8", Lili: "#c47a8a", Felicia: "#c9906a" };
+        const fwColor = fw ? (colors[fw.name] ?? "#7256a0") : "#7256a0";
+        const fwCommission = fw ? fw.svcRev - fw.earn : 0;
+        return (
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: ((!filterUserId || fw) && workerStats.length > 0) ? "0.75rem" : "2rem" }}>
+            <StatBox label="Napi bevétel" value={totalIncome} color="#527666" sub={d.toLocaleDateString("hu-HU", { month: "long", day: "numeric" })} large />
+            {/* Mindenki nézet */}
+            {isAdmin && !isOwnView && !filterUserId && (staffWageTotal > 0) && <StatBox label={wage > 0 ? "Bérek" : "Várható bér"} value={staffWageTotal} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
+            {isAdmin && canSeeProfit && !filterUserId && totalIncome > 0 && <StatBox label="Profit" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={`${Math.round((profit/totalIncome)*100)}%`} large />}
+            {/* Konkrét staff nézet */}
+            {fw && fw.mat > 0 && <StatBox label="Anyagköltség" value={fw.mat} color="#a06830" sub="kiadás" />}
+            {fw && fw.earn > 0 && <StatBox label={fw.wages > 0 ? "Bér" : "60% bér"} value={fw.earn} color={fwColor} sub={fw.wages > 0 ? "rögzített" : "számított"} />}
+            {fw && fwCommission > 0 && <StatBox label="40% →Felicia" value={fwCommission} color="#c9906a" sub="jutalék" />}
+            {!isAdmin && (wage > 0 || revenue > 0) && <StatBox label={wage > 0 ? "Béred" : "Neked jár"} value={wage > 0 ? wage : wageEstimate} color="#a78bfa" sub="ma" large />}
+          </div>
+        );
+      })()}
 
       {/* Per-worker earnings breakdown */}
-      {isAdmin && !filterUserId && workerStats.length > 0 && (
+      {isAdmin && !isOwnView && !filterUserId && workerStats.length > 0 && (
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(114,86,160,0.55)", marginBottom: "0.55rem" }}>♦ Bérek</div>
+          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(114,86,160,0.55)", marginBottom: "0.55rem" }}>♦ Napi bontás</div>
           <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
-            {workerStats.map(w => {
+            {workerStats.filter(w => !filterUserId || w.id === filterUserId).map(w => {
               const colors: Record<string, string> = { Gitta: "#9878b8", Lili: "#c47a8a", Felicia: "#c9906a" };
               const uc = colors[w.name] ?? "#7256a0";
+              const isOwner = w.id === userId;
+              const commission = w.svcRev - w.earn; // 40% Feliciának
+              const row = (label: string, val: number, color: string) => (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.15rem 0" }}>
+                  <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>{label}</span>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.88rem", color, fontWeight: 700 }}>{fmt(val)}</span>
+                </div>
+              );
               return (
-                <div key={w.id} style={{ background: "var(--bg-card)", border: `1px solid ${uc}33`, borderRadius: 14, padding: "0.85rem 1.25rem", flex: "1 1 140px", minWidth: 130 }}>
-                  <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", textTransform: "uppercase", color: `${uc}99`, marginBottom: "0.35rem" }}>{w.name}</div>
-                  <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: uc, fontWeight: 700, lineHeight: 1 }}>{fmt(w.earn)}</div>
-                  <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)", marginTop: "0.25rem", fontStyle: "italic" }}>
-                    {w.wages > 0 ? "rögzített bér" : `bevétel: ${fmt(w.revenue)}`}
-                  </div>
+                <div key={w.id} style={{ background: "var(--bg-card)", border: `1px solid ${uc}33`, borderRadius: 14, padding: "0.85rem 1.25rem", flex: "1 1 180px", minWidth: 170 }}>
+                  <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", textTransform: "uppercase", color: `${uc}99`, marginBottom: "0.55rem" }}>{w.name}</div>
+                  {/* Napi bevétel (service + anyag) */}
+                  {row("Napi bevétel", w.revenue, "#527666")}
+                  {!isOwner && w.mat > 0 && row("Anyagköltség", w.mat, "#a06830")}
+                  {/* Staff: 60% bér + 40% Feliciának */}
+                  {!isOwner && (
+                    <>
+                      {row(w.wages > 0 ? "Bér" : "60% bér", w.earn, uc)}
+                      {commission > 0 && row("40% →Felicia", commission, "#c9906a")}
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -176,6 +205,7 @@ export default function NapiClient({ isAdmin = true, userId = "" }: { isAdmin?: 
           todayStr={todayStr}
           isAdmin={isAdmin}
           ownerId={userId}
+          canSeeProfit={canSeeProfit}
           isLoading={isLoading}
           onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
           emptyMessage="Ezen a napon még nincsenek bejegyzések. ✦"

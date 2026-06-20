@@ -113,9 +113,11 @@ model FinanceEntry {
     workDayId   String?    @unique
     guestCard   GuestCard? @relation(fields: [guestCardId], references: [id], onDelete: SetNull)
     guestCardId String?
+    visitGroupId String?
 
     @@index([date])
     @@index([type])
+    @@index([visitGroupId])
 }
 
 model Guest {

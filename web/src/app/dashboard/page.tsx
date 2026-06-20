@@ -6,9 +6,10 @@ import DashboardClient from "./_client";
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const isAdmin = session.user.role === "admin";
   return (
     <SidebarLayout user={session.user} activeKey="dashboard">
-      <DashboardClient name={session.user.name} />
+      <DashboardClient name={session.user.name} isAdmin={isAdmin} userId={session.user.id} />
     </SidebarLayout>
   );
 }

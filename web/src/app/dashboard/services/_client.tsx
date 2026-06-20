@@ -263,7 +263,7 @@ function CategoryBlock({ cat, isAdmin }: { cat: Category; isAdmin: boolean }) {
   const updateCat = api.services.updateCategory.useMutation({ onSuccess: () => { void utils.services.listCategories.invalidate(); setEditName(false); } });
 
   return (
-    <div style={{ background: panelBg, border, borderRadius: 14, padding: "1.5rem", marginBottom: "1.5rem", backdropFilter: "blur(12px)" }}>
+    <div style={{ background: panelBg, border, borderRadius: 14, padding: "1.5rem", marginBottom: "1.5rem" }}>
       {/* Category header */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
         {editName ? (
@@ -404,7 +404,7 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div>
       {/* Add row — admin only */}
-      {isAdmin && <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem", backdropFilter: "blur(12px)" }}>
+      {isAdmin && <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem" }}>
         <div style={{ flex: 2 }}>
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Anyag neve</div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Szőkítőpor, L'Oréal festék…" style={inputStyle}
@@ -427,7 +427,7 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
       {isLoading ? (
         <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", padding: "2rem", textAlign: "center" }}>Betöltés...</div>
       ) : materials.length === 0 ? (
-        <div style={{ background: panelBg, border, borderRadius: 12, padding: "3rem", textAlign: "center", backdropFilter: "blur(12px)" }}>
+        <div style={{ background: panelBg, border, borderRadius: 12, padding: "3rem", textAlign: "center" }}>
           <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✦</div>
           <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "0.85rem", letterSpacing: "0.1em" }}>Még nincs anyag felvéve</div>
           <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, marginTop: "0.5rem" }}>Add hozzá a szőkítőt, festéket és egyéb anyagokat.</div>
@@ -497,7 +497,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
         isLoading ? (
           <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>Betöltés...</div>
         ) : visibleCats.length === 0 ? (
-          <div style={{ background: panelBg, border, borderRadius: 14, padding: "3rem", textAlign: "center", backdropFilter: "blur(12px)" }}>
+          <div style={{ background: panelBg, border, borderRadius: 14, padding: "3rem", textAlign: "center" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{priceList === "master" ? "✂" : "✦"}</div>
             <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>
               {priceList === "master" ? "Még nincs mester árlista" : "Még nincs fodrász árlista"}

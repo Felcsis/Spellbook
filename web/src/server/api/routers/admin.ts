@@ -66,4 +66,21 @@ export const adminRouter = createTRPCRouter({
       if (input.id === ctx.session.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Saját magadat nem törölheted." });
       return ctx.db.user.delete({ where: { id: input.id } });
     }),
+
+  staffFinances: protectedProcedure
+    .input(z.object({ year: z.number().int(), month: z.number().int().min(1).max(12) }))
+    .query(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      const start = new Date(input.year, input.month - 1, 1);
+      const end   = new Date(input.year, input.month, 0, 23, 59, 59, 999);
+      const entries = await ctx.db.financeEntry.findMany({
+        where: { date: { gte: start, lte: end } },
+        include: {
+          createdBy: { select: { id: true, name: true } },
+          workDay:   { select: { userId: true } },
+        },
+        orderBy: { date: "asc" },
+      });
+      return entries;
+    }),
 });

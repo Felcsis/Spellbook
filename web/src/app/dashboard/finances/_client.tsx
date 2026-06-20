@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
-import { EntryList, StaffCardList } from "./_entry-list";
+import { EntryList } from "./_entry-list";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
@@ -105,6 +105,16 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
     { enabled: !!guestId }
   );
 
+  // Family / material-only mode
+  const [isFamilyMode, setIsFamilyMode] = useState(false);
+  function toggleFamilyMode() {
+    setIsFamilyMode(p => {
+      if (!p) { setSelSvcs([]); setIsManual(false); setManualAmt(""); setShowMats(true); }
+      else { setShowMats(false); }
+      return !p;
+    });
+  }
+
   // Date + amount
   const [date,      setDate]      = useState(() => new Date().toISOString().slice(0, 10));
   const [manualAmt, setManualAmt] = useState("");
@@ -127,7 +137,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
   const requiresMat  = needsMaterial(selSvcs);
   const validMats    = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0);
   const matOk        = !requiresMat || validMats.length > 0;
-  const canSave      = total > 0 && matOk;
+  const canSave      = isFamilyMode ? (validMats.length > 0 && matTotal > 0) : (total > 0 && matOk);
 
   // Auto-open material section when color service is selected
   useEffect(() => {
@@ -153,7 +163,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
     setSelSvcs([]); setSvcSearch(""); setSvcOpen(false);
     setGuestSearch(""); setGuestId(""); setShowNewGuest(false); setNewGuestName("");
     setShowMats(false); setMatRows([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
-    setManualAmt(""); setIsManual(false); setPrevOpen(false);
+    setManualAmt(""); setIsManual(false); setPrevOpen(false); setIsFamilyMode(false);
     setDate(new Date().toISOString().slice(0, 10));
   }
 
@@ -178,6 +188,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
     if (!canSave || saving) return;
     setSaving(true);
     try {
+      const visitGroupId = crypto.randomUUID();
       // 1. Guest card first (so we can link it)
       const validMats = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0);
       let finalGuestId = guestId;
@@ -200,13 +211,52 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
         cardId = card.id;
       }
 
-      // 2. WorkDay bejegyzés (naptárba kerül) + bevétel finance entry
-      await incrementEarnings.mutateAsync({ date, userId: selectedWorkerId || userId, amount: total });
+      const workerId = selectedWorkerId || userId;
+      const revenueDesc = finalGuestId
+        ? selSvcs.map(s => s.name).join(", ") || "Vendég bevétele"
+        : selSvcs.map(s => s.name).join(", ") || "Vendég nélküli bevétel";
 
-      // 3. Material entry if any
-      if (showMats && validMats.length > 0) {
+      if (isFamilyMode) {
+        // Csak anyagköltség — nincs bevételi sor
         const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
-        await createFinance.mutateAsync({ type: "material", description: matDesc, amount: matTotal, date, guestCardId: cardId });
+        await incrementEarnings.mutateAsync({ date, userId: workerId, amount: 0, createFinanceEntry: false });
+        await createFinance.mutateAsync({
+          type: "material",
+          description: `Család — ${matDesc}`,
+          amount: matTotal,
+          date,
+          guestCardId: cardId,
+          workerUserId: workerId,
+          visitGroupId,
+        });
+      } else {
+        // 2. Naptár napi összesítő frissítése, pénzügyi sort viszont látogatásonként hozunk létre.
+        await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
+
+        // 3. Revenue entry for this visit
+        await createFinance.mutateAsync({
+          type: "revenue",
+          description: revenueDesc,
+          amount: total,
+          date,
+          guestCardId: cardId,
+          workerUserId: workerId,
+          visitGroupId,
+        });
+
+        // 4. Material entry if any
+        if (showMats && validMats.length > 0) {
+          const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
+          await createFinance.mutateAsync({
+            type: "material",
+            description: matDesc,
+            amount: matTotal,
+            date,
+            guestCardId: cardId,
+            workerUserId: workerId,
+            visitGroupId,
+          });
+        }
       }
 
       onSaved();
@@ -225,7 +275,13 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
       {anyOpen && <div onClick={closeAll} style={{ position: "fixed", inset: 0, zIndex: 150 }} />}
     <div style={{ background: "var(--bg-panel)", border: "1px solid rgba(82,118,102,0.28)", borderRadius: 18, padding: "1.5rem 1.75rem", marginBottom: "2rem" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.65)", textTransform: "uppercase" }}>◈ Látogatás rögzítése</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.65)", textTransform: "uppercase" }}>◈ Látogatás rögzítése</div>
+          <button type="button" onClick={toggleFamilyMode}
+            style={{ padding: "0.25rem 0.75rem", borderRadius: 7, border: `1px solid ${isFamilyMode ? "rgba(167,139,250,0.6)" : "rgba(167,139,250,0.22)"}`, background: isFamilyMode ? "rgba(167,139,250,0.14)" : "transparent", color: isFamilyMode ? "#a78bfa" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
+            👨‍👩‍👧 Csak anyag
+          </button>
+        </div>
         {allUsers.length > 1 && (
           <div style={{ display: "flex", gap: "0.35rem" }}>
             {allUsers.map(u => {
@@ -244,8 +300,13 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-        {/* ── Service picker ── */}
-        <div>
+        {/* ── Service picker — elrejtve csak-anyag módban ── */}
+        {isFamilyMode && (
+          <div style={{ padding: "0.6rem 0.9rem", background: "rgba(167,139,250,0.07)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 10, fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "rgba(167,139,250,0.7)", fontStyle: "italic" }}>
+            Csak anyag / Család mód — a szolgáltatás ingyenes, csak anyagköltség kerül rögzítésre
+          </div>
+        )}
+        {!isFamilyMode && <div>
           <span style={lbl}>Szolgáltatások</span>
 
           {/* Selected services */}
@@ -354,7 +415,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* ── Guest ── */}
         <div>
@@ -446,11 +507,12 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
         {/* ── Szín recept toggle ── */}
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
-            <button type="button"
+            {!isFamilyMode && <button type="button"
               onClick={() => { if (!requiresMat) setShowMats(p => !p); }}
               style={{ background: showMats ? "rgba(200,162,68,0.1)" : "transparent", border: `1px solid ${requiresMat && !matOk ? "#c47878" : showMats ? "rgba(200,162,68,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "#c8a244" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: requiresMat ? "default" : "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
               ✦ {showMats ? "Szín recept ▾" : "Szín recept hozzáadása"}
-            </button>
+            </button>}
+            {isFamilyMode && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.14em", color: "#c8a244", textTransform: "uppercase" }}>✦ Anyag rögzítése</span>}
             {requiresMat && !matOk && (
               <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", color: "#c47878", animation: "fadeInUp 0.3s ease" }}>
                 ⚠ Festéshez szín recept kötelező
@@ -518,31 +580,28 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
         </div>
 
         {/* ── Visit total ── */}
-        {total > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.7rem 1rem", background: "rgba(82,118,102,0.06)", border: "1px solid rgba(82,118,102,0.22)", borderRadius: 12 }}>
-            {/* Coin icon */}
+        {(total > 0 || (isFamilyMode && matTotal > 0)) && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.7rem 1rem", background: isFamilyMode ? "rgba(167,139,250,0.06)" : "rgba(82,118,102,0.06)", border: `1px solid ${isFamilyMode ? "rgba(167,139,250,0.22)" : "rgba(82,118,102,0.22)"}`, borderRadius: 12 }}>
             <div style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, position: "relative",
-              background: "radial-gradient(circle at 38% 32%, #f5d060 0%, #d4941e 52%, #8a5c10 100%)",
-              boxShadow: "0 4px 12px rgba(140,88,10,0.55), inset 0 1.5px 3px rgba(255,230,120,0.65), inset 0 -2px 4px rgba(80,40,0,0.45)",
-              border: "1.5px solid #b07818",
+              background: isFamilyMode ? "radial-gradient(circle at 38% 32%, #c8b0f0 0%, #8060c0 52%, #4a3080 100%)" : "radial-gradient(circle at 38% 32%, #f5d060 0%, #d4941e 52%, #8a5c10 100%)",
+              boxShadow: isFamilyMode ? "0 4px 12px rgba(100,60,200,0.4)" : "0 4px 12px rgba(140,88,10,0.55), inset 0 1.5px 3px rgba(255,230,120,0.65), inset 0 -2px 4px rgba(80,40,0,0.45)",
+              border: isFamilyMode ? "1.5px solid #8060c0" : "1.5px solid #b07818",
               display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {/* Inner face */}
               <div style={{ width: 28, height: 28, borderRadius: "50%",
-                background: "radial-gradient(circle at 42% 36%, #f0c840 0%, #c88018 65%, #7a4c0a 100%)",
-                boxShadow: "inset 0 1px 3px rgba(255,225,100,0.5), inset 0 -1px 3px rgba(80,38,0,0.5)",
-                border: "1px solid rgba(200,140,20,0.4)",
+                background: isFamilyMode ? "radial-gradient(circle at 42% 36%, #b090e0 0%, #6040a0 65%, #302060 100%)" : "radial-gradient(circle at 42% 36%, #f0c840 0%, #c88018 65%, #7a4c0a 100%)",
+                boxShadow: "inset 0 1px 3px rgba(255,225,100,0.3), inset 0 -1px 3px rgba(0,0,0,0.4)",
                 display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#5a3200", fontSize: "0.9rem", textShadow: "0 0.5px 0 rgba(255,210,80,0.5)" }}>✦</span>
+                <span style={{ color: isFamilyMode ? "#e0d0ff" : "#5a3200", fontSize: "0.85rem" }}>{isFamilyMode ? "👨‍👩‍👧" : "✦"}</span>
               </div>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.2rem" }}>Végösszeg</div>
+              <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.2rem" }}>{isFamilyMode ? "Csak anyag — Család" : "Végösszeg"}</div>
               <div style={{ display: "flex", gap: "0.9rem", flexWrap: "wrap", alignItems: "center" }}>
-                {autoTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#527666" }}>◈ Munkadíj: {fmt(autoTotal)}</span>}
+                {!isFamilyMode && autoTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#527666" }}>◈ Munkadíj: {fmt(autoTotal)}</span>}
                 {matTotal > 0  && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#a06830" }}>✦ Anyag: {fmt(matTotal)}</span>}
               </div>
             </div>
-            <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.45rem", color: "#527666", fontWeight: 700, letterSpacing: "-0.01em" }}>{fmt(total)}</div>
+            <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.45rem", color: isFamilyMode ? "#8060c0" : "#527666", fontWeight: 700, letterSpacing: "-0.01em" }}>{fmt(isFamilyMode ? matTotal : total + matTotal)}</div>
           </div>
         )}
 
@@ -552,16 +611,16 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
             <span style={lbl}>Dátum</span>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inputStyle, width: 160, colorScheme: "dark" }} />
           </div>
-          <div style={{ flex: 1, minWidth: 120 }}>
+          {!isFamilyMode && <div style={{ flex: 1, minWidth: 120 }}>
             <span style={{ ...lbl, display: "flex", alignItems: "center", gap: "0.4rem" }}>
               Összeg (Ft) {!isManual && autoTotal > 0 && <span style={{ color: "rgba(82,118,102,0.7)", fontFamily: "var(--font-cinzel)", fontSize: "0.45rem" }}>AUTO</span>}
             </span>
             <input type="number" min="0"
-              value={isManual ? manualAmt : autoTotal > 0 ? String(autoTotal) : ""}
+              value={isManual ? manualAmt : (autoTotal + matTotal) > 0 ? String(autoTotal + matTotal) : ""}
               onChange={e => { setManualAmt(e.target.value); setIsManual(true); }}
               placeholder="0"
               style={{ ...inputStyle, borderColor: total > 0 ? "rgba(82,118,102,0.4)" : "var(--border)" }} />
-          </div>
+          </div>}
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
             <button type="button" onClick={reset}
               style={{ flex: "0 0 auto", padding: "0.7rem 1rem", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}
@@ -770,31 +829,32 @@ export function userColor(name: string | null | undefined) {
 }
 
 export function buildVisitGroups<T extends {
-  id: string; date: string | Date; type: string; amount: number; guestCardId?: string | null;
+  id: string; date: string | Date; type: string; amount: number; guestCardId?: string | null; visitGroupId?: string | null;
   createdBy?: { id: string; name: string | null } | null;
 }>(visibleEntries: T[]) {
   type VG = { key: string; date: string; cardId: string | null; entries: T[]; totalRevenue: number; totalMaterial: number };
   const visitGroups: VG[] = [];
   const cardGroupMap: Record<string, VG> = {};
-  const dayCreatorMap: Record<string, VG> = {};
+  const visitGroupMap: Record<string, VG> = {};
   visibleEntries.forEach(e => {
     const dateKey   = toDateStr(new Date(e.date));
     const cardId    = e.guestCardId ?? null;
-    const creatorId = e.createdBy?.id ?? "";
+    const visitId   = e.visitGroupId ?? null;
     if (cardId && cardGroupMap[cardId]) {
       const g = cardGroupMap[cardId]!;
       g.entries.push(e);
       if (e.type === "revenue")  g.totalRevenue  += e.amount;
       if (e.type === "material") g.totalMaterial += e.amount;
-    } else if (!cardId && e.type === "material" && dayCreatorMap[`${dateKey}|${creatorId}`]) {
-      const g = dayCreatorMap[`${dateKey}|${creatorId}`]!;
+    } else if (!cardId && visitId && visitGroupMap[visitId]) {
+      const g = visitGroupMap[visitId]!;
       g.entries.push(e);
-      g.totalMaterial += e.amount;
+      if (e.type === "revenue")  g.totalRevenue  += e.amount;
+      if (e.type === "material") g.totalMaterial += e.amount;
     } else {
-      const g: VG = { key: cardId ?? e.id, date: dateKey, cardId, entries: [e], totalRevenue: e.type === "revenue" ? e.amount : 0, totalMaterial: e.type === "material" ? e.amount : 0 };
+      const g: VG = { key: cardId ?? visitId ?? e.id, date: dateKey, cardId, entries: [e], totalRevenue: e.type === "revenue" ? e.amount : 0, totalMaterial: e.type === "material" ? e.amount : 0 };
       visitGroups.push(g);
       if (cardId) cardGroupMap[cardId] = g;
-      if (!cardId && e.type === "revenue") dayCreatorMap[`${dateKey}|${creatorId}`] = g;
+      if (!cardId && visitId) visitGroupMap[visitId] = g;
     }
   });
   const byDate: Record<string, VG[]> = {};
@@ -803,7 +863,7 @@ export function buildVisitGroups<T extends {
   return { visitGroups, byDate, sortedDates };
 }
 
-export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmin?: boolean; userId?: string }) {
+export default function FinancesClient({ isAdmin = true, userId = "", canSeeProfit = false }: { isAdmin?: boolean; userId?: string; canSeeProfit?: boolean }) {
   const now = new Date();
   const year  = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -812,13 +872,13 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
   const [showOther, setShowOther] = useState(false);
 
   const utils = api.useUtils();
-  const inv = () => { void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); };
+  const inv = () => {
+    void utils.finance.list.invalidate();
+    void utils.calendar.month.invalidate();
+  };
   const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: !isAdmin ? userId : undefined });
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
   const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
-
-  // Staff sees their own guest cards (with full details) instead of raw finance entries
-  const { data: myCards = [], isLoading: cardsLoading } = api.guests.myCards.useQuery({ year, month }, { enabled: !isAdmin });
 
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
@@ -845,22 +905,19 @@ export default function FinancesClient({ isAdmin = true, userId = "" }: { isAdmi
         ◈ {MONTHS[month - 1]} bejegyzései
       </div>
 
-      {isAdmin ? (
-        <EntryList
-          byDate={byDate}
-          sortedDates={sortedDates}
-          todayStr={todayStr}
-          isAdmin={isAdmin}
-          ownerId={userId}
-          isLoading={isLoading}
-          onDelete={(ids) => ids.forEach(id => del.mutate({ id }))}
-          onUpdateDate={(ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId })}
-          isSavingDate={updateDate.isPending}
-          emptyMessage="Ebben a hónapban még nincsenek bejegyzések. ✦"
-        />
-      ) : (
-        <StaffCardList cards={myCards} isLoading={cardsLoading} emptyMessage="Ebben a hónapban még nincsenek látogatásaid. ✦" />
-      )}
+      <EntryList
+        byDate={byDate}
+        sortedDates={sortedDates}
+        todayStr={todayStr}
+        isAdmin={isAdmin}
+        ownerId={userId}
+        canSeeProfit={canSeeProfit}
+        isLoading={isLoading}
+        onDelete={isAdmin ? (ids) => ids.forEach(id => del.mutate({ id })) : undefined}
+        onUpdateDate={isAdmin ? (ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId }) : undefined}
+        isSavingDate={updateDate.isPending}
+        emptyMessage="Ebben a hónapban még nincsenek bejegyzések. ✦"
+      />
     </div>
   );
 }
