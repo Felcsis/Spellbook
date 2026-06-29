@@ -111,4 +111,41 @@ export const servicesRouter = createTRPCRouter({
         input.map(({ id, order }) => ctx.db.service.update({ where: { id }, data: { order } }))
       );
     }),
+
+  bulkImport: protectedProcedure
+    .input(z.object({
+      priceListType: z.enum(["master", "beginner"]).default("master"),
+      categories: z.array(z.object({
+        name: z.string().min(1),
+        services: z.array(z.object({
+          name:     z.string().min(1),
+          price:    z.number().nonnegative(),
+          duration: z.number().int().positive().default(30),
+        })),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      const userId = ctx.session.user.id;
+
+      const lastCat = await ctx.db.serviceCategory.findFirst({
+        where:   { priceListType: input.priceListType },
+        orderBy: { order: "desc" },
+        select:  { order: true },
+      });
+      let catOrder = (lastCat?.order ?? -1) + 1;
+
+      for (const cat of input.categories) {
+        const created = await ctx.db.serviceCategory.create({
+          data: { name: cat.name, priceListType: input.priceListType, order: catOrder++, userId },
+        });
+        await ctx.db.$transaction(
+          cat.services.map((svc, i) =>
+            ctx.db.service.create({
+              data: { name: svc.name, price: svc.price, duration: svc.duration, order: i, categoryId: created.id, userId },
+            })
+          )
+        );
+      }
+    }),
 });

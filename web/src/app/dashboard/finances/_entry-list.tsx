@@ -1,8 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { api } from "~/trpc/react";
 import { userColor } from "./_client";
 import { entriesWageAmount, servicesWageAmount } from "~/lib/wage";
+
+const iStyle: React.CSSProperties = {
+  background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 9,
+  padding: "0.6rem 0.85rem", color: "var(--text-primary)",
+  fontFamily: "var(--font-cormorant)", fontSize: "1rem", outline: "none", width: "100%", boxSizing: "border-box",
+};
+
+function StandaloneEditModal({ entryIds, initialAmount, initialDescription, initialDate, onClose }: {
+  entryIds: string[];
+  initialAmount: number;
+  initialDescription: string;
+  initialDate: string;
+  onClose: () => void;
+}) {
+  const utils = api.useUtils();
+  const updateEntry = api.finance.updateEntry.useMutation({
+    onSuccess: () => { void utils.finance.list.invalidate(); onClose(); },
+  });
+
+  const [amount, setAmount]     = useState(String(initialAmount));
+  const [desc,   setDesc]       = useState(initialDescription);
+  const [date,   setDate]       = useState(initialDate);
+
+  function handleSave() {
+    const a = parseFloat(amount);
+    if (isNaN(a) || a <= 0) return;
+    entryIds.forEach(id => updateEntry.mutate({ id, amount: a, description: desc, date }));
+  }
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 18, padding: "2rem", width: "100%", maxWidth: 420, boxShadow: "0 24px 80px rgba(0,0,0,0.7)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+          <h2 style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.9rem", letterSpacing: "0.14em", color: "var(--color-teal)", margin: 0 }}>✎ Bejegyzés szerkesztése</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-soft)", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div>
+            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>Leírás</label>
+            <input value={desc} onChange={e => setDesc(e.target.value)} style={iStyle} />
+          </div>
+          <div>
+            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>Összeg (Ft)</label>
+            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0" step="100" style={iStyle} />
+          </div>
+          <div>
+            <label style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>Dátum</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...iStyle, colorScheme: "light" }} />
+          </div>
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+            <button onClick={onClose} style={{ flex: 1, padding: "0.75rem", borderRadius: 10, background: "transparent", border: "1px solid var(--border)", color: "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.14em", cursor: "pointer" }}>Mégse</button>
+            <button onClick={handleSave} disabled={updateEntry.isPending} className="btn-gold" style={{ flex: 2, padding: "0.75rem", borderRadius: 10, fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.18em" }}>
+              {updateEntry.isPending ? "Mentés…" : "Mentés ✦"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -58,7 +127,7 @@ function VisitGroupRow({
   group, isAdmin, ownerId, canSeeProfit, filterUserId,
   editDateKey, editDateVal,
   onEditDateOpen, onEditDateChange, onEditDateSave, onEditDateCancel, isSavingDate,
-  onDelete,
+  onDelete, onEditCard,
 }: {
   group: VisitGroup;
   isAdmin: boolean;
@@ -73,8 +142,10 @@ function VisitGroupRow({
   onEditDateCancel: () => void;
   isSavingDate: boolean;
   onDelete?: (ids: string[]) => void;
+  onEditCard?: (cardId: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded,      setExpanded]      = useState(false);
+  const [standaloneEdit, setStandaloneEdit] = useState(false);
 
   const revEntry    = group.entries.find(e => e.type === "revenue");
   const card        = (revEntry?.guestCard ?? null) as GuestCard | null;
@@ -166,11 +237,24 @@ function VisitGroupRow({
         {/* Admin controls */}
         {isAdmin && (
           <>
-            <button onClick={e => { e.stopPropagation(); onEditDateOpen(group); }}
-              style={{ background: "none", border: "none", color: isEditingDate ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem", padding: "0.2rem 0.3rem", borderRadius: 5, flexShrink: 0 }}
+            <button onClick={e => {
+                e.stopPropagation();
+                if (group.cardId && onEditCard) onEditCard(group.cardId);
+                else setStandaloneEdit(true);
+              }}
+              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem", padding: "0.2rem 0.3rem", borderRadius: 5, flexShrink: 0 }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
-              onMouseLeave={e => { if (!isEditingDate) (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; }}
-              title="Dátum szerkesztése">✎</button>
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; }}
+              title="Bejegyzés szerkesztése">✎</button>
+            {standaloneEdit && !group.cardId && (
+              <StandaloneEditModal
+                entryIds={group.entries.map(e => e.id)}
+                initialAmount={group.totalRevenue + group.totalMaterial}
+                initialDescription={group.entries[0]?.description ?? ""}
+                initialDate={group.date}
+                onClose={() => setStandaloneEdit(false)}
+              />
+            )}
             {canDelete && (
               <button onClick={e => { e.stopPropagation(); onDelete!(group.entries.map(e => e.id)); }}
                 style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.3rem", borderRadius: 5, flexShrink: 0 }}
@@ -313,7 +397,7 @@ function StaffCardRow({ card }: { card: StaffCard }) {
   const [open, setOpen] = useState(false);
   const svcTotal  = card.services.reduce((s, x) => s + x.price, 0);
   const myWage    = servicesWageAmount(card.services);
-  const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { month: "long", day: "numeric", weekday: "long" });
+  const dateLabel = new Date(card.date).toLocaleDateString("hu-HU", { timeZone: "UTC", month: "long", day: "numeric", weekday: "long" });
 
   return (
     <div style={{ background: "var(--bg-panel)", border: `1px solid ${open ? "#7c5cbe55" : "#7c5cbe22"}`, borderLeft: "3px solid #7c5cbe", borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
@@ -462,11 +546,12 @@ export function StaffCardList({ cards, isLoading, emptyMessage }: {
 
 // ── Full entry list (date-grouped) ────────────────────────────────────────────
 export function EntryList({
-  byDate, sortedDates, todayStr, isAdmin, ownerId, canSeeProfit = false, filterUserId, isLoading,
-  onDelete, onUpdateDate, isSavingDate, emptyMessage,
+  byDate, sortedDates, recentGroups = [], todayStr, isAdmin, ownerId, canSeeProfit = false, filterUserId, isLoading,
+  onDelete, onUpdateDate, isSavingDate, emptyMessage, onEditCard,
 }: {
   byDate: Record<string, VisitGroup[]>;
   sortedDates: string[];
+  recentGroups?: VisitGroup[];
   todayStr: string;
   isAdmin: boolean;
   ownerId: string;
@@ -477,6 +562,7 @@ export function EntryList({
   onUpdateDate?: (entryIds: string[], date: string, cardId?: string) => void;
   isSavingDate?: boolean;
   emptyMessage?: string;
+  onEditCard?: (cardId: string) => void;
 }) {
   const [editDateKey, setEditDateKey] = useState<string | null>(null);
   const [editDateVal, setEditDateVal] = useState("");
@@ -490,7 +576,7 @@ export function EntryList({
     return <div style={{ textAlign: "center", color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", padding: "3rem", fontStyle: "italic" }}>Betöltés...</div>;
   }
 
-  if (sortedDates.length === 0) {
+  if (sortedDates.length === 0 && recentGroups.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16, color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontSize: "1.1rem", fontStyle: "italic" }}>
         {emptyMessage ?? "Nincsenek bejegyzések. ✦"}
@@ -500,6 +586,42 @@ export function EntryList({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {/* Legutóbb mentett 4 */}
+      {recentGroups.length > 0 && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+            <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.16em", color: "var(--color-teal)", textTransform: "uppercase", flexShrink: 0 }}>
+              ✦ Legutóbb mentett
+            </div>
+            <div style={{ flex: 1, height: 1, background: "var(--bg-active)" }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {recentGroups.map(group => (
+              <VisitGroupRow
+                key={group.key}
+                group={group}
+                isAdmin={isAdmin}
+                ownerId={ownerId}
+                canSeeProfit={canSeeProfit}
+                filterUserId={filterUserId}
+                editDateKey={editDateKey}
+                editDateVal={editDateVal}
+                onEditDateOpen={handleEditDateOpen}
+                onEditDateChange={setEditDateVal}
+                onEditDateSave={() => {
+                  if (!editDateVal) return;
+                  onUpdateDate?.(group.entries.map(e => e.id), editDateVal, group.cardId ?? undefined);
+                  setEditDateKey(null);
+                }}
+                onEditDateCancel={() => setEditDateKey(null)}
+                isSavingDate={!!isSavingDate}
+                onDelete={onDelete}
+                onEditCard={onEditCard}
+              />
+            ))}
+          </div>
+        </div>
+      )}
       {sortedDates.map(ds => {
         const dayGroups = byDate[ds]!;
         const dayRev    = dayGroups.reduce((s, g) => s + g.totalRevenue, 0);
@@ -538,6 +660,7 @@ export function EntryList({
                   onEditDateCancel={() => setEditDateKey(null)}
                   isSavingDate={!!isSavingDate}
                   onDelete={onDelete}
+                  onEditCard={onEditCard}
                 />
               ))}
             </div>

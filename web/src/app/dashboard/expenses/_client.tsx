@@ -49,7 +49,7 @@ const navBtn: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
 };
 
-export default function ExpensesClient() {
+export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdmin?: boolean; userId?: string }) {
   const now = new Date();
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -69,10 +69,14 @@ export default function ExpensesClient() {
   const utils = api.useUtils();
   const inv = () => { void utils.expenses.list.invalidate(); };
 
-  const { data: users = [] } = api.admin.listStaff.useQuery();
+  const { data: users = [] } = api.admin.listStaff.useQuery(undefined, { enabled: isAdmin });
 
   const { data: expenses = [], isLoading, error: listError } = api.expenses.list.useQuery(
     viewMode === "month" ? { year, month } : { year },
+  );
+
+  const visibleExpenses = isAdmin ? expenses : expenses.filter(e =>
+    (e.assignedTo?.id ?? e.createdBy?.id) === userId
   );
   const [saveError, setSaveError] = useState<string | null>(null);
   const create = api.expenses.create.useMutation({
@@ -103,7 +107,7 @@ export default function ExpensesClient() {
     ev.preventDefault();
     const amt = parseFloat(amount);
     if (!title.trim() || isNaN(amt) || amt <= 0) return;
-    const assignedId = assignedToId || undefined;
+    const assignedId = isAdmin ? (assignedToId || undefined) : userId;
     if (editId) {
       update.mutate({ id: editId, title: title.trim(), amount: amt, date, category, notes: notes || undefined, paid, assignedToId: assignedId ?? null });
     } else {
@@ -114,19 +118,19 @@ export default function ExpensesClient() {
   function prevPeriod() { if (viewMode === "month") { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); } else setYear(y => y - 1); }
   function nextPeriod() { if (viewMode === "month") { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); } else setYear(y => y + 1); }
 
-  const totalPaid    = expenses.filter(e => e.paid).reduce((s, e) => s + e.amount, 0);
-  const totalPending = expenses.filter(e => !e.paid).reduce((s, e) => s + e.amount, 0);
+  const totalPaid    = visibleExpenses.filter(e => e.paid).reduce((s, e) => s + e.amount, 0);
+  const totalPending = visibleExpenses.filter(e => !e.paid).reduce((s, e) => s + e.amount, 0);
   const total        = totalPaid + totalPending;
 
   // Category breakdown
   const byCat: Record<string, number> = {};
-  expenses.forEach(e => { byCat[e.category] = (byCat[e.category] ?? 0) + e.amount; });
+  visibleExpenses.forEach(e => { byCat[e.category] = (byCat[e.category] ?? 0) + e.amount; });
   const sortedCats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
 
-  // Per-user breakdown — show ALL users, even those with 0 Ft
+  // Per-user breakdown — admin only
   const byUserId: Record<string, { name: string; amount: number }> = {};
   users.forEach(u => { byUserId[u.id] = { name: u.name ?? "?", amount: 0 }; });
-  expenses.forEach(e => {
+  visibleExpenses.forEach(e => {
     const uid = e.assignedTo?.id ?? e.createdBy?.id;
     const uname = e.assignedTo?.name ?? e.createdBy?.name ?? "Ismeretlen";
     if (uid) {
@@ -180,6 +184,7 @@ export default function ExpensesClient() {
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            {isAdmin && (
             <div style={{ flex: 1, minWidth: 140 }}>
               <label style={labelStyle}>Kinek szól</label>
               <select value={assignedToId} onChange={e => setAssignedToId(e.target.value)} style={{ ...inputStyle }}>
@@ -187,6 +192,7 @@ export default function ExpensesClient() {
                 {users.map(u => <option key={u.id} value={u.id}>{u.name ?? "?"}</option>)}
               </select>
             </div>
+            )}
             <div style={{ flex: 2, minWidth: 160 }}>
               <label style={labelStyle}>Megjegyzés</label>
               <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Opcionális…" style={inputStyle} />
@@ -280,8 +286,8 @@ export default function ExpensesClient() {
         </div>
       )}
 
-      {/* Per-user breakdown */}
-      {users.length > 0 && (
+      {/* Per-user breakdown — admin only */}
+      {isAdmin && users.length > 0 && (
         <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 14, padding: "1.1rem 1.25rem", marginBottom: "1.5rem" }}>
           <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.85rem" }}>Felhasználónként</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -311,14 +317,14 @@ export default function ExpensesClient() {
       )}
       {isLoading ? (
         <div style={{ textAlign: "center", color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", padding: "3rem", fontStyle: "italic" }}>Betöltés...</div>
-      ) : expenses.length === 0 ? (
+      ) : visibleExpenses.length === 0 ? (
         <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--bg-panel)", border: "1px dashed var(--border)", borderRadius: 16 }}>
           <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✦</div>
           <div style={{ fontFamily: "var(--font-cinzel)", color: "var(--color-teal)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>Ebben az időszakban nincsenek kiadások</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          {expenses.map(e => {
+          {visibleExpenses.map(e => {
             const col = CAT_COLORS[e.category] ?? "#6b7280";
             const isEditing = editId === e.id;
             return (
@@ -327,7 +333,7 @@ export default function ExpensesClient() {
                   <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", fontWeight: 600 }}>{e.title}</div>
                   <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.15rem" }}>
                     <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: col, padding: "0.1rem 0.4rem", border: `1px solid ${col}44`, borderRadius: 4, textTransform: "uppercase" }}>{e.category}</span>
-                    <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{new Date(e.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}</span>
+                    <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{new Date(e.date).toLocaleDateString("hu-HU", { timeZone: "UTC", year: "numeric", month: "long", day: "numeric" })}</span>
                     {!e.paid && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#fbbf24", padding: "0.1rem 0.4rem", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4 }}>FÜGGŐBEN</span>}
                     {e.assignedTo && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#e8b4c8", padding: "0.1rem 0.4rem", border: "1px solid rgba(232,180,200,0.35)", borderRadius: 4 }}>👤 {e.assignedTo.name}</span>}
                     {e.notes && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", fontStyle: "italic" }}>{e.notes}</span>}

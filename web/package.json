@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "@auth/prisma-adapter": "^2.7.2",
     "@prisma/client": "^6.6.0",
     "@t3-oss/env-nextjs": "^0.12.0",
@@ -30,6 +31,7 @@
     "jspdf-autotable": "^5.0.8",
     "next": "^15.2.3",
     "next-auth": "5.0.0-beta.25",
+    "pdf-parse": "^2.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.8.1",
@@ -40,6 +42,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.15",
     "@types/node": "^20.14.10",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "postcss": "^8.5.3",

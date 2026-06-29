@@ -271,7 +271,7 @@ function StaffFinances({ users }: { users: UserRow[] }) {
                   {revenueEntries.map(e => (
                     <div key={e.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 1.25rem", borderBottom: "1px solid var(--bg-highlight)" }}>
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-muted)", minWidth: 80 }}>
-                        {new Date(e.date).toLocaleDateString("hu-HU", { month: "numeric", day: "numeric" })}
+                        {new Date(e.date).toLocaleDateString("hu-HU", { timeZone: "UTC", month: "numeric", day: "numeric" })}
                       </span>
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{e.description}</span>
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(e.amount)}</span>

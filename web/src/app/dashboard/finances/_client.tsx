@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { api } from "~/trpc/react";
 import { EntryList } from "./_entry-list";
 
@@ -120,6 +121,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
   const [manualAmt, setManualAmt] = useState("");
   const [isManual,  setIsManual]  = useState(false);
   const [saving,    setSaving]    = useState(false);
+  const [saveErr,   setSaveErr]   = useState<string | null>(null);
 
   function closeAll() { setSvcOpen(false); setGuestOpen(false); setMatOpen(false); }
 
@@ -137,7 +139,10 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
   const requiresMat  = needsMaterial(selSvcs);
   const validMats    = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0);
   const matOk        = !requiresMat || validMats.length > 0;
-  const canSave      = isFamilyMode ? (validMats.length > 0 && matTotal > 0) : (total > 0 && matOk);
+  const validMatTotal = validMats.reduce((s, r) => s + r.lineTotal, 0);
+  const canSave      = isFamilyMode
+    ? (!!guestId || !!newGuestName.trim() || (validMats.length > 0 && validMatTotal > 0))
+    : (total > 0 && matOk);
 
   // Auto-open material section when color service is selected
   useEffect(() => {
@@ -168,11 +173,13 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
   }
 
   function loadPrevCard(card: typeof guestCards[0]) {
-    setSelSvcs(card.services.map(s => ({
-      id: s.id, name: s.name, price: s.price,
-      duration: s.duration ?? 0, categoryName: s.categoryName ?? "",
-      gender: s.gender ?? undefined,
-    })));
+    if (!isFamilyMode) {
+      setSelSvcs(card.services.map(s => ({
+        id: s.id, name: s.name, price: s.price,
+        duration: s.duration ?? 0, categoryName: s.categoryName ?? "",
+        gender: s.gender ?? undefined,
+      })));
+    }
     const mats = card.materials.map(m => ({
       name: m.name, brand: m.brand ?? "", colorCode: m.colorCode ?? "",
       grams: String(m.grams), unitPrice: m.unitPrice, lineTotal: m.lineTotal,
@@ -187,6 +194,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
   async function handleSave() {
     if (!canSave || saving) return;
     setSaving(true);
+    setSaveErr(null);
     try {
       const visitGroupId = crypto.randomUUID();
       // 1. Guest card first (so we can link it)
@@ -196,11 +204,41 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
         const g = await createGuest.mutateAsync({ name: newGuestName.trim() });
         finalGuestId = g.id;
       }
-      let cardId: string | undefined;
-      if (finalGuestId) {
+      const workerId = selectedWorkerId || userId;
+
+      if (isFamilyMode) {
+        if (finalGuestId) {
+          // Família + vendég: receptkártya anyaggal, 0 Ft bevétel
+          const card = await createCard.mutateAsync({
+            guestId: finalGuestId,
+            workerId,
+            date,
+            services: [],
+            materials: validMats.map(r => ({
+              name: r.name, brand: r.brand || undefined, colorCode: r.colorCode || undefined,
+              grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
+            })),
+          });
+          await incrementEarnings.mutateAsync({ date, userId: workerId, amount: 0, createFinanceEntry: false });
+          void card;
+        } else {
+          // Família vendég nélkül: csak anyagköltség bejegyzés
+          const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
+          await incrementEarnings.mutateAsync({ date, userId: workerId, amount: 0, createFinanceEntry: false });
+          await createFinance.mutateAsync({
+            type: "material",
+            description: `Család — ${matDesc}`,
+            amount: validMatTotal,
+            date,
+            workerUserId: workerId,
+            visitGroupId,
+          });
+        }
+      } else if (finalGuestId) {
+        // Vendéges bejegyzés: a createCard mutation maga hozza létre a finance entry-ket
         const card = await createCard.mutateAsync({
           guestId: finalGuestId,
-          workerId: selectedWorkerId || userId,
+          workerId,
           date,
           services: selSvcs.map(s => ({ name: s.name, price: s.price, duration: s.duration, gender: s.gender, categoryName: s.categoryName })),
           materials: validMats.map(r => ({
@@ -208,43 +246,23 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
             grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
           })),
         });
-        cardId = card.id;
-      }
-
-      const workerId = selectedWorkerId || userId;
-      const revenueDesc = finalGuestId
-        ? selSvcs.map(s => s.name).join(", ") || "Vendég bevétele"
-        : selSvcs.map(s => s.name).join(", ") || "Vendég nélküli bevétel";
-
-      if (isFamilyMode) {
-        // Csak anyagköltség — nincs bevételi sor
-        const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
-        await incrementEarnings.mutateAsync({ date, userId: workerId, amount: 0, createFinanceEntry: false });
-        await createFinance.mutateAsync({
-          type: "material",
-          description: `Család — ${matDesc}`,
-          amount: matTotal,
-          date,
-          guestCardId: cardId,
-          workerUserId: workerId,
-          visitGroupId,
-        });
+        // Csak a naptár napi összesítőt frissítjük (finance entry már létrejött a createCard-ban)
+        await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
+        void card; // cardId nincs tovább szükség
       } else {
-        // 2. Naptár napi összesítő frissítése, pénzügyi sort viszont látogatásonként hozunk létre.
+        // Vendég nélküli bejegyzés: finance entry-ket itt hozzuk létre
+        const revenueDesc = selSvcs.map(s => s.name).join(", ") || "Vendég nélküli bevétel";
         await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
 
-        // 3. Revenue entry for this visit
         await createFinance.mutateAsync({
           type: "revenue",
           description: revenueDesc,
-          amount: total,
+          amount: autoTotal || total,
           date,
-          guestCardId: cardId,
           workerUserId: workerId,
           visitGroupId,
         });
 
-        // 4. Material entry if any
         if (showMats && validMats.length > 0) {
           const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
           await createFinance.mutateAsync({
@@ -252,7 +270,6 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
             description: matDesc,
             amount: matTotal,
             date,
-            guestCardId: cardId,
             workerUserId: workerId,
             visitGroupId,
           });
@@ -261,6 +278,8 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
 
       onSaved();
       reset();
+    } catch (e) {
+      setSaveErr(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -483,7 +502,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
             {prevOpen && (
               <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, marginTop: "0.3rem", background: "var(--bg-modal)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 12, boxShadow: "0 12px 40px rgba(0,0,0,0.6)", overflow: "hidden" }}>
                 {guestCards.map(card => {
-                  const d = new Date(card.date).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+                  const d = new Date(card.date).toLocaleDateString("hu-HU", { timeZone: "UTC", year: "numeric", month: "long", day: "numeric" });
                   const svcNames = card.services.map((s: { name: string }) => s.name).join(", ");
                   const hasMat = card.materials.length > 0;
                   return (
@@ -621,6 +640,11 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
               placeholder="0"
               style={{ ...inputStyle, borderColor: total > 0 ? "rgba(82,118,102,0.4)" : "var(--border)" }} />
           </div>}
+          {saveErr && (
+            <div style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
+              ⚠ {saveErr}
+            </div>
+          )}
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
             <button type="button" onClick={reset}
               style={{ flex: "0 0 auto", padding: "0.7rem 1rem", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}
@@ -830,9 +854,10 @@ export function userColor(name: string | null | undefined) {
 
 export function buildVisitGroups<T extends {
   id: string; date: string | Date; type: string; amount: number; guestCardId?: string | null; visitGroupId?: string | null;
+  createdAt?: string | Date | null;
   createdBy?: { id: string; name: string | null } | null;
 }>(visibleEntries: T[]) {
-  type VG = { key: string; date: string; cardId: string | null; entries: T[]; totalRevenue: number; totalMaterial: number };
+  type VG = { key: string; date: string; cardId: string | null; entries: T[]; totalRevenue: number; totalMaterial: number; latestCreatedAt: number };
   const visitGroups: VG[] = [];
   const cardGroupMap: Record<string, VG> = {};
   const visitGroupMap: Record<string, VG> = {};
@@ -840,36 +865,46 @@ export function buildVisitGroups<T extends {
     const dateKey   = toDateStr(new Date(e.date));
     const cardId    = e.guestCardId ?? null;
     const visitId   = e.visitGroupId ?? null;
+    const ts        = e.createdAt ? new Date(e.createdAt).getTime() : 0;
     if (cardId && cardGroupMap[cardId]) {
       const g = cardGroupMap[cardId]!;
       g.entries.push(e);
       if (e.type === "revenue")  g.totalRevenue  += e.amount;
       if (e.type === "material") g.totalMaterial += e.amount;
+      if (ts > g.latestCreatedAt) g.latestCreatedAt = ts;
     } else if (!cardId && visitId && visitGroupMap[visitId]) {
       const g = visitGroupMap[visitId]!;
       g.entries.push(e);
       if (e.type === "revenue")  g.totalRevenue  += e.amount;
       if (e.type === "material") g.totalMaterial += e.amount;
+      if (ts > g.latestCreatedAt) g.latestCreatedAt = ts;
     } else {
-      const g: VG = { key: cardId ?? visitId ?? e.id, date: dateKey, cardId, entries: [e], totalRevenue: e.type === "revenue" ? e.amount : 0, totalMaterial: e.type === "material" ? e.amount : 0 };
+      const g: VG = { key: cardId ?? visitId ?? e.id, date: dateKey, cardId, entries: [e], totalRevenue: e.type === "revenue" ? e.amount : 0, totalMaterial: e.type === "material" ? e.amount : 0, latestCreatedAt: ts };
       visitGroups.push(g);
       if (cardId) cardGroupMap[cardId] = g;
       if (!cardId && visitId) visitGroupMap[visitId] = g;
     }
   });
+  // Top 4 legutóbb mentett (createdAt szerint)
+  const recentGroups = [...visitGroups].sort((a, b) => b.latestCreatedAt - a.latestCreatedAt).slice(0, 4);
+  const recentKeys   = new Set(recentGroups.map(g => g.key));
   const byDate: Record<string, VG[]> = {};
-  visitGroups.forEach(g => { (byDate[g.date] ??= []).push(g); });
+  visitGroups.filter(g => !recentKeys.has(g.key)).forEach(g => { (byDate[g.date] ??= []).push(g); });
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-  return { visitGroups, byDate, sortedDates };
+  return { visitGroups, byDate, sortedDates, recentGroups };
 }
 
 export default function FinancesClient({ isAdmin = true, userId = "", canSeeProfit = false }: { isAdmin?: boolean; userId?: string; canSeeProfit?: boolean }) {
   const now = new Date();
-  const year  = now.getFullYear();
-  const month = now.getMonth() + 1;
   const todayStr = toDateStr(now);
 
-  const [showOther, setShowOther] = useState(false);
+  const [viewYear,  setViewYear]  = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1);
+  const year  = viewYear;
+  const month = viewMonth;
+
+  const [showOther,   setShowOther]   = useState(false);
+  const [editCardId,  setEditCardId]  = useState<string | null>(null);
 
   const utils = api.useUtils();
   const inv = () => {
@@ -881,11 +916,24 @@ export default function FinancesClient({ isAdmin = true, userId = "", canSeeProf
   const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
 
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material");
-  const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
+  const { byDate, sortedDates, recentGroups } = buildVisitGroups(visibleEntries);
+
+  function prevMonth() {
+    if (viewMonth === 1) { setViewYear(y => y - 1); setViewMonth(12); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth() + 1;
+    if (isCurrentMonth) return;
+    if (viewMonth === 12) { setViewYear(y => y + 1); setViewMonth(1); }
+    else setViewMonth(m => m + 1);
+  }
+  const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth() + 1;
 
   return (
     <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 800 }}>
-      {showOther && <OtherModal onClose={() => setShowOther(false)} year={year} month={month} isAdmin={isAdmin} />}
+      {showOther  && <OtherModal onClose={() => setShowOther(false)} year={year} month={month} isAdmin={isAdmin} />}
+      {editCardId && <CardEditById cardId={editCardId} onClose={() => setEditCardId(null)} />}
 
       {/* Title */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
@@ -900,14 +948,28 @@ export default function FinancesClient({ isAdmin = true, userId = "", canSeeProf
       {/* Visit entry form */}
       <VisitEntry userId={userId} isAdmin={isAdmin} onSaved={inv} />
 
-      {/* Current month entry list */}
-      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.75rem" }}>
-        ◈ {MONTHS[month - 1]} bejegyzései
+      {/* Month selector + entry list header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase" }}>
+          ◈ {MONTHS[month - 1]} {year !== now.getFullYear() ? year : ""} bejegyzései
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <button onClick={prevMonth} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 7, color: "var(--text-muted)", cursor: "pointer", padding: "0.25rem 0.6rem", fontSize: "0.85rem", lineHeight: 1, transition: "border-color 0.2s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--color-teal)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>‹</button>
+          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", color: "var(--color-teal)", minWidth: 90, textAlign: "center" }}>
+            {MONTHS[month - 1]} {year}
+          </span>
+          <button onClick={nextMonth} disabled={isCurrentMonth} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 7, color: isCurrentMonth ? "var(--text-dim)" : "var(--text-muted)", cursor: isCurrentMonth ? "default" : "pointer", padding: "0.25rem 0.6rem", fontSize: "0.85rem", lineHeight: 1, opacity: isCurrentMonth ? 0.35 : 1, transition: "border-color 0.2s" }}
+            onMouseEnter={e => { if (!isCurrentMonth) (e.currentTarget as HTMLElement).style.borderColor = "var(--color-teal)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>›</button>
+        </div>
       </div>
 
       <EntryList
         byDate={byDate}
         sortedDates={sortedDates}
+        recentGroups={recentGroups}
         todayStr={todayStr}
         isAdmin={isAdmin}
         ownerId={userId}
@@ -916,6 +978,7 @@ export default function FinancesClient({ isAdmin = true, userId = "", canSeeProf
         onDelete={isAdmin ? (ids) => ids.forEach(id => del.mutate({ id })) : undefined}
         onUpdateDate={isAdmin ? (ids, date, cardId) => updateDate.mutate({ entryIds: ids, date, guestCardId: cardId }) : undefined}
         isSavingDate={updateDate.isPending}
+        onEditCard={isAdmin ? (cardId) => setEditCardId(cardId) : undefined}
         emptyMessage="Ebben a hónapban még nincsenek bejegyzések. ✦"
       />
     </div>

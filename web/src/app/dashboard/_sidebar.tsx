@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "~/app/_theme-toggle";
+import { useTheme } from "~/app/_theme-provider";
 import { logout } from "./_actions";
 
 const NAV_ADMIN = [
@@ -20,6 +21,7 @@ const NAV_STAFF = [
   { key: "calendar",     icon: "🌙", label: "Munkanaptár",    href: "/dashboard/calendar" },
   { key: "finances",     icon: "⚗️", label: "Pénzügyek",      href: "/dashboard/finances" },
   { key: "clients",      icon: "📖", label: "Recept könyv",   href: "/dashboard/guests" },
+  { key: "expenses",     icon: "📜", label: "Saját kiadások", href: "/dashboard/expenses" },
   { key: "services",     icon: "✄", label: "Árlista",        href: "/dashboard/services" },
 ];
 
@@ -27,7 +29,7 @@ function initials(name?: string | null) {
   return (name ?? "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
-const S = {
+const S_DARK = {
   gold:         "#c8a840",
   goldBright:   "#e8c84a",
   goldDim:      "rgba(200,168,64,0.50)",
@@ -35,12 +37,28 @@ const S = {
   text:         "rgba(240,228,204,0.80)",
   textBright:   "#f0e4cc",
   textDim:      "rgba(240,228,204,0.42)",
-  /* Active = purple, like the spell book mockup */
   activeColor:  "#c4a0f0",
   activeBg:     "rgba(110,60,200,0.22)",
   activeBorder: "rgba(140,80,220,0.55)",
   activeGlow:   "0 0 18px rgba(110,60,200,0.30), inset 0 0 14px rgba(100,50,180,0.12)",
   hoverBg:      "rgba(200,168,64,0.08)",
+  border:       "rgba(200,168,64,0.12)",
+};
+
+const S_LIGHT = {
+  gold:         "#8a5a20",
+  goldBright:   "#a06a28",
+  goldDim:      "rgba(122,80,32,0.55)",
+  goldFaint:    "rgba(122,80,32,0.18)",
+  text:         "rgba(26,14,6,0.72)",
+  textBright:   "#1a0e06",
+  textDim:      "rgba(26,14,6,0.40)",
+  activeColor:  "#6a4a9a",
+  activeBg:     "rgba(106,74,154,0.14)",
+  activeBorder: "rgba(106,74,154,0.42)",
+  activeGlow:   "0 0 18px rgba(106,74,154,0.18), inset 0 0 14px rgba(90,60,140,0.08)",
+  hoverBg:      "rgba(122,80,32,0.08)",
+  border:       "rgba(122,80,32,0.12)",
 };
 
 export default function SidebarLayout({
@@ -53,6 +71,8 @@ export default function SidebarLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { theme } = useTheme();
+  const S = theme === "dark" ? S_DARK : S_LIGHT;
   const NAV = user.role === "admin" ? NAV_ADMIN : NAV_STAFF;
 
   return (
@@ -69,7 +89,7 @@ export default function SidebarLayout({
         flexDirection: "column",
         padding: "0 1rem 1.25rem",
         background: "var(--bg-sidebar)",
-        borderRight: "1px solid rgba(200,168,64,0.12)",
+        borderRight: `1px solid ${S.border}`,
         overflowY: "auto",
       }}>
 

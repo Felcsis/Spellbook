@@ -47,6 +47,20 @@ export const guestsRouter = createTRPCRouter({
     })
   ),
 
+  getCard: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ ctx, input }) =>
+      ctx.db.guestCard.findUnique({
+        where: { id: input.id },
+        include: {
+          guest:     true,
+          worker:    { select: { id: true, name: true } },
+          services:  true,
+          materials: true,
+        },
+      })
+    ),
+
   // Guest cards
   listCards: protectedProcedure
     .input(z.object({ guestId: z.string().optional() }))

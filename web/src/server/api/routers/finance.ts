@@ -22,7 +22,7 @@ export const financeRouter = createTRPCRouter({
             ],
           }),
         },
-        orderBy: { date: "desc" },
+        orderBy: { createdAt: "desc" },
         include: {
           createdBy: { select: { id: true, name: true } },
           workDay: {
@@ -69,6 +69,24 @@ export const financeRouter = createTRPCRouter({
         },
       });
     }),
+
+  updateEntry: protectedProcedure
+    .input(z.object({
+      id:          z.string(),
+      amount:      z.number().positive().optional(),
+      description: z.string().optional(),
+      date:        z.string().optional(),
+    }))
+    .mutation(({ ctx, input }) =>
+      ctx.db.financeEntry.update({
+        where: { id: input.id },
+        data: {
+          ...(input.amount      !== undefined && { amount: input.amount }),
+          ...(input.description !== undefined && { description: input.description }),
+          ...(input.date        !== undefined && { date: new Date(input.date) }),
+        },
+      })
+    ),
 
   updateDate: protectedProcedure
     .input(z.object({

@@ -153,7 +153,7 @@ export default function DashboardClient({
                     {e.description && <span style={{ color: CREAM_DIM, marginLeft: "0.4rem", fontSize: "0.85rem" }}>— {e.description}</span>}
                   </div>
                   <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.12em", color: GOLD_DIM, marginTop: "0.15rem" }}>
-                    {new Date(e.date).toLocaleDateString("hu-HU", { month: "short", day: "numeric" })}
+                    {new Date(e.date).toLocaleDateString("hu-HU", { timeZone: "UTC", month: "short", day: "numeric" })}
                   </div>
                 </div>
                 <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: GOLD, fontWeight: 600, whiteSpace: "nowrap", alignSelf: "center" }}>

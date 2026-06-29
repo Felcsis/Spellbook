@@ -208,7 +208,7 @@ export default function PdfExportButton({ isAdmin }: { isAdmin: boolean }) {
           body: allEntries
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .map(e => [
-              new Date(e.date).toLocaleDateString("hu-HU", { month: "short", day: "numeric" }),
+              new Date(e.date).toLocaleDateString("hu-HU", { timeZone: "UTC", month: "short", day: "numeric" }),
               TYPE_HU[e.type] ?? e.type,
               (e.description ?? "").slice(0, 55),
               fmt(e.amount),

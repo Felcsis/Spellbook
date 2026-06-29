@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import type { ParsedCategory } from "~/app/api/import-pdf/route";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Service = {
@@ -441,12 +442,163 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+// ── PDF Import Modal ──────────────────────────────────────────────────────
+function PdfImportModal({ priceListType, onClose }: { priceListType: PriceList; onClose: () => void }) {
+  const utils = api.useUtils();
+  const bulkImport = api.services.bulkImport.useMutation({
+    onSuccess: () => { void utils.services.listCategories.invalidate(); onClose(); },
+  });
+
+  const [step, setStep] = useState<"upload" | "preview">("upload");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [categories, setCategories] = useState<ParsedCategory[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    if (!file.name.endsWith(".pdf")) { setError("Csak PDF fájlt lehet feltölteni."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("pdf", file);
+      const res = await fetch("/api/import-pdf", { method: "POST", body: form });
+      const json = await res.json() as { categories?: ParsedCategory[]; error?: string };
+      if (!res.ok || json.error) { setError(json.error ?? "Ismeretlen hiba."); return; }
+      setCategories(json.categories ?? []);
+      setStep("preview");
+    } catch {
+      setError("Hálózati hiba. Próbáld újra.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateServiceName(ci: number, si: number, val: string) {
+    setCategories(prev => prev.map((c, i) => i !== ci ? c : {
+      ...c, services: c.services.map((s, j) => j !== si ? s : { ...s, name: val }),
+    }));
+  }
+  function updateServicePrice(ci: number, si: number, val: string) {
+    const n = parseInt(val.replace(/\D/g, ""), 10);
+    setCategories(prev => prev.map((c, i) => i !== ci ? c : {
+      ...c, services: c.services.map((s, j) => j !== si ? s : { ...s, price: isNaN(n) ? s.price : n }),
+    }));
+  }
+  function removeService(ci: number, si: number) {
+    setCategories(prev => prev.map((c, i) => i !== ci ? c : {
+      ...c, services: c.services.filter((_, j) => j !== si),
+    }).filter(c => c.services.length > 0));
+  }
+  function updateCatName(ci: number, val: string) {
+    setCategories(prev => prev.map((c, i) => i !== ci ? c : { ...c, name: val }));
+  }
+
+  const totalServices = categories.reduce((s, c) => s + c.services.length, 0);
+
+  return createPortal(
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 16, padding: "2rem", width: step === "preview" ? 640 : 440, maxWidth: "calc(100vw - 2rem)", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-modal)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+          <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em" }}>
+            {step === "upload" ? "PDF árlista importálása" : `Előnézet — ${totalServices} szolgáltatás`}
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: dimmed, fontSize: "1.2rem" }}>✕</button>
+        </div>
+
+        {/* Upload step */}
+        {step === "upload" && (
+          <div>
+            <div
+              style={{ border: "2px dashed var(--border)", borderRadius: 12, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", transition: "border-color 0.2s" }}
+              onClick={() => fileRef.current?.click()}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) void handleFile(f); }}
+            >
+              <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📄</div>
+              <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "0.8rem", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>
+                {loading ? "Feldolgozás..." : "Húzd ide a PDF-et vagy kattints"}
+              </div>
+              <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.9rem" }}>
+                Szöveges árlistát tartalmazó PDF fájl
+              </div>
+            </div>
+            <input ref={fileRef} type="file" accept=".pdf" style={{ display: "none" }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) void handleFile(f); }} />
+            {error && <div style={{ color: "#e05555", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", marginTop: "1rem", textAlign: "center" }}>{error}</div>}
+            <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.82rem", marginTop: "1.25rem", lineHeight: 1.6 }}>
+              <b style={{ color: cream }}>Tipp:</b> Akkor működik legjobban ha a PDF szöveges (nem szkennelt kép), és az árakat számként tartalmazza (pl. &quot;Hajvágás 5000 Ft&quot;).
+            </div>
+          </div>
+        )}
+
+        {/* Preview step */}
+        {step === "preview" && (
+          <>
+            <div style={{ overflowY: "auto", flex: 1, paddingRight: "0.25rem" }}>
+              {categories.map((cat, ci) => (
+                <div key={ci} style={{ marginBottom: "1.5rem" }}>
+                  <input
+                    value={cat.name}
+                    onChange={e => updateCatName(ci, e.target.value)}
+                    style={{ ...inputStyle, fontFamily: "var(--font-cinzel)", fontSize: "0.85rem", color: gold, marginBottom: "0.75rem" }}
+                  />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                    {cat.services.map((svc, si) => (
+                      <div key={si} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                        <input
+                          value={svc.name}
+                          onChange={e => updateServiceName(ci, si, e.target.value)}
+                          style={{ ...inputStyle, flex: 3 }}
+                          placeholder="Szolgáltatás neve"
+                        />
+                        <input
+                          type="number"
+                          value={svc.price}
+                          onChange={e => updateServicePrice(ci, si, e.target.value)}
+                          style={{ ...inputStyle, flex: 1 }}
+                          placeholder="Ár"
+                        />
+                        <span style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.85rem", whiteSpace: "nowrap" }}>Ft</span>
+                        <button onClick={() => removeService(ci, si)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(220,50,50,0.6)", fontSize: "1rem", flexShrink: 0 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {error && <div style={{ color: "#e05555", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", margin: "0.75rem 0" }}>{error}</div>}
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "space-between", marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
+              <Btn variant="ghost" onClick={() => setStep("upload")}>← Vissza</Btn>
+              <Btn
+                onClick={() => bulkImport.mutate({ priceListType, categories })}
+                disabled={bulkImport.isPending || categories.length === 0}
+              >
+                {bulkImport.isPending ? "Importálás..." : `Importálás (${totalServices} tétel)`}
+              </Btn>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
   const { data: categories = [], isLoading } = api.services.listCategories.useQuery();
-  const [tab,       setTab]       = useState<"services" | "materials">("services");
-  const [priceList, setPriceList] = useState<PriceList>(isAdmin ? "master" : "beginner");
-  const [addCat,    setAddCat]    = useState(false);
+  const [tab,        setTab]       = useState<"services" | "materials">("services");
+  const [priceList,  setPriceList] = useState<PriceList>(isAdmin ? "master" : "beginner");
+  const [addCat,     setAddCat]    = useState(false);
+  const [pdfImport,  setPdfImport] = useState(false);
 
   const visibleCats = categories.filter(c => c.priceListType === priceList);
 
@@ -462,7 +614,12 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
             Árlista és felhasznált anyagok kezelése
           </p>
         </div>
-        {tab === "services" && isAdmin && <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>}
+        {tab === "services" && isAdmin && (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <Btn variant="ghost" onClick={() => setPdfImport(true)}>📄 PDF import</Btn>
+            <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>
+          </div>
+        )}
       </div>
 
       {/* Main tab switcher */}
@@ -517,7 +674,8 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
       {/* Materials tab */}
       {tab === "materials" && <MaterialsPanel isAdmin={isAdmin} />}
 
-      {isAdmin && addCat && <CategoryModal priceListType={priceList} onClose={() => setAddCat(false)} />}
+      {isAdmin && addCat    && <CategoryModal priceListType={priceList} onClose={() => setAddCat(false)} />}
+      {isAdmin && pdfImport && <PdfImportModal priceListType={priceList} onClose={() => setPdfImport(false)} />}
     </div>
   );
 }
