@@ -1,5 +1,5 @@
 [build]
-rootDirectory = "web"
+dockerfilePath = "web/Dockerfile"
 
 [deploy]
 startCommand = "npm run start"
