@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { EditCardModal, fmt, MAT_OPTIONS } from "~/app/dashboard/_card-edit-modal";
 import type { GuestCardData, MatRow, SvcRow } from "~/app/dashboard/_card-edit-modal";
+import { useIsMobile } from "~/app/_responsive";
 
 const gold  = "var(--color-teal)";
 const cream = "var(--text-primary)";
@@ -230,6 +231,7 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
   isAdmin: boolean;
 }) {
   const utils = api.useUtils();
+  const isMobile = useIsMobile();
   const [open,        setOpen]        = useState(false);
   const [editingCard, setEditingCard] = useState<GuestCardData | null>(null);
   const [editGuest,   setEditGuest]   = useState(false);
@@ -254,12 +256,12 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px var(--bg-highlight)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
 
-      <div style={{ padding: "1.1rem 1.4rem", display: "flex", alignItems: "center", gap: "1rem", cursor: "pointer" }}
+      <div style={{ padding: "1.1rem 1.4rem", display: "flex", alignItems: "center", gap: "0.7rem 1rem", cursor: "pointer", flexWrap: isMobile ? "wrap" : "nowrap" }}
         onClick={() => setOpen(o => !o)}>
         <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg, var(--bg-active), var(--border))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "1rem", color: cream, flexShrink: 0, border: "1px solid var(--border)" }}>
           {(guest.name[0] ?? "?").toUpperCase()}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: isMobile ? "calc(100% - 3.7rem)" : 0 }}>
           <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.1rem", color: cream }}>{guest.name}</div>
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dim, display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <span>{guest.cards.length} látogatás</span>
@@ -268,7 +270,7 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
           </div>
         </div>
         {totalSpent > 0 && (
-          <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: gold, fontWeight: 700, flexShrink: 0 }}>{fmt(totalSpent)}</div>
+          <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: gold, fontWeight: 700, flexShrink: 0, marginLeft: isMobile ? "auto" : undefined }}>{fmt(totalSpent)}</div>
         )}
         {isAdmin && (
           <button type="button" onClick={e => { e.stopPropagation(); setEditGuest(v => !v); setOpen(true); }}
