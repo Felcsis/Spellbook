@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ThemeToggle } from "~/app/_theme-toggle";
+import { useIsMobile } from "~/app/_responsive";
 
 const USERS = [
   { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "#c9906a", glowRgb: "201,144,106" },
@@ -13,6 +14,7 @@ const USERS = [
 
 function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
@@ -36,13 +38,13 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
         background: "var(--bg-card)",
         border: `1px solid ${color}44`,
         borderRadius: "24px",
-        padding: "2.5rem 2rem",
+        padding: isMobile ? "1.75rem 1.25rem" : "2.5rem 2rem",
         backdropFilter: "blur(24px) saturate(160%)",
         boxShadow: `0 4px 32px rgba(${glowRgb},0.1), 0 1px 0 rgba(255,255,255,0.8) inset`,
         animation: "fadeInUp 0.75s cubic-bezier(0.16,1,0.3,1)",
-        flex: "1 1 280px",
-        maxWidth: 360,
-        minWidth: 260,
+        flex: isMobile ? "1 1 100%" : "1 1 280px",
+        maxWidth: isMobile ? "100%" : 360,
+        minWidth: isMobile ? 0 : 260,
       }}
     >
       <div className="mb-6 text-center">
@@ -197,7 +199,7 @@ export default function LoginPage() {
       </div>
 
       <main
-        className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-10 p-8"
+        className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-10 p-4 sm:p-8"
         style={{ animation: "fadeIn 0.6s ease" }}
       >
         <div className="text-center">
