@@ -82,8 +82,30 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Rejtett felhasználónév-mező — ettől ajánlja fel a böngésző a jelszó mentését,
+            és három különböző fiókként tárolja Feliciát/Gittát/Lilit. */}
+        <input
+          type="email"
+          name="username"
+          autoComplete="username"
+          value={email}
+          readOnly
+          tabIndex={-1}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            border: 0,
+          }}
+        />
         <div className="flex flex-col gap-2">
           <label
+            htmlFor={`pw-${email}`}
             style={{
               fontFamily: "var(--font-cinzel)",
               fontSize: "0.6rem",
@@ -95,7 +117,10 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
             Jelszó
           </label>
           <input
+            id={`pw-${email}`}
             type="password"
+            name="password"
+            autoComplete="current-password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="· · · · · · · ·"
