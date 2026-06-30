@@ -7,7 +7,6 @@ import { ThemeProvider } from "./_theme-provider";
 export const metadata: Metadata = {
   title: "Salon Spellbook",
   description: "Varázslatos szépség, minden napra",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
