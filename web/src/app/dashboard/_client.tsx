@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
+import { useIsMobile } from "~/app/_responsive";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -28,6 +29,7 @@ export default function DashboardClient({
   userId?: string;
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -97,7 +99,7 @@ export default function DashboardClient({
       </div>
 
       {/* ── Stat boxes ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "1.75rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: "1rem", marginBottom: "1.75rem" }}>
         {STATS.map(s => (
           <div key={s.label} style={{
             background: CARD_BG,
@@ -126,7 +128,7 @@ export default function DashboardClient({
       </div>
 
       {/* ── Two-column: recent entries + stats ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", marginBottom: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1.25rem", marginBottom: "1.5rem" }}>
 
         {/* Recent entries */}
         <div style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, borderRadius: 14, padding: "1.25rem" }}>

@@ -33,6 +33,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       onClick={onClose}
     >
       <div
+        className="modal-card"
         style={{ background: "var(--bg-modal)", border, borderRadius: 14, padding: "2rem", width: 420, maxWidth: "calc(100vw - 2rem)", boxShadow: "var(--shadow-modal)" }}
         onClick={e => e.stopPropagation()}
       >
@@ -405,7 +406,7 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div>
       {/* Add row — admin only */}
-      {isAdmin && <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem" }}>
+      {isAdmin && <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem" }}>
         <div style={{ flex: 2 }}>
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Anyag neve</div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Szőkítőpor, L'Oréal festék…" style={inputStyle}

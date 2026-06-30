@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "~/app/_theme-toggle";
 import { useTheme } from "~/app/_theme-provider";
@@ -74,29 +75,46 @@ export default function SidebarLayout({
   const { theme } = useTheme();
   const S = theme === "dark" ? S_DARK : S_LIGHT;
   const NAV = user.role === "admin" ? NAV_ADMIN : NAV_STAFF;
+  const [open, setOpen] = useState(false);
+
+  // Mobil: navigálás közben zárjuk a drawert
+  const go = (href?: string) => {
+    setOpen(false);
+    if (href) router.push(href);
+  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-bg)" }}>
 
+      {/* ── Hamburger (csak mobilon látszik) ── */}
+      <button
+        className="sb-hamburger"
+        aria-label="Menü"
+        onClick={() => setOpen(true)}
+      >
+        ☰
+      </button>
+
+      {/* ── Sötétítő háttér (csak mobilon, nyitott drawernél) ── */}
+      {open && <div className="sb-backdrop" onClick={() => setOpen(false)} />}
+
       {/* ── Sidebar ── */}
-      <nav style={{
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        width: 280,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        padding: "0 1rem 1.25rem",
-        background: "var(--bg-sidebar)",
-        borderRight: `1px solid ${S.border}`,
-        overflowY: "auto",
-      }}>
+      <nav
+        className={`sb-nav${open ? " sb-open" : ""}`}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          padding: "0 1rem 1.25rem",
+          background: "var(--bg-sidebar)",
+          borderRight: `1px solid ${S.border}`,
+          overflowY: "auto",
+        }}
+      >
 
         {/* ── Spell Book header ── */}
         <div
           style={{ textAlign: "center", padding: "1.5rem 0 1.2rem", cursor: "pointer" }}
-          onClick={() => router.push("/dashboard")}
+          onClick={() => go("/dashboard")}
         >
           <div style={{
             fontSize: "1.8rem", lineHeight: 1, marginBottom: "0.4rem",
@@ -135,7 +153,7 @@ export default function SidebarLayout({
             return (
               <button
                 key={key}
-                onClick={() => href ? router.push(href) : undefined}
+                onClick={() => href ? go(href) : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -244,13 +262,7 @@ export default function SidebarLayout({
       </nav>
 
       {/* ── Main content ── */}
-      <main style={{
-        flex: 1,
-        position: "relative",
-        overflowY: "auto",
-        padding: "2.5rem 3rem",
-        background: "var(--color-bg2)",
-      }}>
+      <main className="sb-main">
         {children}
       </main>
     </div>

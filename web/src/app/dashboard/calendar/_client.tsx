@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import { useIsMobile } from "~/app/_responsive";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -180,7 +181,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
   return createPortal(
     <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "3rem 1.5rem", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", animation: "fadeIn 0.2s ease" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
+      <div className="modal-card" style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "20px", padding: "2rem 2.25rem", width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
@@ -577,9 +578,9 @@ function WorkerChip({ entry, color, expanded, onClick }: { entry: WorkDay; color
 }
 
 // ── Day column ────────────────────────────────────────────────────────────────
-function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors, isToday, onOpen, compact = false }: {
+function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors, isToday, onOpen, compact = false, colMinWidth = 0 }: {
   date: Date; workEntries: WorkDay[]; costEntries: FinanceEntry[]; guestCards?: GuestCard[];
-  userColors: Record<string, string>; isToday: boolean; onOpen: (ds: string) => void; compact?: boolean;
+  userColors: Record<string, string>; isToday: boolean; onOpen: (ds: string) => void; compact?: boolean; colMinWidth?: number;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const dateStr    = toDateStr(date);
@@ -589,7 +590,7 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
   const dow        = (date.getDay() + 6) % 7;
 
   return (
-    <div style={{ flex: 1, minWidth: 0, background: isToday ? "var(--bg-today)" : "transparent", border: isToday ? "1px solid var(--border)" : "1px solid var(--bg-highlight)", borderRadius: "14px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, minWidth: colMinWidth || 0, background: isToday ? "var(--bg-today)" : "transparent", border: isToday ? "1px solid var(--border)" : "1px solid var(--bg-highlight)", borderRadius: "14px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Header */}
       <div onClick={() => onOpen(dateStr)}
         style={{ padding: compact ? "0.55rem 0.7rem" : "0.85rem 1rem", borderBottom: "1px solid var(--bg-highlight)", cursor: "pointer", background: isToday ? "var(--bg-highlight)" : "var(--bg-panel)", transition: "background 0.2s" }}
@@ -645,11 +646,11 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
 }
 
 // ── Month view ────────────────────────────────────────────────────────────────
-function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColors, today, onOpen }: {
+function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColors, today, onOpen, isMobile = false }: {
   year: number; month: number;
   byDate: Record<string, WorkDay[]>; byCostDate: Record<string, FinanceEntry[]>;
   byGuestCardDate: Record<string, GuestCard[]>;
-  userColors: Record<string, string>; today: string; onOpen: (d: string) => void;
+  userColors: Record<string, string>; today: string; onOpen: (d: string) => void; isMobile?: boolean;
 }) {
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const firstDay    = new Date(year, month - 1, 1);
@@ -659,7 +660,8 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden" }}>
+    <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden", overflowX: isMobile ? "auto" : "hidden" }}>
+     <div style={{ minWidth: isMobile ? 660 : "auto" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--bg-highlight)" }}>
         {DAYS_S.map(d => <div key={d} style={{ padding: "0.6rem 0", textAlign: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>{d}</div>)}
       </div>
@@ -727,6 +729,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
           );
         })}
       </div>
+     </div>
     </div>
   );
 }
@@ -734,6 +737,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CalendarClient() {
   const now = new Date();
+  const isMobile = useIsMobile();
   const [view,   setView]   = useState<View>("month");
   const [anchor, setAnchor] = useState(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
   const [modalDate, setModalDate] = useState<string | null>(null);
@@ -864,17 +868,18 @@ export default function CalendarClient() {
       {/* Calendar body */}
       {view === "month" && (
         <MonthView year={qYear} month={qMonth} byDate={byDate} byCostDate={byCostDate}
-          byGuestCardDate={byGuestCardDate} userColors={userColors} today={todayStr} onOpen={setModalDate} />
+          byGuestCardDate={byGuestCardDate} userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile} />
       )}
       {(view === "week" || view === "3day" || view === "day") && (
-        <div style={{ display: "flex", gap: "0.6rem" }}>
+        <div style={{ display: "flex", gap: "0.6rem", overflowX: isMobile && view !== "day" ? "auto" : "visible", paddingBottom: isMobile && view !== "day" ? "0.5rem" : 0 }}>
           {columnDays().map(date => (
             <DayColumn key={toDateStr(date)} date={date}
               workEntries={byDate[toDateStr(date)] ?? []}
               costEntries={byCostDate[toDateStr(date)] ?? []}
               guestCards={byGuestCardDate[toDateStr(date)] ?? []}
               userColors={userColors} isToday={toDateStr(date) === todayStr}
-              onOpen={setModalDate} compact={view === "week"} />
+              onOpen={setModalDate} compact={view === "week"}
+              colMinWidth={isMobile && view !== "day" ? 158 : 0} />
           ))}
         </div>
       )}
