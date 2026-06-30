@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import { useIsMobile } from "~/app/_responsive";
 
 const USER_COLORS: Record<string, string> = {
   Felicia: "#c9906a",
@@ -295,6 +296,7 @@ function StaffFinances({ users }: { users: UserRow[] }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AdminClient() {
+  const isMobile = useIsMobile();
   const { data: users = [], refetch } = api.admin.listUsers.useQuery();
   const [showCreate, setShowCreate] = useState(false);
   const [editUser, setEditUser]     = useState<UserRow | null>(null);
@@ -312,7 +314,7 @@ export default function AdminClient() {
   return (
     <div style={{ maxWidth: 680 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.25rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
         <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.5rem", color: "var(--color-teal)", margin: 0 }}>
           ✦ Admin felület
         </h1>
@@ -343,6 +345,7 @@ export default function AdminClient() {
                 display: "flex",
                 alignItems: "center",
                 gap: "1rem",
+                flexWrap: isMobile ? "wrap" : "nowrap",
               }}
             >
               {/* Avatar */}
@@ -357,7 +360,7 @@ export default function AdminClient() {
               </div>
 
               {/* Info */}
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: isMobile ? "calc(100% - 3.5rem)" : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.1rem", color: uc, fontWeight: 600 }}>
                     {u.name}
@@ -376,7 +379,7 @@ export default function AdminClient() {
               </div>
 
               {/* Actions */}
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div style={{ display: "flex", gap: "0.5rem", marginLeft: isMobile ? "auto" : undefined }}>
                 <button
                   onClick={() => setEditUser(u)}
                   style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.35rem 0.8rem", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.85rem", fontFamily: "var(--font-cormorant)" }}

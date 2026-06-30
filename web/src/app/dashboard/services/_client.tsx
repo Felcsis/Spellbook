@@ -606,7 +606,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div style={{ maxWidth: 760 }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem", marginBottom: "2rem" }}>
         <div>
           <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.6rem", color: gold, letterSpacing: "0.12em", margin: 0, textShadow: "0 0 24px var(--border)" }}>
             ✂ Szolgáltatások & Anyagtár
