@@ -302,14 +302,15 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
               <input value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Megjegyzés (pl. allergia, preferenciák…)" style={inputStyle} />
               <div style={{ display: "flex", gap: "0.5rem", justifyContent: "space-between", alignItems: "center" }}>
                 <button onClick={() => { if (confirm("Biztosan törlöd ezt a vendéget és az összes kártyáját?")) deleteGuest.mutate({ id: guest.id }); }}
-                  style={{ background: "none", border: "none", color: "rgba(248,113,113,0.4)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>
+                  style={{ padding: "0.35rem 0.85rem", borderRadius: 7, border: "1px solid rgba(248,113,113,0.55)", background: "rgba(248,113,113,0.12)", color: "#f87171", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>
                   Vendég törlése
                 </button>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button onClick={() => setEditGuest(false)} style={{ padding: "0.35rem 0.85rem", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: dim, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>Mégsem</button>
                   <button onClick={() => updateGuest.mutate({ id: guest.id, name: editName.trim() || guest.name, phone: editPhone || undefined, notes: editNotes || undefined })}
                     disabled={updateGuest.isPending}
-                    style={{ padding: "0.35rem 1rem", borderRadius: 7, border: "1px solid var(--color-teal)", background: "var(--color-teal)", color: "var(--bg-base)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", fontWeight: 700 }}>
+                    className="btn-gold"
+                    style={{ padding: "0.35rem 1rem", borderRadius: 7, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", fontWeight: 700 }}>
                     {updateGuest.isPending ? "…" : "Mentés"}
                   </button>
                 </div>
