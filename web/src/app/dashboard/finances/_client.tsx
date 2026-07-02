@@ -51,7 +51,7 @@ const MAT_OPTIONS = [
   { name: "Pigment eltávolító", unitPrice: 5000, unit: "csomag" },
 ];
 
-type SelSvc = { id: string; name: string; price: number; duration: number; categoryName: string; gender?: string };
+type SelSvc = { uid: string; id: string; name: string; price: number; duration: number; categoryName: string; gender?: string; hours: number };
 type MatRow = { name: string; brand: string; colorCode: string; grams: string; unitPrice: number; lineTotal: number };
 
 const COLOR_KEYWORDS = ["festés","festek","szőkít","toner","féltartós","tartós festék","melír","balayage","ombre","pigment","highlight","szín"];
@@ -133,7 +133,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
     ? MAT_OPTIONS.filter(m => m.name.toLowerCase().includes(matSearch.toLowerCase()))
     : MAT_OPTIONS;
 
-  const autoTotal    = selSvcs.reduce((s, x) => s + x.price, 0);
+  const autoTotal    = selSvcs.reduce((s, x) => s + x.price * x.hours, 0);
   const matTotal     = matRows.reduce((s, r) => s + r.lineTotal, 0);
   const total        = isManual ? (parseFloat(manualAmt) || 0) : autoTotal;
   const requiresMat  = needsMaterial(selSvcs);
@@ -175,9 +175,9 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
   function loadPrevCard(card: typeof guestCards[0]) {
     if (!isFamilyMode) {
       setSelSvcs(card.services.map(s => ({
-        id: s.id, name: s.name, price: s.price,
+        uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price,
         duration: s.duration ?? 0, categoryName: s.categoryName ?? "",
-        gender: s.gender ?? undefined,
+        gender: s.gender ?? undefined, hours: 1,
       })));
     }
     const mats = card.materials.map(m => ({
@@ -240,7 +240,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
           guestId: finalGuestId,
           workerId,
           date,
-          services: selSvcs.map(s => ({ name: s.name, price: s.price, duration: s.duration, gender: s.gender, categoryName: s.categoryName })),
+          services: selSvcs.map(s => ({ name: s.hours !== 1 ? `${s.name} (${s.hours} óra)` : s.name, price: s.price * s.hours, duration: Math.round(s.duration * s.hours), gender: s.gender, categoryName: s.categoryName })),
           materials: validMats.map(r => ({
             name: r.name, brand: r.brand || undefined, colorCode: r.colorCode || undefined,
             grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
@@ -251,7 +251,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
         void card; // cardId nincs tovább szükség
       } else {
         // Vendég nélküli bejegyzés: finance entry-ket itt hozzuk létre
-        const revenueDesc = selSvcs.map(s => s.name).join(", ") || "Vendég nélküli bevétel";
+        const revenueDesc = selSvcs.map(s => s.hours !== 1 ? `${s.name} (${s.hours} óra)` : s.name).join(", ") || "Vendég nélküli bevétel";
         await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
 
         await createFinance.mutateAsync({
@@ -332,10 +332,21 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
           {selSvcs.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.55rem" }}>
               {selSvcs.map(s => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.65rem", background: "rgba(82,118,102,0.1)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 8, flexWrap: "wrap" }}>
+                <div key={s.uid} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.65rem", background: "rgba(82,118,102,0.1)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 8, flexWrap: "wrap" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#527666", flex: 1, minWidth: 120 }}>{s.name}</span>
-                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(82,118,102,0.7)", fontWeight: 700 }}>{fmt(s.price)}</span>
-                  {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>{s.duration} perc</span>}
+                  {/* Óra szorzó */}
+                  <input
+                    type="number" min="0.5" step="0.5"
+                    value={s.hours}
+                    onChange={e => setSelSvcs(p => p.map(x => x.uid === s.uid ? { ...x, hours: parseFloat(e.target.value) || 1 } : x))}
+                    style={{ width: 52, background: "var(--bg-card)", border: "1px solid rgba(82,118,102,0.35)", borderRadius: 6, padding: "0.18rem 0.4rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", textAlign: "center", outline: "none" }}
+                  />
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>óra</span>
+                  {s.hours !== 1 && (
+                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", color: "rgba(82,118,102,0.5)", letterSpacing: "0.08em" }}>{fmt(s.price)}/óra</span>
+                  )}
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(82,118,102,0.85)", fontWeight: 700 }}>{fmt(s.price * s.hours)}</span>
+                  {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>{Math.round(s.duration * s.hours)} perc</span>}
                   {(["nő", "férfi", "gyermek"] as const).map(g => {
                     const gColors: Record<string, { border: string; bg: string; text: string }> = {
                       nő:      { border: "rgba(232,180,200,0.7)", bg: "rgba(232,180,200,0.15)", text: "#e8b4c8" },
@@ -346,13 +357,13 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
                     const active = s.gender === g;
                     return (
                       <button key={g} type="button"
-                        onClick={() => setSelSvcs(p => p.map(x => x.id === s.id ? { ...x, gender: active ? undefined : g } : x))}
+                        onClick={() => setSelSvcs(p => p.map(x => x.uid === s.uid ? { ...x, gender: active ? undefined : g } : x))}
                         style={{ padding: "0.18rem 0.55rem", borderRadius: 5, border: `1px solid ${active ? gc.border : "var(--border)"}`, background: active ? gc.bg : "transparent", color: active ? gc.text : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.15s" }}>
                         {g === "nő" ? "Női" : g === "férfi" ? "Férfi" : "Gyermek"}
                       </button>
                     );
                   })}
-                  <button type="button" onClick={() => setSelSvcs(p => p.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: "rgba(82,118,102,0.4)", cursor: "pointer", fontSize: "0.75rem", marginLeft: "0.2rem" }}>✕</button>
+                  <button type="button" onClick={() => setSelSvcs(p => p.filter(x => x.uid !== s.uid))} style={{ background: "none", border: "none", color: "rgba(82,118,102,0.4)", cursor: "pointer", fontSize: "0.75rem", marginLeft: "0.2rem" }}>✕</button>
                 </div>
               ))}
             </div>
@@ -407,26 +418,19 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
                         <div style={{ padding: "0.5rem 0.9rem 0.2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.16em", color: "rgba(82,118,102,0.45)", textTransform: "uppercase" }}>
                           {cat.name}
                         </div>
-                        {catSvcs.map(s => {
-                          const already = !!selSvcs.find(x => x.id === s.id);
-                          return (
+                        {catSvcs.map(s => (
                             <div key={s.id}
                               onMouseDown={() => {
-                                if (already) {
-                                  setSelSvcs(p => p.filter(x => x.id !== s.id));
-                                } else {
-                                  setSelSvcs(p => [...p, { id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: cat.name }]);
-                                }
+                                setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: cat.name, hours: 1 }]);
                               }}
-                              style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.9rem", cursor: "pointer", transition: "background 0.12s", background: already ? "rgba(82,118,102,0.08)" : "transparent" }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(82,118,102,0.12)" : "rgba(82,118,102,0.06)"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "rgba(82,118,102,0.08)" : "transparent"; }}>
-                              <span style={{ width: 14, flexShrink: 0, color: "#527666", fontSize: "0.7rem", textAlign: "center" }}>{already ? "✓" : ""}</span>
-                              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "#527666" : "var(--text-primary)", flex: 1 }}>{s.name}</span>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: already ? "#527666" : "var(--text-soft)", fontWeight: 700, flexShrink: 0 }}>{fmt(s.price)}</span>
+                              style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.9rem", cursor: "pointer", transition: "background 0.12s" }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.06)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                              <span style={{ width: 14, flexShrink: 0 }} />
+                              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "var(--text-soft)", fontWeight: 700, flexShrink: 0 }}>{fmt(s.price)}</span>
                             </div>
-                          );
-                        })}
+                          ))}
                       </div>
                     );
                   })}

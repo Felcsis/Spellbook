@@ -578,7 +578,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                       return (
                         <div key={s.id}>
                           {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "var(--text-dim)", textTransform: "uppercase" }}>{s.categoryName}</div>}
-                          <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: s.categoryName }]); setSvcSearch(""); setSvcOpen(false); } }}
+                          <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: s.categoryName, hours: 1 }]); setSvcSearch(""); setSvcOpen(false); } }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
