@@ -188,6 +188,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                         type="number" min="0.5" step="0.5"
                         value={s.hours}
                         onChange={e => setSelSvcs(p => p.map(x => x.uid === s.uid ? { ...x, hours: parseFloat(e.target.value) || 1 } : x))}
+                        onFocus={e => e.target.select()}
                         style={{ width: 52, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 6, padding: "0.18rem 0.4rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", textAlign: "center", outline: "none" }}
                       />
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dim }}>óra</span>

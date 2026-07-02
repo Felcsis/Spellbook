@@ -339,6 +339,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
                     type="number" min="0.5" step="0.5"
                     value={s.hours}
                     onChange={e => setSelSvcs(p => p.map(x => x.uid === s.uid ? { ...x, hours: parseFloat(e.target.value) || 1 } : x))}
+                    onFocus={e => e.target.select()}
                     style={{ width: 52, background: "var(--bg-card)", border: "1px solid rgba(82,118,102,0.35)", borderRadius: 6, padding: "0.18rem 0.4rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", textAlign: "center", outline: "none" }}
                   />
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>óra</span>
