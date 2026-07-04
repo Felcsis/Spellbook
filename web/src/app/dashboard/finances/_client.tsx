@@ -64,7 +64,10 @@ function needsMaterial(svcs: SelSvc[]) {
   );
 }
 
-function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId: string; isAdmin: boolean }) {
+function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange }: {
+  onSaved: () => void; userId: string; isAdmin: boolean;
+  selectedWorkerId: string; onWorkerChange: (id: string) => void;
+}) {
   const utils = api.useUtils();
   const { data: categories = [] }  = api.services.listCategories.useQuery();
   const { data: allGuests = [] }   = api.guests.listGuests.useQuery();
@@ -74,8 +77,7 @@ function VisitEntry({ onSaved, userId, isAdmin }: { onSaved: () => void; userId:
   const createGuest        = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
   const createCard         = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
 
-  const [selectedWorkerId, setSelectedWorkerId] = useState(userId);
-  function switchWorker(id: string) { setSelectedWorkerId(id); setSelSvcs([]); setIsManual(false); setManualAmt(""); }
+  function switchWorker(id: string) { onWorkerChange(id); setSelSvcs([]); setIsManual(false); setManualAmt(""); }
 
   // Services
   const [selSvcs,   setSelSvcs]  = useState<SelSvc[]>([]);
@@ -908,15 +910,17 @@ export default function FinancesClient({ isAdmin = true, userId = "", canSeeProf
   const year  = viewYear;
   const month = viewMonth;
 
-  const [showOther,   setShowOther]   = useState(false);
-  const [editCardId,  setEditCardId]  = useState<string | null>(null);
+  const [showOther,        setShowOther]        = useState(false);
+  const [editCardId,       setEditCardId]       = useState<string | null>(null);
+  const [selectedWorkerId, setSelectedWorkerId] = useState(userId);
 
   const utils = api.useUtils();
   const inv = () => {
     void utils.finance.list.invalidate();
     void utils.calendar.month.invalidate();
   };
-  const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: !isAdmin ? userId : undefined });
+  const filterUserId = !isAdmin ? userId : (selectedWorkerId !== userId ? selectedWorkerId : undefined);
+  const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId });
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
   const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
 
@@ -951,7 +955,7 @@ export default function FinancesClient({ isAdmin = true, userId = "", canSeeProf
       </div>
 
       {/* Visit entry form */}
-      <VisitEntry userId={userId} isAdmin={isAdmin} onSaved={inv} />
+      <VisitEntry userId={userId} isAdmin={isAdmin} onSaved={inv} selectedWorkerId={selectedWorkerId} onWorkerChange={setSelectedWorkerId} />
 
       {/* Month selector + entry list header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
