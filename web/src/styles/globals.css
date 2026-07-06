@@ -253,6 +253,29 @@ html, body { overflow-x: hidden; max-width: 100%; }
   }
 }
 
+/* ── Szolgáltatás sor — mobilon időtartam elrejtve ── */
+@media (max-width: 640px) {
+  .svc-dur { display: none !important; }
+  .svc-row { gap: 0.4rem !important; }
+  .svc-price { min-width: 0 !important; font-size: 0.88rem !important; }
+}
+
+/* ── Anyagtár hozzáadás form — mobilon egymás alá ── */
+.mat-add-name  { flex: 2 1 160px; min-width: 0; }
+.mat-add-price { flex: 1 1 80px;  min-width: 0; }
+.mat-add-unit  { flex: 1 1 80px;  min-width: 0; }
+@media (max-width: 640px) {
+  .mat-add-name  { flex: 1 1 100% !important; }
+  .mat-add-price { flex: 1 1 calc(50% - 0.25rem) !important; }
+  .mat-add-unit  { flex: 1 1 calc(50% - 0.25rem) !important; }
+}
+
+/* ── Anyag sor — mobilon egység elrejtve ── */
+@media (max-width: 640px) {
+  .mat-unit { display: none !important; }
+  .mat-item-price { min-width: 0 !important; font-size: 0.88rem !important; }
+}
+
 /* ── Tablet (641–1024px) — szűkebb sidebar, mérsékelt padding ── */
 @media (min-width: 641px) and (max-width: 1024px) {
   .sb-nav  { width: 240px; }

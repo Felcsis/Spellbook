@@ -179,6 +179,7 @@ function ServiceRow({
 
   return (
     <div
+      className="svc-row"
       style={{
         display: "flex", alignItems: "center", gap: "1rem",
         padding: "0.7rem 1rem", borderRadius: 8,
@@ -198,14 +199,14 @@ function ServiceRow({
           ⠿
         </div>
       )}
-      <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: svc.active ? cream : dimmed, fontSize: "1rem" }}>
+      <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: svc.active ? cream : dimmed, fontSize: "1rem", minWidth: 0 }}>
         {svc.name}
         {svc.description && <span style={{ marginLeft: "0.5rem", fontSize: "0.82rem", color: dimmed }}>{svc.description}</span>}
       </div>
-      <div style={{ fontFamily: "var(--font-cormorant)", color: gold, fontSize: "1rem", minWidth: 80, textAlign: "right" }}>
+      <div className="svc-price" style={{ fontFamily: "var(--font-cormorant)", color: gold, fontSize: "1rem", minWidth: 80, textAlign: "right", whiteSpace: "nowrap" }}>
         {svc.price.toLocaleString("hu-HU")} Ft
       </div>
-      <div style={{ fontSize: "0.8rem", color: dimmed, minWidth: 60, textAlign: "right" }}>
+      <div className="svc-dur" style={{ fontSize: "0.8rem", color: dimmed, minWidth: 60, textAlign: "right" }}>
         {svc.duration} perc
       </div>
       {isAdmin && (
@@ -369,9 +370,9 @@ function MaterialRow({ mat, isAdmin }: { mat: Material; isAdmin: boolean }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.65rem 1rem", background: mat.active ? "rgba(196,146,110,0.04)" : "var(--bg-panel)", border: "1px solid rgba(196,146,110,0.15)", borderRadius: 8, opacity: mat.active ? 1 : 0.45, transition: "opacity 0.2s" }}>
-      <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: mat.active ? cream : dimmed, fontSize: "1rem" }}>{mat.name}</div>
-      {mat.unit && <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.82rem" }}>{mat.unit}</div>}
-      <div style={{ fontFamily: "var(--font-cormorant)", color: "#c4926e", fontSize: "1rem", minWidth: 80, textAlign: "right" }}>
+      <div style={{ flex: 1, fontFamily: "var(--font-cormorant)", color: mat.active ? cream : dimmed, fontSize: "1rem", minWidth: 0 }}>{mat.name}</div>
+      {mat.unit && <div className="mat-unit" style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "0.82rem" }}>{mat.unit}</div>}
+      <div className="mat-item-price" style={{ fontFamily: "var(--font-cormorant)", color: "#c4926e", fontSize: "1rem", minWidth: 80, textAlign: "right", whiteSpace: "nowrap" }}>
         {mat.price.toLocaleString("hu-HU")} Ft
       </div>
       {isAdmin && (
@@ -407,17 +408,17 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
     <div>
       {/* Add row — admin only */}
       {isAdmin && <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem" }}>
-        <div style={{ flex: 2 }}>
+        <div className="mat-add-name">
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Anyag neve</div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Szőkítőpor, L'Oréal festék…" style={inputStyle}
             onKeyDown={e => e.key === "Enter" && add()} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div className="mat-add-price">
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Ár (Ft)</div>
           <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="6000" style={inputStyle}
             onKeyDown={e => e.key === "Enter" && add()} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div className="mat-add-unit">
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Egység (opc.)</div>
           <input value={unit} onChange={e => setUnit(e.target.value)} placeholder="pl. adag, tubus" style={inputStyle}
             onKeyDown={e => e.key === "Enter" && add()} />
@@ -616,7 +617,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
           </p>
         </div>
         {tab === "services" && isAdmin && (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <Btn variant="ghost" onClick={() => setPdfImport(true)}>📄 PDF import</Btn>
             <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>
           </div>
