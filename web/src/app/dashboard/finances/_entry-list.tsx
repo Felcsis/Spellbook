@@ -216,7 +216,7 @@ function VisitGroupRow({
             {fmt(group.totalRevenue + group.totalMaterial)}
           </span>
           {group.totalMaterial > 0 && (
-            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "var(--text-soft)", opacity: 0.7 }}>
+            <span className="entry-amount-sub" style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: "var(--text-soft)", opacity: 0.7 }}>
               munka: {fmt(group.totalRevenue)} + anyag: {fmt(group.totalMaterial)}
             </span>
           )}
@@ -242,6 +242,7 @@ function VisitGroupRow({
                 if (group.cardId && onEditCard) onEditCard(group.cardId);
                 else setStandaloneEdit(true);
               }}
+              className="entry-action-btn"
               style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.8rem", padding: "0.2rem 0.3rem", borderRadius: 5, flexShrink: 0 }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; }}
@@ -257,6 +258,7 @@ function VisitGroupRow({
             )}
             {canDelete && (
               <button onClick={e => { e.stopPropagation(); onDelete!(group.entries.map(e => e.id)); }}
+                className="entry-action-btn"
                 style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", padding: "0.2rem 0.3rem", borderRadius: 5, flexShrink: 0 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#c47878"; (e.currentTarget as HTMLElement).style.background = "rgba(248,113,113,0.1)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = "none"; }}>✕</button>
@@ -300,7 +302,7 @@ function VisitGroupRow({
                         </span>
                       )}
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
-                      {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
+                      {s.duration > 0 && <span className="entry-svc-duration" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.88rem", color: "#527666", fontWeight: 700 }}>{fmt(s.price)}</span>
                     </div>
                   );
@@ -315,10 +317,10 @@ function VisitGroupRow({
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "rgba(200,162,68,0.55)", textTransform: "uppercase", marginBottom: "0.4rem" }}>✦ Szín recept</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
                 {card.materials.map((m, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0.65rem", background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.15)", borderRadius: 6 }}>
+                  <div key={i} className="entry-mat-row" style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0.65rem", background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.15)", borderRadius: 6 }}>
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                    {m.brand && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>{m.brand}</span>}
-                    {m.colorCode && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "#c8a244", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
+                    {m.brand && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>{m.brand}</span>}
+                    {m.colorCode && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "#c8a244", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{m.grams}g</span>
                     <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#a06830", fontWeight: 700 }}>{fmt(m.lineTotal)}</span>
                   </div>
@@ -449,7 +451,7 @@ function StaffCardRow({ card }: { card: StaffCard }) {
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.65rem", background: "rgba(124,92,190,0.06)", border: "1px solid rgba(124,92,190,0.15)", borderRadius: 7 }}>
                       {badge && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", padding: "0.1rem 0.35rem", borderRadius: 4, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, flexShrink: 0 }}>{badge.label}</span>}
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
-                      {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
+                      {s.duration > 0 && <span className="entry-svc-duration" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "var(--text-soft)" }}>⏱ {s.duration} perc</span>}
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.88rem", color: "#527666", fontWeight: 700 }}>{fmt(s.price)}</span>
                     </div>
                   );
@@ -464,10 +466,10 @@ function StaffCardRow({ card }: { card: StaffCard }) {
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "rgba(200,162,68,0.55)", textTransform: "uppercase", marginBottom: "0.4rem" }}>✦ Szín recept</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
                 {card.materials.map((m, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0.65rem", background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.15)", borderRadius: 6 }}>
+                  <div key={i} className="entry-mat-row" style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0.65rem", background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.15)", borderRadius: 6 }}>
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                    {m.brand && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>{m.brand}</span>}
-                    {m.colorCode && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "#c8a244", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
+                    {m.brand && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>{m.brand}</span>}
+                    {m.colorCode && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "#c8a244", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{m.grams}g</span>
                   </div>
                 ))}

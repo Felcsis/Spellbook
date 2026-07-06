@@ -219,6 +219,26 @@ html, body { overflow-x: hidden; max-width: 100%; }
   .mat-inputs-top > .mat-color  { flex: 0.8 1 0; }
 }
 
+/* ── Bejegyzés lista — mobil ── */
+
+/* Összeg sor: az "munka: X + anyag: Y" sor rejtve mobilon */
+@media (max-width: 640px) {
+  .entry-amount-sub   { display: none !important; }
+  .entry-svc-duration { display: none !important; }
+  .entry-mat-meta     { display: none !important; }
+
+  /* Szerkesztés/törlés gombok: kisebb padding mobilon */
+  .entry-action-btn {
+    padding: 0.15rem 0.25rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Anyag sor: grams + ár egymás alá mehet */
+  .entry-mat-row {
+    flex-wrap: wrap;
+  }
+}
+
 /* Modál-kártya — mobilon szűkebb padding, kényelmesebb tartalom */
 @media (max-width: 640px) {
   .modal-card { padding: 1.5rem 1.25rem !important; }
