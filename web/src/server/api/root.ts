@@ -6,6 +6,7 @@ import { materialsRouter } from "~/server/api/routers/materials";
 import { guestsRouter } from "~/server/api/routers/guests";
 import { adminRouter } from "~/server/api/routers/admin";
 import { expensesRouter } from "~/server/api/routers/expenses";
+import { backupRouter } from "~/server/api/routers/backup";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   guests: guestsRouter,
   admin: adminRouter,
   expenses: expensesRouter,
+  backup: backupRouter,
 });
 
 export type AppRouter = typeof appRouter;

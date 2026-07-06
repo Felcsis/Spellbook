@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
@@ -402,6 +402,113 @@ export default function AdminClient() {
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} onCreated={() => void refetch()} />}
       {editUser   && <EditUserModal   user={editUser}   onClose={() => setEditUser(null)}   onSaved={() => void refetch()} />}
       {deleteUser && <DeleteModal     user={deleteUser} onClose={() => setDeleteUser(null)} onDeleted={() => void refetch()} />}
+
+      <BackupSection />
+    </div>
+  );
+}
+
+// ── Backup szekció ─────────────────────────────────────────────────────────────
+
+function BackupSection() {
+  const [importing,   setImporting]   = useState(false);
+  const [importMsg,   setImportMsg]   = useState<{ ok: boolean; text: string } | null>(null);
+  const [exporting,   setExporting]   = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const exportQuery = api.backup.export.useQuery(undefined, { enabled: false });
+  const importMutation = api.backup.import.useMutation({
+    onSuccess: (counts) => {
+      const parts = [
+        counts.guests        > 0 && `${counts.guests} vendég`,
+        counts.guestCards    > 0 && `${counts.guestCards} receptkártya`,
+        counts.financeEntries > 0 && `${counts.financeEntries} pénzügyi tétel`,
+        counts.workDays      > 0 && `${counts.workDays} munkanap`,
+        counts.expenses      > 0 && `${counts.expenses} kiadás`,
+        counts.serviceCategories > 0 && `${counts.serviceCategories} kategória`,
+        counts.services      > 0 && `${counts.services} szolgáltatás`,
+        counts.materials     > 0 && `${counts.materials} anyag`,
+      ].filter(Boolean).join(", ");
+      setImportMsg({ ok: true, text: parts ? `Visszaállítva: ${parts}.` : "Minden adat már szerepelt az adatbázisban." });
+      setImporting(false);
+    },
+    onError: (err) => {
+      setImportMsg({ ok: false, text: `Hiba: ${err.message}` });
+      setImporting(false);
+    },
+  });
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const result = await exportQuery.refetch();
+      if (!result.data) return;
+      const json = JSON.stringify(result.data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      const date = new Date().toISOString().slice(0, 10);
+      a.href     = url;
+      a.download = `spellbook-backup-${date}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportMsg(null);
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      importMutation.mutate({ data: text });
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  const btnStyle: React.CSSProperties = {
+    padding: "0.6rem 1.2rem", borderRadius: 9, border: "1px solid var(--border)",
+    background: "var(--bg-card)", color: "var(--color-teal)",
+    fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.1em",
+    cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap",
+  };
+
+  return (
+    <div style={{ marginTop: "2.5rem", borderTop: "1px solid var(--border)", paddingTop: "2rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+        ◈ Biztonsági mentés
+      </div>
+      <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.4rem", color: "var(--color-teal)", margin: "0 0 0.4rem" }}>Adatexport & visszaállítás</h2>
+      <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: "0 0 1.5rem" }}>
+        Az export egy JSON fájlt tölt le az összes vendég, receptkártya, pénzügyi bejegyzés és szolgáltatás adatával.
+        Ezt tárold biztonságos helyen (Google Drive, pendrive). Visszaállításhoz töltsd fel ugyanezt a fájlt.
+      </p>
+
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+        <button onClick={handleExport} disabled={exporting} style={btnStyle}>
+          {exporting ? "⏳ Exportálás..." : "⬇ Adatok exportálása"}
+        </button>
+
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={importing}
+          style={{ ...btnStyle, color: "var(--color-pink)", borderColor: "rgba(180,100,120,0.3)" }}
+        >
+          {importing ? "⏳ Visszaállítás..." : "⬆ Backup visszatöltése"}
+        </button>
+        <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleFileChange} />
+      </div>
+
+      {importMsg && (
+        <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: 10, border: `1px solid ${importMsg.ok ? "rgba(82,118,102,0.3)" : "rgba(200,60,60,0.3)"}`, background: importMsg.ok ? "rgba(82,118,102,0.07)" : "rgba(200,60,60,0.07)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: importMsg.ok ? "var(--color-teal)" : "#c04040" }}>
+          {importMsg.ok ? "✓ " : "✕ "}{importMsg.text}
+        </div>
+      )}
     </div>
   );
 }
