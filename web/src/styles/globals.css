@@ -192,6 +192,33 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* ── Globális overflow-védelum ── */
+html, body { overflow-x: hidden; max-width: 100%; }
+
+/* ── Anyag sor — mobilon egymás alá ── */
+.mat-inputs-top {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.mat-inputs-top > .mat-name   { flex: 1 1 100%; }
+.mat-inputs-top > .mat-brand  { flex: 1 1 calc(50% - 0.45rem); }
+.mat-inputs-top > .mat-color  { flex: 1 1 calc(50% - 0.45rem); }
+
+.mat-inputs-bottom {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mat-inputs-bottom > .mat-grams { flex: 1 1 80px; min-width: 70px; }
+
+@media (min-width: 641px) {
+  .mat-inputs-top > .mat-name   { flex: 2 1 0; }
+  .mat-inputs-top > .mat-brand  { flex: 1 1 0; }
+  .mat-inputs-top > .mat-color  { flex: 0.8 1 0; }
+}
+
 /* Modál-kártya — mobilon szűkebb padding, kényelmesebb tartalom */
 @media (max-width: 640px) {
   .modal-card { padding: 1.5rem 1.25rem !important; }

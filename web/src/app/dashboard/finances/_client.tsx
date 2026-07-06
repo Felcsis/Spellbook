@@ -294,9 +294,9 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   return (
     <>
       {anyOpen && <div onClick={closeAll} style={{ position: "fixed", inset: 0, zIndex: 150 }} />}
-    <div style={{ background: "var(--bg-panel)", border: "1px solid rgba(82,118,102,0.28)", borderRadius: 18, padding: "1.5rem 1.75rem", marginBottom: "2rem" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+    <div style={{ background: "var(--bg-panel)", border: "1px solid rgba(82,118,102,0.28)", borderRadius: 18, padding: "1.25rem 1rem", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", flexWrap: "wrap" }}>
           <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.65)", textTransform: "uppercase" }}>◈ Látogatás rögzítése</div>
           <button type="button" onClick={toggleFamilyMode}
             style={{ padding: "0.25rem 0.75rem", borderRadius: 7, border: `1px solid ${isFamilyMode ? "rgba(167,139,250,0.6)" : "rgba(167,139,250,0.22)"}`, background: isFamilyMode ? "rgba(167,139,250,0.14)" : "transparent", color: isFamilyMode ? "#a78bfa" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
@@ -304,7 +304,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
           </button>
         </div>
         {allUsers.length > 1 && (
-          <div style={{ display: "flex", gap: "0.35rem" }}>
+          <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
             {allUsers.map(u => {
               const uc  = USER_COLORS[u.name ?? ""] ?? "var(--color-teal)";
               const sel = selectedWorkerId === u.id;
@@ -555,8 +555,8 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
             <div style={{ marginTop: "0.65rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
               {matRows.map((row, i) => (
                 <div key={i} style={{ background: "rgba(200,162,68,0.04)", border: "1px solid rgba(200,162,68,0.18)", borderRadius: 10, padding: "0.65rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                  <div style={{ display: "flex", gap: "0.45rem" }}>
-                    <div style={{ flex: 2, position: "relative" }}>
+                  <div className="mat-inputs-top">
+                    <div className="mat-name" style={{ position: "relative" }}>
                       <input value={row.name}
                         onChange={e => { updateMat(i, "name", e.target.value); setActiveMat(i); setMatSearch(e.target.value); setMatOpen(true); }}
                         onFocus={() => { setActiveMat(i); setMatSearch(row.name); setMatOpen(true); }}
@@ -577,13 +577,13 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
                         </div>
                       )}
                     </div>
-                    <input value={row.brand} onChange={e => updateMat(i, "brand", e.target.value)} placeholder="Márka" style={{ ...inputStyle, flex: 1, fontSize: "0.92rem" }} />
-                    <input value={row.colorCode} onChange={e => updateMat(i, "colorCode", e.target.value)} placeholder="Színkód" style={{ ...inputStyle, flex: 0.8, fontSize: "0.92rem" }} />
-                    <button type="button" onClick={() => setMatRows(p => p.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", alignSelf: "center" }}>✕</button>
+                    <input value={row.brand} onChange={e => updateMat(i, "brand", e.target.value)} placeholder="Márka" className="mat-brand" style={{ ...inputStyle, fontSize: "0.92rem" }} />
+                    <input value={row.colorCode} onChange={e => updateMat(i, "colorCode", e.target.value)} placeholder="Színkód" className="mat-color" style={{ ...inputStyle, fontSize: "0.92rem" }} />
+                    <button type="button" onClick={() => setMatRows(p => p.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", alignSelf: "center", flexShrink: 0 }}>✕</button>
                   </div>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <div className="mat-inputs-bottom">
                     <input type="number" value={row.grams} onChange={e => updateMat(i, "grams", e.target.value)} placeholder="Gramm" min="0" step="any"
-                      style={{ ...inputStyle, flex: 1, fontSize: "0.9rem", textAlign: "center" }} />
+                      className="mat-grams" style={{ ...inputStyle, fontSize: "0.9rem", textAlign: "center" }} />
                     <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-soft)", fontSize: "0.9rem" }}>g ×</span>
                     <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(200,162,68,0.7)", fontSize: "0.9rem", minWidth: 50 }}>{fmt(row.unitPrice)}</span>
                     <span style={{ color: "var(--text-soft)", fontSize: "0.85rem" }}>=</span>
@@ -633,11 +633,11 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
 
         {/* ── Date + amount + save ── */}
         <div style={{ display: "flex", gap: "0.65rem", alignItems: "flex-end", flexWrap: "wrap", paddingTop: "0.25rem", borderTop: "1px solid var(--bg-active)" }}>
-          <div style={{ flex: "0 0 auto" }}>
+          <div style={{ flex: "1 1 140px", minWidth: 130 }}>
             <span style={lbl}>Dátum</span>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inputStyle, width: 160, colorScheme: "dark" }} />
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inputStyle, colorScheme: "dark" }} />
           </div>
-          {!isFamilyMode && <div style={{ flex: 1, minWidth: 120 }}>
+          {!isFamilyMode && <div style={{ flex: "1 1 120px", minWidth: 110 }}>
             <span style={{ ...lbl, display: "flex", alignItems: "center", gap: "0.4rem" }}>
               Összeg (Ft) {!isManual && autoTotal > 0 && <span style={{ color: "rgba(82,118,102,0.7)", fontFamily: "var(--font-cinzel)", fontSize: "0.45rem" }}>AUTO</span>}
             </span>
@@ -652,15 +652,15 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
               ⚠ {saveErr}
             </div>
           )}
-          <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
+          <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end", flex: "1 1 200px" }}>
             <button type="button" onClick={reset}
-              style={{ flex: "0 0 auto", padding: "0.7rem 1rem", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}
+              style={{ flex: 1, padding: "0.7rem 1rem", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.1em", cursor: "pointer", transition: "all 0.2s" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#c47878"; (e.currentTarget as HTMLElement).style.color = "#c47878"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-soft)"; }}>
               Törlés
             </button>
             <button onClick={handleSave} disabled={saving || !canSave}
-              style={{ flex: "0 0 auto", padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: canSave ? "linear-gradient(120deg,#4a7a6a 0%,#527666 50%,#4a7a6a 100%)" : "var(--bg-card)", backgroundSize: "200% auto", color: canSave ? "#fff" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.15em", cursor: canSave ? "pointer" : "not-allowed", animation: canSave ? "shimmer 3s linear infinite" : "none", opacity: saving ? 0.7 : 1, transition: "all 0.2s", alignSelf: "flex-end" }}>
+              style={{ flex: 2, padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: canSave ? "linear-gradient(120deg,#4a7a6a 0%,#527666 50%,#4a7a6a 100%)" : "var(--bg-card)", backgroundSize: "200% auto", color: canSave ? "#fff" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.15em", cursor: canSave ? "pointer" : "not-allowed", animation: canSave ? "shimmer 3s linear infinite" : "none", opacity: saving ? 0.7 : 1, transition: "all 0.2s", alignSelf: "flex-end" }}>
               {saving ? "Mentés..." : "Rögzítés ◈"}
             </button>
           </div>
