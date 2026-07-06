@@ -148,7 +148,7 @@ export default function NapiClient({ isAdmin = true, userId = "", canSeeProfit =
         const fwColor = fw ? (colors[fw.name] ?? "#7256a0") : "#7256a0";
         const fwCommission = fw ? fw.svcRev - fw.earn : 0;
         return (
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: ((!filterUserId || fw) && workerStats.length > 0) ? "0.75rem" : "2rem" }}>
+          <div className="stat-boxes" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: ((!filterUserId || fw) && workerStats.length > 0) ? "0.75rem" : "2rem" }}>
             <StatBox label="Napi bevétel" value={totalIncome} color="#527666" sub={d.toLocaleDateString("hu-HU", { month: "long", day: "numeric" })} large />
             {/* Mindenki nézet */}
             {isAdmin && !isOwnView && !filterUserId && (staffWageTotal > 0) && <StatBox label={wage > 0 ? "Bérek" : "Várható bér"} value={staffWageTotal} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}

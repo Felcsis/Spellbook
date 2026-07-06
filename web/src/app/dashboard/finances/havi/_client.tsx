@@ -148,7 +148,7 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
         const fwColor = fw ? (COLORS[fw.name] ?? "#7256a0") : "#7256a0";
         const fwCommission = fw ? fw.svcRev - fw.wageEstimate : 0;
         return (
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && Object.keys(staffStats).length > 0) ? "0.75rem" : "2.5rem" }}>
+          <div className="stat-boxes" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && Object.keys(staffStats).length > 0) ? "0.75rem" : "2.5rem" }}>
             <StatBox label={MONTHS[month-1] ?? ""} value={totalIncome} color="#527666" sub="havi bevétel" large />
             {isAdmin && !isOwnView && !filterUserId && staffWageTotal > 0 && <StatBox label={wage > 0 ? "Bérek" : "Várható bér"} value={staffWageTotal} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
             {isAdmin && !filterUserId && overheadTotal > 0 && <StatBox label="Kiadások" value={overheadTotal} color="#e87171" sub="rezsi, bérleti díj…" />}

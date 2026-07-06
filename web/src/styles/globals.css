@@ -244,6 +244,15 @@ html, body { overflow-x: hidden; max-width: 100%; }
   .modal-card { padding: 1.5rem 1.25rem !important; }
 }
 
+/* ── Stat boxes — mobilon 2 oszlopos ── */
+@media (max-width: 640px) {
+  .stat-boxes > div {
+    flex: 1 1 calc(50% - 0.4rem) !important;
+    min-width: 0 !important;
+    max-width: calc(50% - 0.4rem) !important;
+  }
+}
+
 /* ── Tablet (641–1024px) — szűkebb sidebar, mérsékelt padding ── */
 @media (min-width: 641px) and (max-width: 1024px) {
   .sb-nav  { width: 240px; }

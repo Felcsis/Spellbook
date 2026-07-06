@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, CartesianGrid,
   BarChart, Cell,
 } from "recharts";
+import PdfExportButton from "../_pdf-export";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 const MONTHS_SHORT = ["Jan","Feb","Már","Ápr","Máj","Jún","Júl","Aug","Sep","Okt","Nov","Dec"];
@@ -175,7 +176,7 @@ export default function EvesClient({ isAdmin = true, userId = "", canSeeProfit =
         const fwColor = fw ? (COLORS[fw.name] ?? "#7256a0") : "#7256a0";
         const fwCommission = fw && !fw.isOwner ? fw.revenue - fw.wageEstimate : 0;
         return (
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && workerYearStats.length > 0) ? "0.75rem" : "2rem" }}>
+          <div className="stat-boxes" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && workerYearStats.length > 0) ? "0.75rem" : "2rem" }}>
             <StatBox label={`${year} bevétel`} value={yearTotalIncome} color="#527666" sub="összesen" large />
             {isAdmin && !filterUserId && (yearStaffWage > 0 || yearStaffEstimate > 0) && (
               <StatBox label={yearWage > 0 ? "Bérek" : "Várható bér"} value={yearStaffWage > 0 ? yearStaffWage : yearStaffEstimate} color="#7256a0" sub={yearWage > 0 ? "összesen" : "becslés"} />
@@ -271,6 +272,13 @@ export default function EvesClient({ isAdmin = true, userId = "", canSeeProfit =
             </ComposedChart>
           </ResponsiveContainer>
           <CustomLegend canSeeProfit={canSeeProfit && !filterUserId} />
+        </div>
+      )}
+
+      {/* PDF export */}
+      {isAdmin && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "2rem" }}>
+          <PdfExportButton isAdmin={isAdmin} />
         </div>
       )}
 
