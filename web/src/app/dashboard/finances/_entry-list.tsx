@@ -12,15 +12,6 @@ const iStyle: React.CSSProperties = {
   fontFamily: "var(--font-cormorant)", fontSize: "1rem", outline: "none", width: "100%", boxSizing: "border-box",
 };
 
-function parseExistingDiscount(desc: string, amount: number): { base: number; discount: number } {
-  const m = /\((\d+)\s*Ft kedvezmény\)/.exec(desc);
-  if (m) {
-    const discount = parseInt(m[1]!, 10);
-    return { base: amount + discount, discount };
-  }
-  return { base: amount, discount: 0 };
-}
-
 const lStyle: React.CSSProperties = {
   fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.16em",
   textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "0.3rem",
@@ -38,27 +29,34 @@ function StandaloneEditModal({ entryIds, initialAmount, initialDescription, init
     onSuccess: () => { void utils.finance.list.invalidate(); onClose(); },
   });
 
-  const parsed = parseExistingDiscount(initialDescription, initialAmount);
-
-  const [baseAmt,      setBaseAmt]      = useState(String(parsed.base));
+  const [amount,       setAmount]       = useState(String(initialAmount));
   const [desc,         setDesc]         = useState(initialDescription);
   const [date,         setDate]         = useState(initialDate);
   const [discountType, setDiscountType] = useState<"%" | "Ft">("Ft");
-  const [discountVal,  setDiscountVal]  = useState(parsed.discount > 0 ? String(parsed.discount) : "");
+  const [discountBase, setDiscountBase] = useState("");
+  const [discountVal,  setDiscountVal]  = useState("");
 
-  const base         = parseFloat(baseAmt) || 0;
-  const discountNum  = parseFloat(discountVal) || 0;
-  const discountAmt  = discountNum > 0 && base > 0
+  const base        = parseFloat(discountBase) || 0;
+  const discountNum = parseFloat(discountVal) || 0;
+  const discountAmt = discountNum > 0 && base > 0
     ? discountType === "%" ? Math.round(base * Math.min(discountNum, 100) / 100) : Math.min(discountNum, base)
     : 0;
-  const finalAmount  = Math.max(0, base - discountAmt);
+  const calcResult  = base > 0 ? Math.max(0, base - discountAmt) : 0;
+
+  function applyDiscount() {
+    if (calcResult > 0) {
+      setAmount(String(calcResult));
+      const cleanDesc = desc.replace(/\s*\(\d+\s*Ft kedvezmény\)/, "");
+      setDesc(cleanDesc + (discountAmt > 0 ? ` (${discountAmt} Ft kedvezmény)` : ""));
+      setDiscountBase("");
+      setDiscountVal("");
+    }
+  }
 
   function handleSave() {
-    if (base <= 0) return;
-    const newDesc = discountAmt > 0
-      ? desc.replace(/\s*\(\d+\s*Ft kedvezmény\)/, "") + ` (${discountAmt} Ft kedvezmény)`
-      : desc.replace(/\s*\(\d+\s*Ft kedvezmény\)/, "");
-    entryIds.forEach(id => updateEntry.mutate({ id, amount: finalAmount, description: newDesc, date }));
+    const a = parseFloat(amount);
+    if (isNaN(a) || a <= 0) return;
+    entryIds.forEach(id => updateEntry.mutate({ id, amount: a, description: desc, date }));
   }
 
   const [mounted, setMounted] = useState(false);
@@ -83,42 +81,44 @@ function StandaloneEditModal({ entryIds, initialAmount, initialDescription, init
             <input value={desc} onChange={e => setDesc(e.target.value)} style={iStyle} />
           </div>
           <div>
-            <label style={lStyle}>Bruttó összeg (Ft)</label>
-            <input type="number" value={baseAmt} onChange={e => setBaseAmt(e.target.value)} min="0" step="100" style={iStyle} />
+            <label style={lStyle}>Összeg (Ft)</label>
+            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0" step="100" style={iStyle} />
           </div>
-          <div>
-            <label style={lStyle}>Kedvezmény</label>
+          {/* Discount calculator */}
+          <div style={{ background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.75rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <span style={{ ...lStyle, marginBottom: 0 }}>Kedvezmény számológép</span>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+              <input type="number" min="0" step="100" value={discountBase} onChange={e => setDiscountBase(e.target.value)}
+                onFocus={e => e.target.select()} placeholder="Eredeti ár"
+                style={{ ...iStyle, flex: 1, fontSize: "0.92rem" }} />
+              <span style={{ color: dim, fontSize: "0.85rem" }}>−</span>
+              <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
                 {(["%", "Ft"] as const).map(t => (
                   <button key={t} type="button" onClick={() => setDiscountType(t)}
-                    style={{ padding: "0.35rem 0.7rem", background: discountType === t ? "var(--bg-active)" : "transparent", color: discountType === t ? gold : dim, border: "none", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.08em" }}>
+                    style={{ padding: "0.3rem 0.55rem", background: discountType === t ? "var(--bg-active)" : "transparent", color: discountType === t ? gold : dim, border: "none", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem" }}>
                     {t}
                   </button>
                 ))}
               </div>
               <input type="number" min="0" step="any" value={discountVal} onChange={e => setDiscountVal(e.target.value)}
                 onFocus={e => e.target.select()} placeholder="0"
-                style={{ ...iStyle, flex: 1, textAlign: "right" }} />
+                style={{ ...iStyle, width: 72, textAlign: "right", fontSize: "0.92rem" }} />
             </div>
-            {discountAmt > 0 && (
-              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171", marginTop: "0.35rem" }}>
-                − {fmt(discountAmt)} → <strong>{fmt(finalAmount)}</strong>
+            {base > 0 && discountAmt > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
+                  − {fmt(discountAmt)} → <strong>{fmt(calcResult)}</strong>
+                </span>
+                <button type="button" onClick={applyDiscount}
+                  style={{ padding: "0.3rem 0.8rem", borderRadius: 7, background: "var(--bg-active)", border: "1px solid var(--border)", color: gold, fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.1em", cursor: "pointer" }}>
+                  Alkalmaz
+                </button>
               </div>
             )}
           </div>
           <div>
             <label style={lStyle}>Dátum</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...iStyle, colorScheme: "light" }} />
-          </div>
-          <div style={{ padding: "0.7rem 0.9rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.14em", color: dim }}>VÉGÖSSZEG</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              {discountAmt > 0 && (
-                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: dim, textDecoration: "line-through" }}>{fmt(base)}</span>
-              )}
-              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.2rem", color: gold, fontWeight: 700 }}>{fmt(finalAmount)}</span>
-            </div>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.25rem" }}>
             <button onClick={onClose} style={{ flex: 1, padding: "0.75rem", borderRadius: 10, background: "transparent", border: "1px solid var(--border)", color: dim, fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.14em", cursor: "pointer" }}>Mégse</button>
