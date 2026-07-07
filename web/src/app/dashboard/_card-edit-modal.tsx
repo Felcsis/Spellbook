@@ -86,6 +86,14 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
   const [workerId, setWorkerId] = useState(card.worker.id);
   const [notes,    setNotes]    = useState(card.notes ?? "");
 
+  const [discountType, setDiscountType] = useState<"%" | "Ft">("Ft");
+  const [discountVal,  setDiscountVal]  = useState<string>(() => {
+    const initSvcTotal = card.services.reduce((s, sv) => s + sv.price, 0);
+    const initMatTotal = card.materials.reduce((s, m) => s + m.lineTotal, 0);
+    const implied = Math.round(initSvcTotal - (card.total - initMatTotal));
+    return implied > 0 ? String(implied) : "";
+  });
+
   const [selSvcs, setSelSvcs] = useState<SvcRow[]>(() =>
     card.services.map(s => {
       const parsed = parseHours(s.name, s.price);
@@ -124,8 +132,14 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
     });
   }
 
-  const svcTotal = selSvcs.reduce((s, x) => s + x.price * x.hours, 0);
-  const matTotal = matRows.reduce((s, r) => s + r.lineTotal, 0);
+  const svcTotal   = selSvcs.reduce((s, x) => s + x.price * x.hours, 0);
+  const matTotal   = matRows.reduce((s, r) => s + r.lineTotal, 0);
+  const discountNum = parseFloat(discountVal) || 0;
+  const discountAmt = discountNum > 0 && svcTotal > 0
+    ? discountType === "%" ? Math.round(svcTotal * Math.min(discountNum, 100) / 100) : Math.min(discountNum, svcTotal)
+    : 0;
+  const discountedSvcTotal = Math.max(0, svcTotal - discountAmt);
+  const total = discountedSvcTotal + matTotal;
 
   function handleSave() {
     const mats = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0)
@@ -134,6 +148,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
       id: card.id, date, workerId, notes: notes || undefined,
       services:  selSvcs.map(s => ({ name: s.hours !== 1 ? `${s.name} (${s.hours} óra)` : s.name, price: s.price * s.hours, duration: Math.round(s.duration * s.hours), gender: s.gender, categoryName: s.categoryName })),
       materials: mats,
+      discount: discountAmt,
     });
   }
 
@@ -294,15 +309,46 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
               <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="pl. következő időpont…" style={inputStyle} />
             </div>
 
+            {/* Discount */}
+            {svcTotal > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                <label style={labelStyle}>Kedvezmény</label>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+                    {(["%", "Ft"] as const).map(t => (
+                      <button key={t} type="button" onClick={() => setDiscountType(t)}
+                        style={{ padding: "0.35rem 0.7rem", background: discountType === t ? "var(--bg-active)" : "transparent", color: discountType === t ? gold : dim, border: "none", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.08em" }}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="number" min="0" step="any" value={discountVal} onChange={e => setDiscountVal(e.target.value)}
+                    onFocus={e => e.target.select()}
+                    placeholder="0"
+                    style={{ ...inputStyle, flex: 1, textAlign: "right" }} />
+                  {discountAmt > 0 && (
+                    <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171", whiteSpace: "nowrap" }}>
+                      − {fmt(discountAmt)} → {fmt(discountedSvcTotal)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Total + save */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
               <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: dim }}>
-                {svcTotal > 0 && <span>Szolgáltatás: {fmt(svcTotal)}</span>}
+                {svcTotal > 0 && <span>Szolgáltatás: {discountAmt > 0 ? fmt(discountedSvcTotal) : fmt(svcTotal)}</span>}
+                {discountAmt > 0 && <span style={{ color: "#f87171", marginLeft: "0.3rem" }}>− {fmt(discountAmt)}</span>}
                 {svcTotal > 0 && matTotal > 0 && <span style={{ margin: "0 0.4rem" }}>·</span>}
                 {matTotal > 0 && <span>Anyag: {fmt(matTotal)}</span>}
               </div>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.14em", color: dim }}>
-                VÉGÖSSZEG <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", color: gold, fontWeight: 700, marginLeft: "0.5rem" }}>{fmt(svcTotal + matTotal)}</span>
+                VÉGÖSSZEG{" "}
+                {discountAmt > 0 && (
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: dim, textDecoration: "line-through", marginLeft: "0.4rem" }}>{fmt(svcTotal + matTotal)}</span>
+                )}
+                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", color: gold, fontWeight: 700, marginLeft: "0.5rem" }}>{fmt(total)}</span>
               </div>
             </div>
 

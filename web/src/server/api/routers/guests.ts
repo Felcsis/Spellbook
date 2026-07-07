@@ -155,6 +155,7 @@ export const guestsRouter = createTRPCRouter({
       workerId:  z.string().optional(),
       services:  z.array(ServiceInput).optional(),
       materials: z.array(MaterialInput).optional(),
+      discount:  z.number().min(0).default(0),
     }))
     .mutation(async ({ ctx, input }) => {
       if (input.services !== undefined) {
@@ -177,9 +178,10 @@ export const guestsRouter = createTRPCRouter({
         },
         include: { services: true, materials: true },
       });
-      const svcTotal = fetched.services.reduce((s, x) => s + x.price, 0);
-      const matTotal = fetched.materials.reduce((s, x) => s + x.lineTotal, 0);
-      const total    = svcTotal + matTotal;
+      const svcTotal          = fetched.services.reduce((s, x) => s + x.price, 0);
+      const matTotal          = fetched.materials.reduce((s, x) => s + x.lineTotal, 0);
+      const discountedSvcTotal = Math.max(0, svcTotal - input.discount);
+      const total              = discountedSvcTotal + matTotal;
 
       const card = await ctx.db.guestCard.update({
         where: { id: input.id },
@@ -190,8 +192,8 @@ export const guestsRouter = createTRPCRouter({
       // Sync linked finance entries
       const date = fetched.date;
       await ctx.db.financeEntry.deleteMany({ where: { guestCardId: input.id } });
-      if (svcTotal > 0)
-        await ctx.db.financeEntry.create({ data: { type: "revenue",  description: card.services.map(s => s.name).join(", "), amount: svcTotal, date, createdById: card.workerId, guestCardId: input.id } });
+      if (discountedSvcTotal > 0)
+        await ctx.db.financeEntry.create({ data: { type: "revenue", description: `${card.services.map(s => s.name).join(", ")}${input.discount > 0 ? ` (${input.discount} Ft kedvezmény)` : ""}`, amount: discountedSvcTotal, date, createdById: card.workerId, guestCardId: input.id } });
       if (matTotal > 0)
         await ctx.db.financeEntry.create({ data: { type: "material", description: card.materials.map(m => `${m.name} (${m.grams}g)`).join(", "), amount: matTotal, date, createdById: card.workerId, guestCardId: input.id } });
 
