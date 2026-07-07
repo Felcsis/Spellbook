@@ -118,10 +118,12 @@ export const guestsRouter = createTRPCRouter({
       notes:     z.string().optional(),
       services:  z.array(ServiceInput),
       materials: z.array(MaterialInput),
+      discount:  z.number().min(0).default(0),
     }))
     .mutation(async ({ ctx, input }) => {
       const svcTotal = input.services.reduce((s, x) => s + x.price, 0);
       const matTotal = input.materials.reduce((s, x) => s + x.lineTotal, 0);
+      const discountedSvcTotal = Math.max(0, svcTotal - input.discount);
       const date = new Date(input.date);
       const card = await ctx.db.guestCard.create({
         data: {
@@ -129,14 +131,17 @@ export const guestsRouter = createTRPCRouter({
           workerId: input.workerId,
           date,
           notes:    input.notes,
-          total:    svcTotal + matTotal,
+          total:    discountedSvcTotal + matTotal,
           services:  { create: input.services },
           materials: { create: input.materials },
         },
         include: { guest: true, worker: { select: { id: true, name: true } }, services: true, materials: true },
       });
-      if (svcTotal > 0)
-        await ctx.db.financeEntry.create({ data: { type: "revenue",  description: card.services.map(s => s.name).join(", "), amount: svcTotal, date, createdById: card.workerId, guestCardId: card.id } });
+      if (discountedSvcTotal > 0) {
+        const svcDesc = card.services.map(s => s.name).join(", ");
+        const desc = input.discount > 0 ? `${svcDesc} (${Math.round(input.discount)} Ft kedvezmény)` : svcDesc;
+        await ctx.db.financeEntry.create({ data: { type: "revenue", description: desc, amount: discountedSvcTotal, date, createdById: card.workerId, guestCardId: card.id } });
+      }
       if (matTotal > 0)
         await ctx.db.financeEntry.create({ data: { type: "material", description: card.materials.map(m => `${m.name} (${m.grams}g)`).join(", "), amount: matTotal, date, createdById: card.workerId, guestCardId: card.id } });
       return card;

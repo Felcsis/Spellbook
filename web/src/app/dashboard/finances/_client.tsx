@@ -118,6 +118,10 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     });
   }
 
+  // Discount
+  const [discountType, setDiscountType] = useState<"%" | "Ft">("%");
+  const [discountVal,  setDiscountVal]  = useState("");
+
   // Date + amount
   const [date,      setDate]      = useState(() => new Date().toISOString().slice(0, 10));
   const [manualAmt, setManualAmt] = useState("");
@@ -137,7 +141,12 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
 
   const autoTotal    = selSvcs.reduce((s, x) => s + x.price * x.hours, 0);
   const matTotal     = matRows.reduce((s, r) => s + r.lineTotal, 0);
-  const total        = isManual ? (parseFloat(manualAmt) || 0) : autoTotal;
+  const discountNum  = parseFloat(discountVal) || 0;
+  const discountAmt  = discountNum > 0
+    ? discountType === "%" ? Math.round(autoTotal * Math.min(discountNum, 100) / 100) : Math.min(discountNum, autoTotal)
+    : 0;
+  const discountedAutoTotal = Math.max(0, autoTotal - discountAmt);
+  const total        = isManual ? (parseFloat(manualAmt) || 0) : discountedAutoTotal;
   const requiresMat  = needsMaterial(selSvcs);
   const validMats    = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0);
   const matOk        = !requiresMat || validMats.length > 0;
@@ -171,6 +180,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     setGuestSearch(""); setGuestId(""); setShowNewGuest(false); setNewGuestName("");
     setShowMats(false); setMatRows([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
     setManualAmt(""); setIsManual(false); setPrevOpen(false); setIsFamilyMode(false);
+    setDiscountVal(""); setDiscountType("%");
     setDate(new Date().toISOString().slice(0, 10));
   }
 
@@ -247,19 +257,22 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
             name: r.name, brand: r.brand || undefined, colorCode: r.colorCode || undefined,
             grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
           })),
+          discount: discountAmt,
         });
         // Csak a naptár napi összesítőt frissítjük (finance entry már létrejött a createCard-ban)
         await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
         void card; // cardId nincs tovább szükség
       } else {
         // Vendég nélküli bejegyzés: finance entry-ket itt hozzuk létre
-        const revenueDesc = selSvcs.map(s => s.hours !== 1 ? `${s.name} (${s.hours} óra)` : s.name).join(", ") || "Vendég nélküli bevétel";
+        const baseSvcDesc = selSvcs.map(s => s.hours !== 1 ? `${s.name} (${s.hours} óra)` : s.name).join(", ") || "Vendég nélküli bevétel";
+        const discountNote = discountAmt > 0 ? ` (${discountType === "%" ? `${discountNum}%` : `${Math.round(discountAmt)} Ft`} kedvezmény)` : "";
+        const revenueDesc = baseSvcDesc + discountNote;
         await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
 
         await createFinance.mutateAsync({
           type: "revenue",
           description: revenueDesc,
-          amount: autoTotal || total,
+          amount: total || discountedAutoTotal,
           date,
           workerUserId: workerId,
           visitGroupId,
@@ -605,6 +618,38 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
           )}
         </div>
 
+        {/* ── Kedvezmény ── */}
+        {!isFamilyMode && autoTotal > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", color: "var(--text-dim)", textTransform: "uppercase" }}>Kedvezmény</span>
+            <div style={{ display: "flex", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
+              {(["%", "Ft"] as const).map(t => (
+                <button key={t} type="button" onClick={() => { setDiscountType(t); setDiscountVal(""); }}
+                  style={{ padding: "0.28rem 0.65rem", border: "none", background: discountType === t ? "rgba(82,118,102,0.18)" : "transparent", color: discountType === t ? "#527666" : "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.15s" }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            <input
+              type="number" min="0" step={discountType === "%" ? "1" : "100"}
+              value={discountVal}
+              onChange={e => setDiscountVal(e.target.value)}
+              onFocus={e => e.target.select()}
+              placeholder={discountType === "%" ? "pl. 10" : "pl. 500"}
+              style={{ width: 80, background: "var(--bg-card)", border: `1px solid ${discountAmt > 0 ? "rgba(196,120,120,0.5)" : "var(--border)"}`, borderRadius: 7, padding: "0.28rem 0.5rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", textAlign: "center", outline: "none" }}
+            />
+            {discountAmt > 0 && (
+              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#c47878" }}>
+                − {fmt(discountAmt)} → <span style={{ color: "#527666", fontWeight: 700 }}>{fmt(discountedAutoTotal)}</span>
+              </span>
+            )}
+            {discountVal && !discountAmt && (
+              <button type="button" onClick={() => setDiscountVal("")}
+                style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.75rem" }}>✕</button>
+            )}
+          </div>
+        )}
+
         {/* ── Visit total ── */}
         {(total > 0 || (isFamilyMode && matTotal > 0)) && (
           <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.7rem 1rem", background: isFamilyMode ? "rgba(167,139,250,0.06)" : "rgba(82,118,102,0.06)", border: `1px solid ${isFamilyMode ? "rgba(167,139,250,0.22)" : "rgba(82,118,102,0.22)"}`, borderRadius: 12 }}>
@@ -623,7 +668,11 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.14em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.2rem" }}>{isFamilyMode ? "Csak anyag — Család" : "Végösszeg"}</div>
               <div style={{ display: "flex", gap: "0.9rem", flexWrap: "wrap", alignItems: "center" }}>
-                {!isFamilyMode && autoTotal > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#527666" }}>◈ Munkadíj: {fmt(autoTotal)}</span>}
+                {!isFamilyMode && autoTotal > 0 && (
+                  discountAmt > 0
+                    ? <><span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#527666", textDecoration: "line-through", opacity: 0.55 }}>◈ {fmt(autoTotal)}</span><span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#c47878" }}> − {fmt(discountAmt)}</span></>
+                    : <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#527666" }}>◈ Munkadíj: {fmt(autoTotal)}</span>
+                )}
                 {matTotal > 0  && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#a06830" }}>✦ Anyag: {fmt(matTotal)}</span>}
               </div>
             </div>
