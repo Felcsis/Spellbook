@@ -193,13 +193,11 @@ function VisitCard({ card, onDelete, onEdit, isAdmin, guestName }: { card: Guest
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.4rem", borderTop: "1px solid var(--bg-highlight)" }}>
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              {isAdmin && (
-                <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
-                  Törlés
-                </button>
-              )}
+              <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
+                Törlés
+              </button>
               <button onClick={e => { e.stopPropagation(); onEdit(); }}
                 style={{ background: "none", border: "none", color: "rgba(122,158,140,0.5)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
@@ -272,12 +270,10 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
         {totalSpent > 0 && (
           <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1rem", color: gold, fontWeight: 700, flexShrink: 0, marginLeft: isMobile ? "auto" : undefined }}>{fmt(totalSpent)}</div>
         )}
-        {isAdmin && (
-          <button type="button" onClick={e => { e.stopPropagation(); setEditGuest(v => !v); setOpen(true); }}
-            style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 7, color: editGuest ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.08em", padding: "0.28rem 0.55rem", flexShrink: 0, transition: "all 0.2s" }}>
-            ✎
-          </button>
-        )}
+        <button type="button" onClick={e => { e.stopPropagation(); setEditGuest(v => !v); setOpen(true); }}
+          style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 7, color: editGuest ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.08em", padding: "0.28rem 0.55rem", flexShrink: 0, transition: "all 0.2s" }}>
+          ✎
+        </button>
         <button type="button"
           onClick={e => { e.stopPropagation(); onNewCard(guest.id, guest.name); }}
           style={{ background: "var(--bg-highlight)", border: "1px solid var(--border)", borderRadius: 7, color: gold, cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em", padding: "0.3rem 0.65rem", flexShrink: 0, transition: "all 0.2s" }}
