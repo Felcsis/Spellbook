@@ -243,6 +243,15 @@ html, body { overflow-x: hidden; max-width: 100%; }
 /* Modál-kártya — mobilon szűkebb padding, kényelmesebb tartalom */
 @media (max-width: 640px) {
   .modal-card { padding: 1.5rem 1.25rem !important; }
+  .modal-outer-pad { padding: 0.75rem 0.5rem 2rem !important; }
+  .modal-worker-date { flex-direction: column !important; }
+  .modal-mat-top { flex-wrap: wrap !important; }
+  .modal-mat-name { flex: 1 1 100% !important; }
+  .modal-mat-brand { flex: 1 1 calc(50% - 0.25rem) !important; }
+  .modal-mat-color { flex: 1 1 calc(50% - 0.25rem) !important; }
+  .modal-total-bar { flex-direction: column !important; align-items: flex-start !important; gap: 0.4rem !important; }
+  .modal-discount-row { flex-wrap: wrap !important; }
+  .modal-discount-result { width: 100% !important; }
 }
 
 /* ── Stat boxes — mobilon 2 oszlopos ── */

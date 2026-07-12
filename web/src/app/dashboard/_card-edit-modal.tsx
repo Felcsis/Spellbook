@@ -159,7 +159,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
   return createPortal(
     <div style={{ position: "fixed", inset: 0, zIndex: 9999, overflowY: "auto", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "3rem 1rem" }}>
+      <div className="modal-outer-pad" style={{ minHeight: "100%", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "3rem 1rem" }}>
         <div className="modal-card" style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 20, padding: "2rem 2.25rem", width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.7)", animation: "fadeInUp 0.3s ease" }}
           onClick={e => e.stopPropagation()}>
 
@@ -170,7 +170,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
 
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             {/* Worker + date */}
-            <div style={{ display: "flex", gap: "0.75rem" }}>
+            <div className="modal-worker-date" style={{ display: "flex", gap: "0.75rem" }}>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>Ki végezte?</label>
                 <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
@@ -263,8 +263,8 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {matRows.map((row, i) => (
                   <div key={i} style={{ background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.7rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <div style={{ flex: 2, position: "relative" }}>
+                    <div className="modal-mat-top" style={{ display: "flex", gap: "0.5rem" }}>
+                      <div className="modal-mat-name" style={{ flex: 2, position: "relative" }}>
                         <input value={row.name}
                           onChange={e => { updateMat(i, "name", e.target.value); setActiveMat(i); setMatSearch(e.target.value); setMatOpen(true); }}
                           onFocus={() => { setActiveMat(i); setMatSearch(row.name); setMatOpen(true); }}
@@ -285,8 +285,8 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                           </div>
                         )}
                       </div>
-                      <input value={row.brand} onChange={e => updateMat(i, "brand", e.target.value)} placeholder="Márka" style={{ ...inputStyle, flex: 1.2, fontSize: "0.92rem" }} />
-                      <input value={row.colorCode} onChange={e => updateMat(i, "colorCode", e.target.value)} placeholder="Színkód" style={{ ...inputStyle, flex: 1, fontSize: "0.92rem" }} />
+                      <input value={row.brand} onChange={e => updateMat(i, "brand", e.target.value)} placeholder="Márka" className="modal-mat-brand" style={{ ...inputStyle, flex: 1.2, fontSize: "0.92rem" }} />
+                      <input value={row.colorCode} onChange={e => updateMat(i, "colorCode", e.target.value)} placeholder="Színkód" className="modal-mat-color" style={{ ...inputStyle, flex: 1, fontSize: "0.92rem" }} />
                       <button type="button" onClick={() => setMatRows(p => p.filter((_, idx) => idx !== i))}
                         style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", padding: "0 0.2rem", alignSelf: "center" }}>✕</button>
                     </div>
@@ -313,7 +313,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
             {svcTotal > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
                 <label style={labelStyle}>Kedvezmény</label>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <div className="modal-discount-row" style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                   <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
                     {(["%", "Ft"] as const).map(t => (
                       <button key={t} type="button" onClick={() => setDiscountType(t)}
@@ -327,7 +327,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                     placeholder="0"
                     style={{ ...inputStyle, flex: 1, textAlign: "right" }} />
                   {discountAmt > 0 && (
-                    <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171", whiteSpace: "nowrap" }}>
+                    <span className="modal-discount-result" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171", whiteSpace: "nowrap" }}>
                       − {fmt(discountAmt)} → {fmt(discountedSvcTotal)}
                     </span>
                   )}
@@ -336,7 +336,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
             )}
 
             {/* Total + save */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
+            <div className="modal-total-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
               <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: dim }}>
                 {svcTotal > 0 && <span>Szolgáltatás: {discountAmt > 0 ? fmt(discountedSvcTotal) : fmt(svcTotal)}</span>}
                 {discountAmt > 0 && <span style={{ color: "#f87171", marginLeft: "0.3rem" }}>− {fmt(discountAmt)}</span>}
