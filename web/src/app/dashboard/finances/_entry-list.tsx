@@ -33,7 +33,7 @@ function StandaloneEditModal({ entryIds, initialAmount, initialDescription, init
   const [desc,         setDesc]         = useState(initialDescription);
   const [date,         setDate]         = useState(initialDate);
   const [discountType, setDiscountType] = useState<"%" | "Ft">("Ft");
-  const [discountBase, setDiscountBase] = useState("");
+  const [discountBase, setDiscountBase] = useState(String(initialAmount));
   const [discountVal,  setDiscountVal]  = useState("");
 
   const base        = parseFloat(discountBase) || 0;
