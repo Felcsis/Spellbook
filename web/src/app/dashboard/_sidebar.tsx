@@ -84,7 +84,7 @@ export default function SidebarLayout({
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-bg)" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--color-bg)" }}>
 
       {/* ── Hamburger (csak mobilon látszik) ── */}
       <button

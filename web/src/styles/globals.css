@@ -132,6 +132,7 @@
 .sb-main {
   flex: 1;
   position: relative;
+  height: 100vh;
   overflow-y: auto;
   padding: 2.5rem 3rem;
   background: var(--color-bg2);
