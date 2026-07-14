@@ -153,7 +153,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   const validMatTotal = validMats.reduce((s, r) => s + r.lineTotal, 0);
   const canSave      = isFamilyMode
     ? true
-    : (total > 0 && matOk);
+    : ((total > 0 || (validMats.length > 0 && matTotal > 0)) && matOk);
 
   // Auto-open material section when color service is selected
   useEffect(() => {
@@ -271,14 +271,16 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
         const revenueDesc = baseSvcDesc + discountNote;
         await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
 
-        await createFinance.mutateAsync({
-          type: "revenue",
-          description: revenueDesc,
-          amount: total || discountedAutoTotal,
-          date,
-          workerUserId: workerId,
-          visitGroupId,
-        });
+        if (total > 0) {
+          await createFinance.mutateAsync({
+            type: "revenue",
+            description: revenueDesc,
+            amount: total,
+            date,
+            workerUserId: workerId,
+            visitGroupId,
+          });
+        }
 
         if (showMats && validMats.length > 0) {
           const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
