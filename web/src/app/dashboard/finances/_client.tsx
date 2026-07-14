@@ -152,7 +152,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   const matOk        = !requiresMat || validMats.length > 0;
   const validMatTotal = validMats.reduce((s, r) => s + r.lineTotal, 0);
   const canSave      = isFamilyMode
-    ? (!!guestId || !!newGuestName.trim() || (validMats.length > 0 && validMatTotal > 0))
+    ? true
     : (total > 0 && matOk);
 
   // Auto-open material section when color service is selected
@@ -234,17 +234,19 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
           await incrementEarnings.mutateAsync({ date, userId: workerId, amount: 0, createFinanceEntry: false });
           void card;
         } else {
-          // Família vendég nélkül: csak anyagköltség bejegyzés
-          const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
+          // Família vendég nélkül: munkanap rögzítés + anyagköltség ha van
           await incrementEarnings.mutateAsync({ date, userId: workerId, amount: 0, createFinanceEntry: false });
-          await createFinance.mutateAsync({
-            type: "material",
-            description: `Család — ${matDesc}`,
-            amount: validMatTotal,
-            date,
-            workerUserId: workerId,
-            visitGroupId,
-          });
+          if (validMats.length > 0 && validMatTotal > 0) {
+            const matDesc = validMats.map(r => `${r.name} (${r.grams}g)`).join(", ");
+            await createFinance.mutateAsync({
+              type: "material",
+              description: `Család — ${matDesc}`,
+              amount: validMatTotal,
+              date,
+              workerUserId: workerId,
+              visitGroupId,
+            });
+          }
         }
       } else if (finalGuestId) {
         // Vendéges bejegyzés: a createCard mutation maga hozza létre a finance entry-ket
