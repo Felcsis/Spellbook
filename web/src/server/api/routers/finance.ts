@@ -235,6 +235,129 @@ export const financeRouter = createTRPCRouter({
       };
     }),
 
+  // Rugalmas időszakos kimutatás: nap / hét / hónap / negyedév / félév / év.
+  // Naptárhoz igazított időszak az `anchor` dátum körül, személyenkénti + összesített
+  // bontással és idősoros bucketekkel (személyenként) egy stacked charthoz.
+  periodStats: protectedProcedure
+    .input(z.object({
+      granularity: z.enum(["day", "week", "month", "quarter", "half", "year"]),
+      anchor: z.string(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const isAdmin = ctx.session.user.role === "admin";
+      const anchor = new Date(input.anchor);
+      const y = anchor.getFullYear(), m = anchor.getMonth(), d = anchor.getDate();
+      const MON = ["Jan", "Feb", "Már", "Ápr", "Máj", "Jún", "Júl", "Aug", "Sze", "Okt", "Nov", "Dec"];
+
+      let from: Date, to: Date, label: string;
+      let bucketUnit: "day" | "month";
+
+      switch (input.granularity) {
+        case "day":
+          from = new Date(y, m, d); to = new Date(y, m, d + 1); bucketUnit = "day";
+          label = from.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+          break;
+        case "week": {
+          const dow = (anchor.getDay() + 6) % 7; // hétfő = 0
+          from = new Date(y, m, d - dow);
+          to = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 7);
+          bucketUnit = "day";
+          const last = new Date(to.getFullYear(), to.getMonth(), to.getDate() - 1);
+          label = `${from.toLocaleDateString("hu-HU", { month: "short", day: "numeric" })} – ${last.toLocaleDateString("hu-HU", { month: "short", day: "numeric" })}`;
+          break;
+        }
+        case "month":
+          from = new Date(y, m, 1); to = new Date(y, m + 1, 1); bucketUnit = "day";
+          label = from.toLocaleDateString("hu-HU", { year: "numeric", month: "long" });
+          break;
+        case "quarter": {
+          const q = Math.floor(m / 3);
+          from = new Date(y, q * 3, 1); to = new Date(y, q * 3 + 3, 1); bucketUnit = "month";
+          label = `${y}. ${q + 1}. negyedév`;
+          break;
+        }
+        case "half": {
+          const h = m < 6 ? 0 : 1;
+          from = new Date(y, h * 6, 1); to = new Date(y, h * 6 + 6, 1); bucketUnit = "month";
+          label = `${y}. ${h === 0 ? "I." : "II."} félév`;
+          break;
+        }
+        default:
+          from = new Date(y, 0, 1); to = new Date(y + 1, 0, 1); bucketUnit = "month";
+          label = `${y}. év`;
+      }
+
+      const targetId = isAdmin ? undefined : ctx.session.user.id;
+      const rows = await ctx.db.financeEntry.findMany({
+        where: {
+          date: { gte: from, lt: to },
+          ...(targetId && { OR: [{ workDay: { userId: targetId } }, { workDayId: null, createdById: targetId }] }),
+        },
+        include: {
+          createdBy: { select: { id: true, name: true } },
+          guestCard: { include: { services: { select: { name: true, price: true, gender: true, categoryName: true } } } },
+          workDay: {
+            include: {
+              user: { select: { id: true, name: true } },
+              services: { include: { service: { select: { name: true, price: true, category: { select: { name: true } } } } } },
+            },
+          },
+        },
+      });
+
+      // Üres bucketek előre, hogy a hézagok is 0-ként jelenjenek meg.
+      type Bucket = { key: string; label: string; total: number } & Record<string, number | string>;
+      const buckets: Bucket[] = [];
+      const bidx: Record<string, number> = {};
+      const keyDay = (t: Date) => `${t.getFullYear()}-${t.getMonth()}-${t.getDate()}`;
+      const keyMonth = (t: Date) => `${t.getFullYear()}-${t.getMonth()}`;
+
+      if (bucketUnit === "day") {
+        for (let t = new Date(from); t < to; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)) {
+          const blabel = input.granularity === "week"
+            ? ["Hé", "Ke", "Sze", "Csü", "Pé", "Szo", "Va"][(t.getDay() + 6) % 7]!
+            : String(t.getDate());
+          bidx[keyDay(t)] = buckets.length;
+          buckets.push({ key: keyDay(t), label: blabel, total: 0 });
+        }
+      } else {
+        for (let t = new Date(from); t < to; t = new Date(t.getFullYear(), t.getMonth() + 1, 1)) {
+          bidx[keyMonth(t)] = buckets.length;
+          buckets.push({ key: keyMonth(t), label: MON[t.getMonth()]!, total: 0 });
+        }
+      }
+
+      const byUser: Record<string, { id: string; name: string; revenue: number; material: number; wage: number; wageEstimate: number; count: number }> = {};
+      const combined = { revenue: 0, material: 0, wage: 0, wageEstimate: 0, count: 0 };
+
+      rows.forEach(e => {
+        const id = e.workDay?.user?.id ?? e.createdById ?? "?";
+        const name = e.workDay?.user?.name ?? e.createdBy?.name ?? "?";
+        byUser[id] ??= { id, name, revenue: 0, material: 0, wage: 0, wageEstimate: 0, count: 0 };
+        const est = entryWageAmount(e);
+        if (e.type === "revenue") { byUser[id]!.revenue += e.amount; byUser[id]!.count += 1; combined.revenue += e.amount; combined.count += 1; }
+        if (e.type === "material") { byUser[id]!.material += e.amount; combined.material += e.amount; }
+        if (e.type === "wage") { byUser[id]!.wage += e.amount; combined.wage += e.amount; }
+        byUser[id]!.wageEstimate += est; combined.wageEstimate += est;
+
+        if (e.type === "revenue") {
+          const bk = bucketUnit === "day" ? keyDay(new Date(e.date)) : keyMonth(new Date(e.date));
+          const b = buckets[bidx[bk] ?? -1];
+          if (b) { b.total += e.amount; b[id] = (Number(b[id]) || 0) + e.amount; }
+        }
+      });
+
+      const perUser = Object.values(byUser).sort((a, b) => b.revenue - a.revenue);
+      return {
+        granularity: input.granularity,
+        range: { from: from.toISOString(), to: to.toISOString(), label },
+        users: perUser.map(u => ({ id: u.id, name: u.name })),
+        buckets,
+        perUser,
+        combined,
+      };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

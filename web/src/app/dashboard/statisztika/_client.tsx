@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import PeriodStats from "./_period-stats";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend,
@@ -103,10 +104,19 @@ export default function StatisztikaClient({ userId }: { userId: string }) {
   return (
     <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 860 }}>
 
-      {/* Header */}
+      {/* Fő cím + rugalmas időszakos kimutatás */}
+      <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: "0 0 0.3rem" }}>Statisztika ✦</h1>
+      <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem", margin: "0 0 1.75rem" }}>
+        Időszakos kimutatás — személyenként és összesítve
+      </p>
+      <PeriodStats />
+
+      <div style={{ height: 1, background: "var(--border)", margin: "0.5rem 0 2rem" }} />
+
+      {/* Header — éves részletes elemzés */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: 0 }}>Statisztika ✦</h1>
+          <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.4rem", color: "var(--color-teal)", margin: 0 }}>Éves részletes elemzés</h2>
           <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem", margin: "0.3rem 0 0" }}>
             {year}. évi elemzés
           </p>
