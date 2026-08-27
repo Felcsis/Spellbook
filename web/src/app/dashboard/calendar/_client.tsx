@@ -15,7 +15,7 @@ const COST_CONFIG = {
   wage:     { label: "Bér",          color: "#9278b0", icon: "♦" },
 } as const;
 
-type View = "month" | "week" | "3day" | "day";
+type View = "month" | "week" | "3day" | "day" | "year";
 type CostType = keyof typeof COST_CONFIG;
 
 type ServiceItem = { id: string; name: string; price: number; duration: number };
@@ -24,6 +24,7 @@ type ServiceCategory = { id: string; name: string; services: ServiceItem[] };
 type WorkDay = {
   id: string; date: Date | string; userId: string;
   earnings: number; notes: string | null;
+  startTime?: string | null; endTime?: string | null;
   user: { id: string; name: string | null };
   services?: { serviceId: string; priceSnap: number; service: { id: string; name: string; price: number } }[];
 };
@@ -46,6 +47,20 @@ const fmt = (n: number) =>
 const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function weekStart(d: Date) { const r = new Date(d); r.setDate(r.getDate() - ((r.getDay() + 6) % 7)); return r; }
+
+// Ledolgozott órák "HH:MM" érkezés/távozásból.
+function hoursOf(start?: string | null, end?: string | null): number {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(":");
+  const [eh, em] = end.split(":");
+  const s = Number(sh) * 60 + Number(sm ?? 0);
+  const e = Number(eh) * 60 + Number(em ?? 0);
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;
+  let mins = e - s;
+  if (mins < 0) mins += 1440; // éjfélen átnyúló műszak
+  return mins / 60;
+}
+const fmtH = (h: number) => (h > 0 ? `${Number.isInteger(h) ? h : h.toFixed(1)} ó` : "");
 
 const dim = "var(--text-soft)";
 
@@ -90,6 +105,8 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
   const [earnings,       setEarnings]       = useState("");
   const [earningsManual, setEarningsManual] = useState(false);
   const [wNotes,         setWNotes]         = useState("");
+  const [wStart,         setWStart]         = useState(""); // érkezés
+  const [wEnd,           setWEnd]           = useState(""); // távozás
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   // Service search
   const [svcSearch,      setSvcSearch]      = useState("");
@@ -144,7 +161,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
 
   function resetWork() {
     setSelectedSvc(new Set()); setEarnings(""); setEarningsManual(false);
-    setWNotes(""); setSvcSearch(""); setSvcOpen(false);
+    setWNotes(""); setWStart(""); setWEnd(""); setSvcSearch(""); setSvcOpen(false);
     setMatDesc(""); setMatAmt(""); setMatOpen(false); setMatManual(false);
     setEditingEntryId(null);
   }
@@ -154,6 +171,8 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
     setEarnings(String(e.earnings));
     setEarningsManual(true);
     setWNotes(e.notes ?? "");
+    setWStart(e.startTime ?? "");
+    setWEnd(e.endTime ?? "");
     const svcIds = new Set((e.services ?? []).map(s => s.serviceId));
     setSelectedSvc(svcIds);
     setEditingEntryId(e.id);
@@ -237,6 +256,9 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: col, boxShadow: `0 0 6px ${col}88`, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: col }}>{e.user.name}</div>
+                    {e.startTime && e.endTime && (
+                      <div style={{ fontSize: "0.72rem", color: `${col}aa`, fontFamily: "var(--font-cinzel)", letterSpacing: "0.05em" }}>🕐 {e.startTime}–{e.endTime} · {fmtH(hoursOf(e.startTime, e.endTime))}</div>
+                    )}
                     {e.notes && <div style={{ fontSize: "0.78rem", fontStyle: "italic", color: `${col}88` }}>{e.notes}</div>}
                     {(e.services ?? []).length > 0 && (
                       <div style={{ fontSize: "0.72rem", color: `${col}77`, marginTop: "0.1rem" }}>
@@ -332,6 +354,8 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
               date: dateStr, userId,
               earnings: parseFloat(earnings) || 0,
               notes: wNotes || undefined,
+              startTime: wStart || undefined,
+              endTime: wEnd || undefined,
               serviceIds: Array.from(selectedSvc),
             });
             if (!editingEntryId && matDesc.trim() && matAmt) {
@@ -360,6 +384,25 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Munkaidő: érkezés – távozás */}
+            <div>
+              <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                Munkaidő a szalonban
+                {hoursOf(wStart, wEnd) > 0 && (
+                  <span style={{ color: userColors[userId] ?? "var(--color-teal)", fontSize: "0.6rem", letterSpacing: "0.05em" }}>{fmtH(hoursOf(wStart, wEnd))}</span>
+                )}
+              </label>
+              <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+                <input type="time" value={wStart} onChange={e => setWStart(e.target.value)} style={{ ...inputStyle, flex: 1 }} aria-label="Érkezés"
+                  onFocus={e => { e.target.style.borderColor = userColors[userId] ?? "var(--color-teal)"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; }} />
+                <span style={{ color: "var(--text-soft)", fontFamily: "var(--font-cormorant)" }}>–</span>
+                <input type="time" value={wEnd} onChange={e => setWEnd(e.target.value)} style={{ ...inputStyle, flex: 1 }} aria-label="Távozás"
+                  onFocus={e => { e.target.style.borderColor = userColors[userId] ?? "var(--color-teal)"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; }} />
               </div>
             </div>
 
@@ -570,8 +613,12 @@ function WorkerChip({ entry, color, expanded, onClick }: { entry: WorkDay; color
       <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0, boxShadow: `0 0 5px ${color}99` }} />
         <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color, flex: 1 }}>{entry.user.name}</span>
+        {hoursOf(entry.startTime, entry.endTime) > 0 && (
+          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", color: `${color}cc`, flexShrink: 0, letterSpacing: "0.03em" }}>{fmtH(hoursOf(entry.startTime, entry.endTime))}</span>
+        )}
         <span style={{ fontFamily: "var(--font-playfair)", fontSize: expanded ? "0.95rem" : "0.72rem", color, fontWeight: 700, flexShrink: 0 }}>{expanded ? fmt(entry.earnings) : `${Math.round(entry.earnings / 1000)}k`}</span>
       </div>
+      {expanded && entry.startTime && entry.endTime && <div style={{ marginTop: "0.3rem", fontSize: "0.78rem", color: `${color}aa`, fontFamily: "var(--font-cinzel)", letterSpacing: "0.04em" }}>🕐 {entry.startTime}–{entry.endTime}</div>}
       {expanded && entry.notes && <div style={{ marginTop: "0.3rem", paddingTop: "0.3rem", borderTop: `1px solid ${color}22`, fontStyle: "italic", fontSize: "0.82rem", color: `${color}bb`, fontFamily: "var(--font-cormorant)" }}>{entry.notes}</div>}
     </div>
   );
@@ -697,7 +744,7 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: col, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{e.user.name}</span>
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: col, fontWeight: 700 }}>{Math.round(e.earnings / 1000)}k</span>
                     </div>
-                    {exp && <div style={{ marginTop: "0.2rem", paddingTop: "0.2rem", borderTop: `1px solid ${col}22` }}><div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: col, fontWeight: 700 }}>{fmt(e.earnings)}</div>{e.notes && <div style={{ fontStyle: "italic", fontSize: "0.68rem", color: `${col}88` }}>{e.notes}</div>}</div>}
+                    {exp && <div style={{ marginTop: "0.2rem", paddingTop: "0.2rem", borderTop: `1px solid ${col}22` }}><div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: col, fontWeight: 700 }}>{fmt(e.earnings)}</div>{e.startTime && e.endTime && <div style={{ fontSize: "0.64rem", color: `${col}aa`, fontFamily: "var(--font-cinzel)", letterSpacing: "0.03em" }}>🕐 {e.startTime}–{e.endTime} · {fmtH(hoursOf(e.startTime, e.endTime))}</div>}{e.notes && <div style={{ fontStyle: "italic", fontSize: "0.68rem", color: `${col}88` }}>{e.notes}</div>}</div>}
                   </div>
                 );
               })}
@@ -734,6 +781,73 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
   );
 }
 
+// ── Year view ─────────────────────────────────────────────────────────────────
+function YearView({ year, userColors }: { year: number; userColors: Record<string, string> }) {
+  const { data, isLoading } = api.calendar.year.useQuery({ year });
+  const perUser = data?.perUser ?? [];
+  const MON = ["Jan", "Feb", "Már", "Ápr", "Máj", "Jún", "Júl", "Aug", "Sze", "Okt", "Nov", "Dec"];
+  const hCell = (h: number) => (h > 0 ? (Number.isInteger(h) ? String(h) : h.toFixed(1)) : "–");
+
+  const monthTotals = Array(12).fill(0) as number[];
+  perUser.forEach(u => u.monthlyHours.forEach((h, i) => { monthTotals[i]! += h; }));
+  const grandHours = perUser.reduce((s, u) => s + u.totalHours, 0);
+  const grandEarnings = perUser.reduce((s, u) => s + u.totalEarnings, 0);
+  const grandDays = perUser.reduce((s, u) => s + u.totalDays, 0);
+
+  if (isLoading) return <div style={{ textAlign: "center", color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", padding: "4rem", fontStyle: "italic" }}>Betöltés…</div>;
+  if (perUser.length === 0) return <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 16, padding: "2rem", textAlign: "center", color: "var(--text-soft)", fontFamily: "var(--font-cormorant)", fontStyle: "italic" }}>Ebben az évben nincs rögzített munkanap.</div>;
+
+  const thBase: React.CSSProperties = { fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)", padding: "0.55rem 0.4rem", textAlign: "center", borderBottom: "1px solid var(--border)" };
+  const tdBase: React.CSSProperties = { fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "var(--text-primary)", padding: "0.5rem 0.4rem", textAlign: "center", borderBottom: "1px solid var(--bg-today)" };
+
+  return (
+    <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 20, padding: "1.25rem", overflowX: "auto" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.18em", color: "rgba(74,124,126,0.7)", textTransform: "uppercase", marginBottom: "1rem" }}>
+        ◈ Éves óra-összesítés személyenként — {year} (órában)
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+        <thead>
+          <tr>
+            <th style={{ ...thBase, textAlign: "left", paddingLeft: "0.6rem" }}>Dolgozó</th>
+            {MON.map(m => <th key={m} style={thBase}>{m}</th>)}
+            <th style={{ ...thBase, color: "var(--color-teal)" }}>Össz óra</th>
+            <th style={thBase}>Bevétel</th>
+            <th style={thBase}>Napok</th>
+          </tr>
+        </thead>
+        <tbody>
+          {perUser.map(u => {
+            const col = userColors[u.id] ?? "#c4926e";
+            return (
+              <tr key={u.id}>
+                <td style={{ ...tdBase, textAlign: "left", paddingLeft: "0.6rem", whiteSpace: "nowrap" }}>
+                  <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: col, marginRight: "0.5rem" }} />
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: col }}>{u.name}</span>
+                </td>
+                {u.monthlyHours.map((h, i) => (
+                  <td key={i} style={{ ...tdBase, color: h > 0 ? "var(--text-primary)" : "var(--border)" }}>{hCell(h)}</td>
+                ))}
+                <td style={{ ...tdBase, color: col, fontWeight: 700 }}>{u.totalHours > 0 ? hCell(u.totalHours) : "–"}</td>
+                <td style={{ ...tdBase, color: "#7a9e8c", fontWeight: 700 }}>{fmt(u.totalEarnings)}</td>
+                <td style={{ ...tdBase, color: "var(--text-soft)" }}>{u.totalDays}</td>
+              </tr>
+            );
+          })}
+          <tr>
+            <td style={{ ...tdBase, textAlign: "left", paddingLeft: "0.6rem", borderTop: "1px solid var(--border)", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.1em", color: "var(--color-teal)", textTransform: "uppercase" }}>Összes</td>
+            {monthTotals.map((h, i) => (
+              <td key={i} style={{ ...tdBase, borderTop: "1px solid var(--border)", color: h > 0 ? "var(--color-teal)" : "var(--border)", fontWeight: 700 }}>{hCell(h)}</td>
+            ))}
+            <td style={{ ...tdBase, borderTop: "1px solid var(--border)", color: "var(--color-teal)", fontWeight: 700 }}>{grandHours > 0 ? hCell(grandHours) : "–"}</td>
+            <td style={{ ...tdBase, borderTop: "1px solid var(--border)", color: "#7a9e8c", fontWeight: 700 }}>{fmt(grandEarnings)}</td>
+            <td style={{ ...tdBase, borderTop: "1px solid var(--border)", color: "var(--text-soft)" }}>{grandDays}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CalendarClient() {
   const now = new Date();
@@ -754,6 +868,8 @@ export default function CalendarClient() {
 
   const userColors: Record<string, string> = {};
   users.forEach((u, i) => { userColors[u.id] = USER_COLORS[i % USER_COLORS.length]!; });
+  // Új munkához csak aktív dolgozó választható; a színek/előzmény mindenkit megtartanak.
+  const activeUsers = users.filter(u => (u as { active?: boolean }).active !== false);
 
   const byDate: Record<string, WorkDay[]>          = {};
   const byCostDate: Record<string, FinanceEntry[]>  = {};
@@ -766,7 +882,11 @@ export default function CalendarClient() {
 
   // Monthly totals
   const userTotals: Record<string, number> = {};
-  workDays.forEach(w => { userTotals[w.userId] = (userTotals[w.userId] ?? 0) + w.earnings; });
+  const userHours: Record<string, number> = {};
+  workDays.forEach(w => {
+    userTotals[w.userId] = (userTotals[w.userId] ?? 0) + w.earnings;
+    userHours[w.userId]  = (userHours[w.userId]  ?? 0) + hoursOf((w as WorkDay).startTime, (w as WorkDay).endTime);
+  });
   const totalRevenue = workDays.reduce((s, w) => s + w.earnings, 0);
   const totalCosts   = financeEntries.reduce((s, e) => s + e.amount, 0);
   const totalProfit  = totalRevenue - totalCosts;
@@ -775,6 +895,7 @@ export default function CalendarClient() {
     setAnchor(prev => {
       const d = new Date(prev);
       if (view === "month") d.setMonth(d.getMonth() + dir);
+      else if (view === "year") d.setFullYear(d.getFullYear() + dir);
       else if (view === "week") d.setDate(d.getDate() + dir * 7);
       else if (view === "3day") d.setDate(d.getDate() + dir * 3);
       else d.setDate(d.getDate() + dir);
@@ -783,6 +904,7 @@ export default function CalendarClient() {
   }
 
   function navLabel() {
+    if (view === "year") return String(anchor.getFullYear());
     if (view === "month") return `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`;
     if (view === "week") {
       const ws = weekStart(anchor); const we = addDays(ws, 6);
@@ -802,8 +924,8 @@ export default function CalendarClient() {
   }
 
   const VIEW_BTNS: { key: View; label: string }[] = [
-    { key: "month", label: "Havi" }, { key: "week", label: "Heti" },
-    { key: "3day",  label: "3 napos" }, { key: "day", label: "Napi" },
+    { key: "day", label: "Napi" }, { key: "week", label: "Heti" },
+    { key: "month", label: "Havi" }, { key: "year", label: "Éves" },
   ];
 
   const modalWorkEntries  = modalDate ? (byDate[modalDate] ?? []) : [];
@@ -814,7 +936,7 @@ export default function CalendarClient() {
     <div style={{ animation: "fadeInUp 0.5s ease" }}>
       {modalDate && (
         <DayModal dateStr={modalDate} workEntries={modalWorkEntries} costEntries={modalCostEntries}
-          guestCards={modalGuestCards} users={users} userColors={userColors} onClose={() => setModalDate(null)} />
+          guestCards={modalGuestCards} users={activeUsers} userColors={userColors} onClose={() => setModalDate(null)} />
       )}
 
       <div style={{ marginBottom: "1.5rem" }}>
@@ -843,7 +965,8 @@ export default function CalendarClient() {
           <button onClick={() => navigate(1)} style={navBtnStyle}>›</button>
         </div>
 
-        {/* Monthly summary */}
+        {/* Monthly summary — év nézetben a táblázat mutatja */}
+        {view !== "year" && (
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
           {users.map((u, i) => {
             const col = USER_COLORS[i % USER_COLORS.length]!;
@@ -853,6 +976,7 @@ export default function CalendarClient() {
                 <div style={{ width: 6, height: 6, borderRadius: "50%", background: col }} />
                 <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: col }}>{u.name}</span>
                 {t > 0 && <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.75rem", color: col, fontWeight: 700 }}>{fmt(t)}</span>}
+                {(userHours[u.id] ?? 0) > 0 && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", color: `${col}cc`, letterSpacing: "0.03em" }}>· {fmtH(userHours[u.id]!)}</span>}
               </div>
             );
           })}
@@ -863,9 +987,13 @@ export default function CalendarClient() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Calendar body */}
+      {view === "year" && (
+        <YearView year={qYear} userColors={userColors} />
+      )}
       {view === "month" && (
         <MonthView year={qYear} month={qMonth} byDate={byDate} byCostDate={byCostDate}
           byGuestCardDate={byGuestCardDate} userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile} />

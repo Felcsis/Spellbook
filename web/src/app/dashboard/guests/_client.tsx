@@ -342,7 +342,8 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
   const utils = api.useUtils();
 
   const { data: allGuests = [] }  = api.guests.listGuests.useQuery();
-  const { data: workers = [] }    = api.calendar.users.useQuery();
+  const { data: allWorkers = [] } = api.calendar.users.useQuery();
+  const workers = allWorkers.filter(u => u.active !== false); // csak aktív dolgozó választható
   const { data: categories = [] } = api.services.listCategories.useQuery();
 
   const createGuest   = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });

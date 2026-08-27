@@ -5,11 +5,11 @@ export const calendarRouter = createTRPCRouter({
   // Admin látja az összes usert, staff csak magát
   users: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.session.user.role === "admin") {
-      return ctx.db.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
+      return ctx.db.user.findMany({ select: { id: true, name: true, active: true }, orderBy: { name: "asc" } });
     }
     return ctx.db.user.findMany({
       where:   { id: ctx.session.user.id },
-      select:  { id: true, name: true },
+      select:  { id: true, name: true, active: true },
     });
   }),
 
@@ -71,12 +71,57 @@ export const calendarRouter = createTRPCRouter({
       return { workDays, financeEntries, guestCards };
     }),
 
+  // Éves nézet: személyenként havi bontásban ledolgozott órák, bevétel és napok.
+  year: protectedProcedure
+    .input(z.object({ year: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const from = new Date(input.year, 0, 1);
+      const to   = new Date(input.year + 1, 0, 1);
+      const isAdmin = ctx.session.user.role === "admin";
+
+      const workDays = await ctx.db.workDay.findMany({
+        where: { date: { gte: from, lt: to }, ...(!isAdmin && { userId: ctx.session.user.id }) },
+        include: { user: { select: { id: true, name: true } } },
+        orderBy: { date: "asc" },
+      });
+
+      const hrs = (s: string | null, e: string | null) => {
+        if (!s || !e) return 0;
+        const sp = s.split(":"), ep = e.split(":");
+        const sMin = Number(sp[0]) * 60 + Number(sp[1] ?? 0);
+        const eMin = Number(ep[0]) * 60 + Number(ep[1] ?? 0);
+        if (Number.isNaN(sMin) || Number.isNaN(eMin)) return 0;
+        let mins = eMin - sMin;
+        if (mins < 0) mins += 24 * 60; // éjfélen átnyúló műszak
+        return mins / 60;
+      };
+
+      type Row = { id: string; name: string; monthlyHours: number[]; monthlyEarnings: number[]; monthlyDays: number[]; totalHours: number; totalEarnings: number; totalDays: number };
+      const byUser: Record<string, Row> = {};
+      workDays.forEach(w => {
+        byUser[w.userId] ??= { id: w.userId, name: w.user.name ?? "?", monthlyHours: Array(12).fill(0), monthlyEarnings: Array(12).fill(0), monthlyDays: Array(12).fill(0), totalHours: 0, totalEarnings: 0, totalDays: 0 };
+        const r = byUser[w.userId]!;
+        const m = new Date(w.date).getMonth();
+        const h = hrs(w.startTime, w.endTime);
+        r.monthlyHours[m]! += h;
+        r.monthlyEarnings[m]! += w.earnings;
+        r.monthlyDays[m]! += 1;
+        r.totalHours += h;
+        r.totalEarnings += w.earnings;
+        r.totalDays += 1;
+      });
+
+      return { year: input.year, perUser: Object.values(byUser).sort((a, b) => b.totalEarnings - a.totalEarnings) };
+    }),
+
   upsert: protectedProcedure
     .input(z.object({
       date:       z.string(),
       userId:     z.string(),
       earnings:   z.number().min(0),
       notes:      z.string().optional(),
+      startTime:  z.string().optional(),   // érkezés "HH:MM"
+      endTime:    z.string().optional(),   // távozás "HH:MM"
       serviceIds: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -92,8 +137,8 @@ export const calendarRouter = createTRPCRouter({
 
       const workDay = await ctx.db.workDay.upsert({
         where:  { date_userId: { date, userId: targetUserId } },
-        create: { date, userId: targetUserId, earnings: input.earnings, notes: input.notes },
-        update: { earnings: input.earnings, notes: input.notes },
+        create: { date, userId: targetUserId, earnings: input.earnings, notes: input.notes, startTime: input.startTime ?? null, endTime: input.endTime ?? null },
+        update: { earnings: input.earnings, notes: input.notes, startTime: input.startTime ?? null, endTime: input.endTime ?? null },
       });
 
       if (input.serviceIds !== undefined) {

@@ -65,6 +65,8 @@ model User {
     image          String?
     password       String?
     role           String         @default("staff")  // "admin" | "staff"
+    active         Boolean        @default(true)      // false = archivált (nem léphet be, nem választható új munkához)
+    archivedAt     DateTime?
     accounts       Account[]
     sessions       Session[]
     posts          Post[]
@@ -86,6 +88,8 @@ model WorkDay {
     userId        String
     earnings      Float            @default(0)
     notes         String?
+    startTime     String?          // érkezés "HH:MM"
+    endTime       String?          // távozás "HH:MM"
     financeEntry  FinanceEntry?
     services      WorkDayService[]
 

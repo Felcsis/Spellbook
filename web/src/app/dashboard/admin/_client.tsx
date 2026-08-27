@@ -176,29 +176,58 @@ function EditUserModal({ user, onClose, onSaved }: {
   );
 }
 
-// ── Delete confirm ────────────────────────────────────────────────────────────
-function DeleteModal({ user, onClose, onDeleted }: {
+// ── Archive confirm + záró elszámolás ─────────────────────────────────────────
+function SettleRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.3rem 0", fontFamily: "var(--font-cormorant)" }}>
+      <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{label}</span>
+      <span style={{ color: "var(--text-primary)", fontSize: "0.95rem", fontWeight: 600 }}>{value}</span>
+    </div>
+  );
+}
+
+function ArchiveModal({ user, onClose, onDone }: {
   user: { id: string; name: string | null };
   onClose: () => void;
-  onDeleted: () => void;
+  onDone: () => void;
 }) {
-  const del = api.admin.deleteUser.useMutation({ onSuccess: () => { onDeleted(); onClose(); } });
+  const { data: s, isLoading } = api.admin.staffSettlement.useQuery({ userId: user.id });
+  const archive = api.admin.archiveUser.useMutation({ onSuccess: () => { onDone(); onClose(); } });
+  const wageShown = (s?.wage ?? 0) > 0 ? (s?.wage ?? 0) : (s?.wageEstimate ?? 0);
+  const range = s?.firstDate && s?.lastDate
+    ? `${new Date(s.firstDate).toLocaleDateString("hu-HU")} – ${new Date(s.lastDate).toLocaleDateString("hu-HU")}`
+    : "—";
+
   return (
-    <Modal title="Törlés megerősítése" onClose={onClose}>
-      <p style={{ color: "var(--text-muted)", marginBottom: "1.5rem", fontFamily: "var(--font-cormorant)", fontSize: "1.05rem" }}>
-        Biztosan törlöd <strong style={{ color: "var(--text-primary)" }}>{user.name}</strong> felhasználóját? Ez visszavonhatatlan.
+    <Modal title={`Archiválás — ${user.name}`} onClose={onClose}>
+      <p style={{ color: "var(--text-muted)", marginBottom: "1rem", fontFamily: "var(--font-cormorant)", fontSize: "1rem" }}>
+        A dolgozó <strong style={{ color: "var(--text-primary)" }}>nem tud többé belépni</strong> és nem választható új munkához,
+        de minden eddigi pénzügyi adata megmarad. Záró elszámolás:
       </p>
+      <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", marginBottom: "1.25rem" }}>
+        {isLoading ? (
+          <p style={{ color: "var(--text-muted)", fontFamily: "var(--font-cormorant)", textAlign: "center", margin: 0 }}>Számolás…</p>
+        ) : (
+          <>
+            <SettleRow label="Időszak" value={range} />
+            <SettleRow label="Termelt bevétel" value={fmt(s?.revenue ?? 0)} />
+            <SettleRow label="Anyagköltség" value={fmt(s?.material ?? 0)} />
+            <SettleRow label={(s?.wage ?? 0) > 0 ? "Kifizetett bér" : "Becsült bér (60%)"} value={fmt(wageShown)} />
+            <SettleRow label="Alkalmak" value={`${s?.count ?? 0} db`} />
+          </>
+        )}
+      </div>
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
         <Btn variant="ghost" onClick={onClose}>Mégse</Btn>
-        <Btn variant="danger" onClick={() => del.mutate({ id: user.id })} disabled={del.isPending}>
-          {del.isPending ? "Törlés…" : "Törlés"}
+        <Btn variant="danger" onClick={() => archive.mutate({ id: user.id })} disabled={archive.isPending}>
+          {archive.isPending ? "Archiválás…" : "Archiválás megerősítése"}
         </Btn>
       </div>
     </Modal>
   );
 }
 
-type UserRow = { id: string; name: string | null; email: string | null; role: string };
+type UserRow = { id: string; name: string | null; email: string | null; role: string; active?: boolean; archivedAt?: string | Date | null };
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 const fmt = (n: number) => new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -298,10 +327,11 @@ function StaffFinances({ users }: { users: UserRow[] }) {
 export default function AdminClient() {
   const isMobile = useIsMobile();
   const { data: users = [], refetch } = api.admin.listUsers.useQuery();
-  const [showCreate, setShowCreate] = useState(false);
-  const [editUser, setEditUser]     = useState<UserRow | null>(null);
-  const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
+  const [showCreate, setShowCreate]   = useState(false);
+  const [editUser, setEditUser]       = useState<UserRow | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<UserRow | null>(null);
   const [tab, setTab] = useState<"users" | "finances">("users");
+  const restore = api.admin.restoreUser.useMutation({ onSuccess: () => void refetch() });
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: "0.45rem 1.1rem", borderRadius: 8, border: "none", cursor: "pointer",
@@ -346,6 +376,7 @@ export default function AdminClient() {
                 alignItems: "center",
                 gap: "1rem",
                 flexWrap: isMobile ? "wrap" : "nowrap",
+                opacity: u.active === false ? 0.55 : 1,
               }}
             >
               {/* Avatar */}
@@ -374,6 +405,11 @@ export default function AdminClient() {
                   }}>
                     {ROLE_LABELS[u.role] ?? u.role}
                   </span>
+                  {u.active === false && (
+                    <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 20, background: "rgba(150,150,150,0.15)", color: "var(--text-muted)", border: "1px solid var(--border)", fontFamily: "var(--font-cinzel)", letterSpacing: "0.08em" }}>
+                      Archivált
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-soft)", marginTop: "0.1rem" }}>{u.email}</div>
               </div>
@@ -386,12 +422,22 @@ export default function AdminClient() {
                 >
                   Szerkesztés
                 </button>
-                <button
-                  onClick={() => setDeleteUser(u)}
-                  style={{ background: "none", border: "1px solid #e0555533", borderRadius: 8, padding: "0.35rem 0.8rem", color: "#e05555", cursor: "pointer", fontSize: "0.85rem", fontFamily: "var(--font-cormorant)" }}
-                >
-                  Törlés
-                </button>
+                {u.active === false ? (
+                  <button
+                    onClick={() => restore.mutate({ id: u.id })}
+                    disabled={restore.isPending}
+                    style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.35rem 0.8rem", color: "var(--color-teal)", cursor: "pointer", fontSize: "0.85rem", fontFamily: "var(--font-cormorant)" }}
+                  >
+                    Visszaállítás
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setArchiveTarget(u)}
+                    style={{ background: "none", border: "1px solid #c9906a55", borderRadius: 8, padding: "0.35rem 0.8rem", color: "#c9906a", cursor: "pointer", fontSize: "0.85rem", fontFamily: "var(--font-cormorant)" }}
+                  >
+                    Archiválás
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -400,8 +446,8 @@ export default function AdminClient() {
 
       {/* Modals */}
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} onCreated={() => void refetch()} />}
-      {editUser   && <EditUserModal   user={editUser}   onClose={() => setEditUser(null)}   onSaved={() => void refetch()} />}
-      {deleteUser && <DeleteModal     user={deleteUser} onClose={() => setDeleteUser(null)} onDeleted={() => void refetch()} />}
+      {editUser      && <EditUserModal user={editUser}      onClose={() => setEditUser(null)}      onSaved={() => void refetch()} />}
+      {archiveTarget && <ArchiveModal  user={archiveTarget} onClose={() => setArchiveTarget(null)} onDone={() => void refetch()} />}
 
       <BackupSection />
     </div>

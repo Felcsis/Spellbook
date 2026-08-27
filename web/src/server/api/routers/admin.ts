@@ -2,6 +2,7 @@ import { z } from "zod";
 import { hash } from "bcryptjs";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import { entryWageAmount } from "~/lib/wage";
 
 function requireAdmin(role: string) {
   if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Csak admin számára elérhető." });
@@ -11,8 +12,8 @@ export const adminRouter = createTRPCRouter({
   listUsers: protectedProcedure.query(async ({ ctx }) => {
     requireAdmin(ctx.session.user.role);
     return ctx.db.user.findMany({
-      select: { id: true, name: true, email: true, role: true },
-      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true, role: true, active: true, archivedAt: true },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
     });
   }),
 
@@ -65,6 +66,65 @@ export const adminRouter = createTRPCRouter({
       requireAdmin(ctx.session.user.role);
       const hashed = await hash(input.password, 12);
       return ctx.db.user.update({ where: { id: input.id }, data: { password: hashed }, select: { id: true } });
+    }),
+
+  // Archiválás: a dolgozó nem léphet be és nem választható új munkához,
+  // de minden pénzügyi előzménye/statisztikája megmarad, attribútálva.
+  archiveUser: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      if (input.id === ctx.session.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Saját magadat nem archiválhatod." });
+      // Hozzáférés megvonása: aktív munkamenetek törlése + jelszó érvénytelenítése.
+      await ctx.db.session.deleteMany({ where: { userId: input.id } });
+      return ctx.db.user.update({
+        where: { id: input.id },
+        data: { active: false, archivedAt: new Date(), password: null },
+        select: { id: true, active: true },
+      });
+    }),
+
+  restoreUser: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      return ctx.db.user.update({
+        where: { id: input.id },
+        data: { active: true, archivedAt: null },
+        select: { id: true, active: true },
+      });
+    }),
+
+  // Végső elszámolás egy dolgozóhoz: teljes eddigi termelt bevétel, bér, anyag.
+  staffSettlement: protectedProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      requireAdmin(ctx.session.user.role);
+      const rows = await ctx.db.financeEntry.findMany({
+        where: { OR: [{ workDay: { userId: input.userId } }, { workDayId: null, createdById: input.userId }] },
+        include: {
+          guestCard: { include: { services: { select: { name: true, price: true, categoryName: true } } } },
+          workDay: { include: { services: { include: { service: { select: { name: true, price: true, category: { select: { name: true } } } } } } } },
+        },
+        orderBy: { date: "asc" },
+      });
+      let revenue = 0, material = 0, wage = 0, wageEstimate = 0, count = 0;
+      let firstDate: Date | null = null, lastDate: Date | null = null;
+      rows.forEach(e => {
+        if (e.type === "revenue") { revenue += e.amount; count += 1; }
+        if (e.type === "material") material += e.amount;
+        if (e.type === "wage") wage += e.amount;
+        wageEstimate += entryWageAmount(e);
+        const d = new Date(e.date);
+        if (!firstDate || d < firstDate) firstDate = d;
+        if (!lastDate || d > lastDate) lastDate = d;
+      });
+      const user = await ctx.db.user.findUnique({ where: { id: input.userId }, select: { id: true, name: true, email: true, active: true, archivedAt: true } });
+      return {
+        user, revenue, material, wage, wageEstimate, count,
+        firstDate: firstDate ? (firstDate as Date).toISOString() : null,
+        lastDate: lastDate ? (lastDate as Date).toISOString() : null,
+      };
     }),
 
   deleteUser: protectedProcedure

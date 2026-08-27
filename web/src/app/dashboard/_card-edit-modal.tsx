@@ -60,7 +60,9 @@ const gColors: Record<string, { border: string; bg: string; text: string }> = {
 
 export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose: () => void }) {
   const utils = api.useUtils();
-  const { data: workers = [] }    = api.calendar.users.useQuery();
+  const { data: allWorkers = [] } = api.calendar.users.useQuery();
+  // Csak aktív dolgozó választható; a kártya jelenlegi dolgozóját megtartjuk, ha archivált.
+  const workers = allWorkers.filter(u => u.active !== false || u.id === card.worker.id);
   const { data: categories = [] } = api.services.listCategories.useQuery();
 
   const updateCard = api.guests.updateCard.useMutation({
