@@ -594,6 +594,58 @@ function PdfImportModal({ priceListType, onClose }: { priceListType: PriceList; 
   );
 }
 
+// ── Árlista PDF export ─────────────────────────────────────────────────────
+// A jsPDF beépített Helvetica fontja nem tud magyar ékezetet → ASCII-ra normalizálunk.
+function deHu(s: string): string {
+  return s
+    .replace(/[áÁ]/g, m => (m === "á" ? "a" : "A"))
+    .replace(/[éÉ]/g, m => (m === "é" ? "e" : "E"))
+    .replace(/[íÍ]/g, m => (m === "í" ? "i" : "I"))
+    .replace(/[óÓ]/g, m => (m === "ó" ? "o" : "O"))
+    .replace(/[öÖőŐ]/g, m => (m.toLowerCase() === m ? "o" : "O"))
+    .replace(/[úÚ]/g, m => (m === "ú" ? "u" : "U"))
+    .replace(/[üÜűŰ]/g, m => (m.toLowerCase() === m ? "u" : "U"));
+}
+
+async function downloadPriceListPdf(
+  cats: { name: string; services: { name: string; price: number }[] }[],
+  listLabel: string,
+) {
+  const { default: jsPDF }    = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(40, 40, 40);
+  doc.text("Salon Spellbook", pageW / 2, 18, { align: "center" });
+  doc.setFontSize(13);
+  doc.text(deHu("Arlista"), pageW / 2, 26, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(90, 90, 90);
+  doc.text(deHu(listLabel), pageW / 2, 32, { align: "center" });
+  doc.text(new Date().toLocaleDateString("hu-HU"), pageW / 2, 37, { align: "center" });
+
+  let y = 44;
+  for (const cat of cats) {
+    if (!cat.services.length) continue;
+    autoTable(doc, {
+      startY: y,
+      head: [[deHu(cat.name), "Ar (Ft)"]],
+      body: cat.services.map(s => [deHu(s.name), s.price.toLocaleString("hu-HU")]),
+      styles: { font: "helvetica", fontSize: 10, cellPadding: 2.5 },
+      headStyles: { fillColor: [60, 100, 100], textColor: 255, fontStyle: "bold" },
+      columnStyles: { 1: { halign: "right", cellWidth: 32 } },
+      margin: { left: 20, right: 20 },
+    });
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+  }
+
+  doc.save(`arlista-${deHu(listLabel).toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
   const { data: categories = [], isLoading } = api.services.listCategories.useQuery();
@@ -625,10 +677,11 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
             Árlista és felhasznált anyagok kezelése
           </p>
         </div>
-        {tab === "services" && isAdmin && (
+        {tab === "services" && (
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <Btn variant="ghost" onClick={() => setPdfImport(true)}>📄 PDF import</Btn>
-            <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>
+            <Btn variant="ghost" onClick={() => void downloadPriceListPdf(visibleCats, effList === "master" ? "Mester árlista" : "Fodrász árlista")}>⬇ Árlista PDF</Btn>
+            {isAdmin && <Btn variant="ghost" onClick={() => setPdfImport(true)}>📄 PDF import</Btn>}
+            {isAdmin && <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>}
           </div>
         )}
       </div>
