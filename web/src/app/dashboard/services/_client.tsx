@@ -602,7 +602,16 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
   const [addCat,     setAddCat]    = useState(false);
   const [pdfImport,  setPdfImport] = useState(false);
 
-  const visibleCats = categories.filter(c => c.priceListType === priceList);
+  // Csak a használatban lévő árlistákat mutatjuk: egy lista akkor jelenik meg, ha van
+  // hozzá rendelt AKTÍV dolgozó. Az adatok megmaradnak; ha egy dolgozót arra a listára
+  // állítasz (Admin → Szerkesztés → Árlista), a lista automatikusan visszajön.
+  const { data: allUsers = [] } = api.calendar.users.useQuery();
+  const LIST_DEFS: [PriceList, string][] = [["master", "◈ Mester árlista"], ["beginner", "✦ Fodrász árlista"]];
+  const usedLists = new Set(allUsers.filter(u => u.active !== false).map(u => (u.priceListType as PriceList | undefined) ?? "beginner"));
+  const shownLists = LIST_DEFS.filter(([k]) => usedLists.has(k));
+  const effList: PriceList = shownLists.some(([k]) => k === priceList) ? priceList : (shownLists[0]?.[0] ?? "master");
+
+  const visibleCats = categories.filter(c => c.priceListType === effList);
 
   return (
     <div style={{ maxWidth: 760 }}>
@@ -634,20 +643,20 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
         ))}
       </div>
 
-      {/* Price list sub-tabs — admin only */}
-      {tab === "services" && isAdmin && (
+      {/* Árlista-választó — csak a használatban lévő listák, ha több mint egy van */}
+      {tab === "services" && isAdmin && shownLists.length > 1 && (
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem" }}>
-          {([["master", "◈ Mester árlista"], ["beginner", "✦ Fodrász árlista"]] as [PriceList, string][]).map(([key, label]) => (
+          {shownLists.map(([key, label]) => (
             <button key={key} onClick={() => setPriceList(key)}
-              style={{ padding: "0.42rem 1rem", borderRadius: 8, border: priceList === key ? `1px solid ${key === "master" ? "rgba(74,124,126,0.5)" : "rgba(196,146,110,0.5)"}` : "1px solid var(--border)", background: priceList === key ? (key === "master" ? "rgba(74,124,126,0.1)" : "rgba(196,146,110,0.1)") : "transparent", color: priceList === key ? (key === "master" ? gold : "#c4926e") : dimmed, fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
+              style={{ padding: "0.42rem 1rem", borderRadius: 8, border: effList === key ? `1px solid ${key === "master" ? "rgba(74,124,126,0.5)" : "rgba(196,146,110,0.5)"}` : "1px solid var(--border)", background: effList === key ? (key === "master" ? "rgba(74,124,126,0.1)" : "rgba(196,146,110,0.1)") : "transparent", color: effList === key ? (key === "master" ? gold : "#c4926e") : dimmed, fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}>
               {label}
             </button>
           ))}
         </div>
       )}
-      {tab === "services" && !isAdmin && (
-        <div style={{ marginBottom: "2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "#c4926e", textTransform: "uppercase" }}>
-          ✦ Fodrász árlista
+      {tab === "services" && (!isAdmin || shownLists.length <= 1) && (
+        <div style={{ marginBottom: "2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: effList === "master" ? gold : "#c4926e", textTransform: "uppercase" }}>
+          {effList === "master" ? "◈ Mester árlista" : "✦ Fodrász árlista"}
         </div>
       )}
 
@@ -657,9 +666,9 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
           <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>Betöltés...</div>
         ) : visibleCats.length === 0 ? (
           <div style={{ background: panelBg, border, borderRadius: 14, padding: "3rem", textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{priceList === "master" ? "✂" : "✦"}</div>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{effList === "master" ? "✂" : "✦"}</div>
             <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>
-              {priceList === "master" ? "Még nincs mester árlista" : "Még nincs fodrász árlista"}
+              {effList === "master" ? "Még nincs mester árlista" : "Még nincs fodrász árlista"}
             </div>
             {isAdmin && (
               <>
@@ -676,8 +685,8 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
       {/* Materials tab */}
       {tab === "materials" && <MaterialsPanel isAdmin={isAdmin} />}
 
-      {isAdmin && addCat    && <CategoryModal priceListType={priceList} onClose={() => setAddCat(false)} />}
-      {isAdmin && pdfImport && <PdfImportModal priceListType={priceList} onClose={() => setPdfImport(false)} />}
+      {isAdmin && addCat    && <CategoryModal priceListType={effList} onClose={() => setAddCat(false)} />}
+      {isAdmin && pdfImport && <PdfImportModal priceListType={effList} onClose={() => setPdfImport(false)} />}
     </div>
   );
 }
