@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { api } from "~/trpc/react";
 import { EntryList } from "./_entry-list";
-import { priceListFor } from "~/lib/pricelist";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
@@ -123,9 +122,10 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   // Date + amount
   const [date,      setDate]      = useState(() => new Date().toISOString().slice(0, 10));
 
-  // 2026-09-01-től mindenki a "master" árlistát kapja (a bejegyzés dátuma dönt);
-  // előtte a régi szabály (tulaj saját munkája master, staff beginner).
-  const targetPriceList = priceListFor(date, isAdmin && selectedWorkerId === userId);
+  // A kiválasztott dolgozóhoz rendelt árlista dönt (dolgozónként állítható az adminban).
+  const selectedWorker = allUsers.find((u: { id: string }) => u.id === selectedWorkerId);
+  const targetPriceList = (selectedWorker as { priceListType?: string } | undefined)?.priceListType
+    ?? (isAdmin && selectedWorkerId === userId ? "master" : "beginner");
   const visibleCategories = categories.filter((c: { priceListType?: string }) => c.priceListType === targetPriceList);
   const [manualAmt, setManualAmt] = useState("");
   const [isManual,  setIsManual]  = useState(false);

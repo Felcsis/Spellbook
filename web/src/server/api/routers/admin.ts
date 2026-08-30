@@ -12,7 +12,7 @@ export const adminRouter = createTRPCRouter({
   listUsers: protectedProcedure.query(async ({ ctx }) => {
     requireAdmin(ctx.session.user.role);
     return ctx.db.user.findMany({
-      select: { id: true, name: true, email: true, role: true, active: true, archivedAt: true },
+      select: { id: true, name: true, email: true, role: true, active: true, archivedAt: true, priceListType: true },
       orderBy: [{ active: "desc" }, { name: "asc" }],
     });
   }),
@@ -38,17 +38,18 @@ export const adminRouter = createTRPCRouter({
       if (existing) throw new TRPCError({ code: "CONFLICT", message: "Ez az email már foglalt." });
       const hashed = await hash(input.password, 12);
       return ctx.db.user.create({
-        data: { name: input.name, email: input.email, password: hashed, role: input.role },
-        select: { id: true, name: true, email: true, role: true },
+        data: { name: input.name, email: input.email, password: hashed, role: input.role, priceListType: input.role === "admin" ? "master" : "beginner" },
+        select: { id: true, name: true, email: true, role: true, priceListType: true },
       });
     }),
 
   updateUser: protectedProcedure
     .input(z.object({
-      id:    z.string(),
-      name:  z.string().min(1).optional(),
-      email: z.string().email().optional(),
-      role:  z.enum(["admin", "staff"]).optional(),
+      id:            z.string(),
+      name:          z.string().min(1).optional(),
+      email:         z.string().email().optional(),
+      role:          z.enum(["admin", "staff"]).optional(),
+      priceListType: z.enum(["master", "beginner"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);
@@ -56,7 +57,7 @@ export const adminRouter = createTRPCRouter({
       return ctx.db.user.update({
         where: { id },
         data,
-        select: { id: true, name: true, email: true, role: true },
+        select: { id: true, name: true, email: true, role: true, priceListType: true },
       });
     }),
 

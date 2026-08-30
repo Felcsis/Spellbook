@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import type { ParsedCategory } from "~/app/api/import-pdf/route";
-import { priceListFor } from "~/lib/pricelist";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Service = {
@@ -599,7 +598,7 @@ function PdfImportModal({ priceListType, onClose }: { priceListType: PriceList; 
 export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
   const { data: categories = [], isLoading } = api.services.listCategories.useQuery();
   const [tab,        setTab]       = useState<"services" | "materials">("services");
-  const [priceList,  setPriceList] = useState<PriceList>(priceListFor(new Date(), isAdmin));
+  const [priceList,  setPriceList] = useState<PriceList>("master");
   const [addCat,     setAddCat]    = useState(false);
   const [pdfImport,  setPdfImport] = useState(false);
 

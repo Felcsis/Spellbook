@@ -132,13 +132,14 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
 function EditUserModal({ user, onClose, onSaved }: {
-  user: { id: string; name: string | null; email: string | null; role: string };
+  user: { id: string; name: string | null; email: string | null; role: string; priceListType?: string | null };
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [name, setName]   = useState(user.name ?? "");
   const [email, setEmail] = useState(user.email ?? "");
   const [role, setRole]   = useState<"admin" | "staff">(user.role as "admin" | "staff");
+  const [priceList, setPriceList] = useState<"master" | "beginner">((user.priceListType as "master" | "beginner") ?? "beginner");
   const [pw, setPw]       = useState("");
   const [err, setErr]     = useState("");
 
@@ -155,6 +156,12 @@ function EditUserModal({ user, onClose, onSaved }: {
           <option value="admin">Admin</option>
         </Select>
       </Field>
+      <Field label="Árlista">
+        <Select value={priceList} onChange={e => setPriceList(e.target.value as "master" | "beginner")}>
+          <option value="master">Master (teljes árlista)</option>
+          <option value="beginner">Beginner</option>
+        </Select>
+      </Field>
       <div style={{ borderTop: "1px solid var(--border)", margin: "1rem 0", paddingTop: "1rem" }}>
         <Field label="Új jelszó (opcionális)">
           <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -168,7 +175,7 @@ function EditUserModal({ user, onClose, onSaved }: {
       {err && <p style={{ color: "#e05555", fontSize: "0.85rem", marginBottom: "1rem" }}>{err}</p>}
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
         <Btn variant="ghost" onClick={onClose}>Mégse</Btn>
-        <Btn onClick={() => update.mutate({ id: user.id, name, email, role })} disabled={update.isPending}>
+        <Btn onClick={() => update.mutate({ id: user.id, name, email, role, priceListType: priceList })} disabled={update.isPending}>
           {update.isPending ? "Mentés…" : "Mentés"}
         </Btn>
       </div>
@@ -227,7 +234,7 @@ function ArchiveModal({ user, onClose, onDone }: {
   );
 }
 
-type UserRow = { id: string; name: string | null; email: string | null; role: string; active?: boolean; archivedAt?: string | Date | null };
+type UserRow = { id: string; name: string | null; email: string | null; role: string; active?: boolean; archivedAt?: string | Date | null; priceListType?: string | null };
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 const fmt = (n: number) => new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -410,6 +417,9 @@ export default function AdminClient() {
                       Archivált
                     </span>
                   )}
+                  <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 20, background: "rgba(120,180,160,0.1)", color: "var(--text-soft)", border: "1px solid var(--border)", fontFamily: "var(--font-cinzel)", letterSpacing: "0.06em" }}>
+                    {u.priceListType === "master" ? "Master lista" : "Beginner lista"}
+                  </span>
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-soft)", marginTop: "0.1rem" }}>{u.email}</div>
               </div>

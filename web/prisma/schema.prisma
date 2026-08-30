@@ -67,6 +67,7 @@ model User {
     role           String         @default("staff")  // "admin" | "staff"
     active         Boolean        @default(true)      // false = archivált (nem léphet be, nem választható új munkához)
     archivedAt     DateTime?
+    priceListType  String         @default("beginner") // "master" | "beginner" — melyik árlistán dolgozik
     accounts       Account[]
     sessions       Session[]
     posts          Post[]
