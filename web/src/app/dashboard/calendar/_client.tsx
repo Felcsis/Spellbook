@@ -38,6 +38,7 @@ type GuestCard = {
   guest:    { id: string; name: string };
   worker:   { id: string; name: string | null };
   services: { name: string; price: number }[];
+  materials?: { name: string; brand?: string | null; colorCode?: string | null; grams: number; lineTotal: number }[];
 };
 type User = { id: string; name: string | null };
 
@@ -295,8 +296,20 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     <div style={{ fontSize: "0.75rem", color: dim, fontStyle: "italic" }}>
                       {card.worker.name}{card.services.length > 0 && ` · ${card.services.map(s => s.name).join(", ")}`}
                     </div>
+                    {card.materials && card.materials.length > 0 && (
+                      <div style={{ marginTop: "0.3rem", display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+                        {card.materials.map((m, i) => (
+                          <div key={i} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem" }}>
+                            <span style={{ color: "#c09898" }}>🧴 {m.name}</span>
+                            {m.brand && <span style={{ color: "var(--text-muted)" }}> · {m.brand}</span>}
+                            {m.colorCode && <span style={{ color: "#c8a244", fontWeight: 600, letterSpacing: "0.03em" }}> · {m.colorCode}</span>}
+                            <span style={{ color: "var(--text-muted)" }}> · {m.grams}g</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(card.total)}</div>
+                  <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem", alignSelf: "flex-start" }}>{fmt(card.total)}</div>
                   <button onClick={() => delCard.mutate({ id: card.id })} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}

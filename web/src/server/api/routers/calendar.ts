@@ -61,9 +61,10 @@ export const calendarRouter = createTRPCRouter({
             ...(!isAdmin && { workerId: ctx.session.user.id }),
           },
           include: {
-            guest:    { select: { id: true, name: true } },
-            worker:   { select: { id: true, name: true } },
-            services: { select: { name: true, price: true } },
+            guest:     { select: { id: true, name: true } },
+            worker:    { select: { id: true, name: true } },
+            services:  { select: { name: true, price: true } },
+            materials: { select: { name: true, brand: true, colorCode: true, grams: true, lineTotal: true } },
           },
           orderBy: { date: "asc" },
         }),
