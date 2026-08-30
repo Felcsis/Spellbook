@@ -5,7 +5,9 @@ export const calendarRouter = createTRPCRouter({
   // Admin látja az összes usert, staff csak magát
   users: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.session.user.role === "admin") {
-      return ctx.db.user.findMany({ select: { id: true, name: true, active: true, priceListType: true }, orderBy: { name: "asc" } });
+      // Csak aktív dolgozók: az archiváltak (pl. kilépett) sehol nem jelennek meg
+      // a pickerekben / összesítőkben / szűrőkben. A múltbeli adataik data-alapon maradnak.
+      return ctx.db.user.findMany({ where: { active: true }, select: { id: true, name: true, active: true, priceListType: true }, orderBy: { name: "asc" } });
     }
     return ctx.db.user.findMany({
       where:   { id: ctx.session.user.id },

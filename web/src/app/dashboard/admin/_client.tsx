@@ -234,6 +234,38 @@ function ArchiveModal({ user, onClose, onDone }: {
   );
 }
 
+// Archivált dolgozó költségei — csak megtekintés (visszamenőleg).
+function SettlementModal({ user, onClose }: { user: { id: string; name: string | null }; onClose: () => void }) {
+  const { data: s, isLoading } = api.admin.staffSettlement.useQuery({ userId: user.id });
+  const wageShown = (s?.wage ?? 0) > 0 ? (s?.wage ?? 0) : (s?.wageEstimate ?? 0);
+  const range = s?.firstDate && s?.lastDate
+    ? `${new Date(s.firstDate).toLocaleDateString("hu-HU")} – ${new Date(s.lastDate).toLocaleDateString("hu-HU")}`
+    : "—";
+  return (
+    <Modal title={`Költségek — ${user.name}`} onClose={onClose}>
+      <p style={{ color: "var(--text-muted)", marginBottom: "1rem", fontFamily: "var(--font-cormorant)", fontSize: "1rem" }}>
+        Archivált dolgozó teljes eddigi könyvelése (visszamenőleg):
+      </p>
+      <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", marginBottom: "1.25rem" }}>
+        {isLoading ? (
+          <p style={{ color: "var(--text-muted)", fontFamily: "var(--font-cormorant)", textAlign: "center", margin: 0 }}>Számolás…</p>
+        ) : (
+          <>
+            <SettleRow label="Időszak" value={range} />
+            <SettleRow label="Termelt bevétel" value={fmt(s?.revenue ?? 0)} />
+            <SettleRow label="Anyagköltség" value={fmt(s?.material ?? 0)} />
+            <SettleRow label={(s?.wage ?? 0) > 0 ? "Kifizetett bér" : "Becsült bér (60%)"} value={fmt(wageShown)} />
+            <SettleRow label="Alkalmak" value={`${s?.count ?? 0} db`} />
+          </>
+        )}
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Btn variant="ghost" onClick={onClose}>Bezárás</Btn>
+      </div>
+    </Modal>
+  );
+}
+
 type UserRow = { id: string; name: string | null; email: string | null; role: string; active?: boolean; archivedAt?: string | Date | null; priceListType?: string | null };
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -247,7 +279,7 @@ function StaffFinances({ users }: { users: UserRow[] }) {
 
   const { data: entries = [] } = api.admin.staffFinances.useQuery({ year, month });
 
-  const staff = users.filter(u => u.role !== "admin");
+  const staff = users.filter(u => u.role !== "admin" && u.active !== false);
 
   function prevMonth() { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); }
   function nextMonth() { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }
@@ -337,6 +369,8 @@ export default function AdminClient() {
   const [showCreate, setShowCreate]   = useState(false);
   const [editUser, setEditUser]       = useState<UserRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<UserRow | null>(null);
+  const [settleUser, setSettleUser]       = useState<UserRow | null>(null);
+  const [showArchived, setShowArchived]   = useState(false);
   const [tab, setTab] = useState<"users" | "finances">("users");
   const restore = api.admin.restoreUser.useMutation({ onSuccess: () => void refetch() });
 
@@ -355,7 +389,12 @@ export default function AdminClient() {
         <h1 style={{ fontFamily: "var(--font-cinzel)", fontSize: "1.5rem", color: "var(--color-teal)", margin: 0 }}>
           ✦ Admin felület
         </h1>
-        {tab === "users" && <Btn onClick={() => setShowCreate(true)}>+ Új felhasználó</Btn>}
+        {tab === "users" && (
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <Btn variant="ghost" onClick={() => setShowArchived(v => !v)}>{showArchived ? "Archiváltak elrejtése" : "Archiváltak megjelenítése"}</Btn>
+            <Btn onClick={() => setShowCreate(true)}>+ Új felhasználó</Btn>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -368,7 +407,7 @@ export default function AdminClient() {
 
       {/* User cards */}
       {tab === "users" && <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        {users?.map(u => {
+        {users?.filter(u => showArchived || u.active !== false).map(u => {
           const uc = userColor(u.name);
           return (
             <div
@@ -433,13 +472,21 @@ export default function AdminClient() {
                   Szerkesztés
                 </button>
                 {u.active === false ? (
-                  <button
-                    onClick={() => restore.mutate({ id: u.id })}
-                    disabled={restore.isPending}
-                    style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.35rem 0.8rem", color: "var(--color-teal)", cursor: "pointer", fontSize: "0.85rem", fontFamily: "var(--font-cormorant)" }}
-                  >
-                    Visszaállítás
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setSettleUser(u)}
+                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.35rem 0.8rem", color: "var(--text-primary)", cursor: "pointer", fontSize: "0.85rem", fontFamily: "var(--font-cormorant)" }}
+                    >
+                      Költségek
+                    </button>
+                    <button
+                      onClick={() => restore.mutate({ id: u.id })}
+                      disabled={restore.isPending}
+                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.35rem 0.8rem", color: "var(--color-teal)", cursor: "pointer", fontSize: "0.85rem", fontFamily: "var(--font-cormorant)" }}
+                    >
+                      Visszaállítás
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={() => setArchiveTarget(u)}
@@ -458,6 +505,7 @@ export default function AdminClient() {
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} onCreated={() => void refetch()} />}
       {editUser      && <EditUserModal user={editUser}      onClose={() => setEditUser(null)}      onSaved={() => void refetch()} />}
       {archiveTarget && <ArchiveModal  user={archiveTarget} onClose={() => setArchiveTarget(null)} onDone={() => void refetch()} />}
+      {settleUser    && <SettlementModal user={settleUser}  onClose={() => setSettleUser(null)} />}
 
       <BackupSection />
     </div>
