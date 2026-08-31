@@ -98,6 +98,10 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
   const staffWageTotal = Object.values(staffStats)
     .filter(st => !st.isOwner)
     .reduce((s, st) => s + (st.wage > 0 ? st.wage : st.wageEstimate), 0);
+  // A csapattól (nem-tulaj dolgozóktól) a tulajhoz befolyó 40% jutalék összesen.
+  const totalCommission = Object.values(staffStats)
+    .filter(st => !st.isOwner)
+    .reduce((s, st) => s + Math.max(0, st.svcRev - st.wageEstimate), 0);
   const overheadTotal = expenseList.reduce((s, e) => s + e.amount, 0);
   const profit = revenue - staffWageTotal - overheadTotal;
 
@@ -198,6 +202,10 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
                       <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>◈ Havi bevétel</span>
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "#527666", fontWeight: 700 }}>{fmt(st.revenue)}</span>
                     </div>
+                    {st.isOwner && st.material > 0 && row("✦ Anyagköltség (átfolyó)", st.material, "#a06830")}
+                    {st.isOwner && row("♦ Saját munka (100%)", st.svcRev, uC)}
+                    {st.isOwner && totalCommission > 0 && row("◆ Jutalék a csapattól (40%)", totalCommission, "#c9906a")}
+                    {st.isOwner && row("= Összesen (neked marad)", st.svcRev + totalCommission, "#527666")}
                     {!st.isOwner && st.material > 0 && row("✦ Anyagköltség", st.material, "#a06830")}
                     {!st.isOwner && row(`♦ ${st.name} bére (60%)`, st.wage > 0 ? st.wage : st.wageEstimate, uC)}
                     {!st.isOwner && st.expenses > 0 && row(`− Kiadás (${st.name})`, st.expenses, "#f87171")}
