@@ -8,7 +8,7 @@ import type { ParsedCategory } from "~/app/api/import-pdf/route";
 // ── Types ──────────────────────────────────────────────────────────────────
 type Service = {
   id: string; name: string; price: number; duration: number;
-  description: string | null; active: boolean; order: number;
+  description: string | null; active: boolean; order: number; perHour?: boolean;
 };
 type Category = {
   id: string; name: string; order: number; priceListType: string; services: Service[];
@@ -87,6 +87,7 @@ function ServiceModal({ categoryId, service, onClose }: { categoryId: string; se
   const [price, setPrice] = useState(service?.price?.toString() ?? "");
   const [dur, setDur]     = useState(service?.duration?.toString() ?? "30");
   const [desc, setDesc]   = useState(service?.description ?? "");
+  const [perHour, setPerHour] = useState(service?.perHour ?? false);
   const [err, setErr]     = useState("");
 
   const create = api.services.createService.useMutation({
@@ -106,9 +107,9 @@ function ServiceModal({ categoryId, service, onClose }: { categoryId: string; se
     if (isNaN(p) || p < 0) { setErr("Adj meg érvényes árat."); return; }
     if (isNaN(d) || d <= 0) { setErr("Adj meg érvényes időtartamot."); return; }
     if (service) {
-      update.mutate({ id: service.id, name, price: p, duration: d, description: desc || undefined });
+      update.mutate({ id: service.id, name, price: p, duration: d, description: desc || undefined, perHour });
     } else {
-      create.mutate({ categoryId, name, price: p, duration: d, description: desc || undefined });
+      create.mutate({ categoryId, name, price: p, duration: d, description: desc || undefined, perHour });
     }
   };
 
@@ -127,6 +128,12 @@ function ServiceModal({ categoryId, service, onClose }: { categoryId: string; se
       <Field label="Időtartam (perc)">
         <input style={inputStyle} type="number" value={dur} onChange={e => setDur(e.target.value)} placeholder="30"
           onKeyDown={e => e.key === "Enter" && save()} />
+      </Field>
+      <Field label="Óradíj">
+        <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", fontFamily: "var(--font-cormorant)", color: cream, fontSize: "0.95rem" }}>
+          <input type="checkbox" checked={perHour} onChange={e => setPerHour(e.target.checked)} style={{ width: 18, height: 18, cursor: "pointer" }} />
+          Az ár óradíj — a listában és PDF-ben „Ft/óra" jelöléssel
+        </label>
       </Field>
       <Field label="Megjegyzés (opcionális)">
         <input style={inputStyle} value={desc} onChange={e => setDesc(e.target.value)} placeholder="rövid leírás..."
@@ -204,7 +211,7 @@ function ServiceRow({
         {svc.description && <span style={{ marginLeft: "0.5rem", fontSize: "0.82rem", color: dimmed }}>{svc.description}</span>}
       </div>
       <div className="svc-price" style={{ fontFamily: "var(--font-cormorant)", color: gold, fontSize: "1rem", minWidth: 80, textAlign: "right", whiteSpace: "nowrap" }}>
-        {svc.price.toLocaleString("hu-HU")} Ft
+        {svc.price.toLocaleString("hu-HU")} Ft{svc.perHour ? "/óra" : ""}
       </div>
       <div className="svc-dur" style={{ fontSize: "0.8rem", color: dimmed, minWidth: 60, textAlign: "right" }}>
         {svc.duration} perc
@@ -608,7 +615,7 @@ function deHu(s: string): string {
 }
 
 async function downloadPriceListPdf(
-  cats: { name: string; services: { name: string; price: number }[] }[],
+  cats: { name: string; services: { name: string; price: number; perHour?: boolean }[] }[],
   listLabel: string,
 ) {
   const { default: jsPDF }    = await import("jspdf");
@@ -634,7 +641,7 @@ async function downloadPriceListPdf(
     autoTable(doc, {
       startY: y,
       head: [[deHu(cat.name), "Ar (Ft)"]],
-      body: cat.services.map(s => [deHu(s.name), s.price.toLocaleString("hu-HU")]),
+      body: cat.services.map(s => [deHu(s.name), s.price.toLocaleString("hu-HU") + (s.perHour ? "/ora" : "")]),
       styles: { font: "helvetica", fontSize: 10, cellPadding: 2.5 },
       headStyles: { fillColor: [60, 100, 100], textColor: 255, fontStyle: "bold" },
       columnStyles: { 1: { halign: "right", cellWidth: 32 } },

@@ -60,6 +60,7 @@ export const servicesRouter = createTRPCRouter({
       price:       z.number().nonnegative(),
       duration:    z.number().int().positive().default(30),
       description: z.string().optional(),
+      perHour:     z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);
@@ -74,6 +75,7 @@ export const servicesRouter = createTRPCRouter({
           price:       input.price,
           duration:    input.duration,
           description: input.description,
+          perHour:     input.perHour ?? false,
           order:       (last?.order ?? -1) + 1,
           categoryId:  input.categoryId,
           userId:      ctx.session.user.id,
@@ -89,6 +91,7 @@ export const servicesRouter = createTRPCRouter({
       duration:    z.number().int().positive().optional(),
       description: z.string().optional(),
       active:      z.boolean().optional(),
+      perHour:     z.boolean().optional(),
     }))
     .mutation(({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);

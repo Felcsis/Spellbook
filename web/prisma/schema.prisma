@@ -263,6 +263,7 @@ model Service {
     duration     Int              @default(30)
     description  String?
     active       Boolean          @default(true)
+    perHour      Boolean          @default(false)  // true = óradíj, a listában/PDF-ben "Ft/óra"
     order        Int              @default(0)
     createdAt    DateTime         @default(now())
     category     ServiceCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
