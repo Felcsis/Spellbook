@@ -148,11 +148,12 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
         const fwColor = fw ? (COLORS[fw.name] ?? "#7256a0") : "#7256a0";
         const fwCommission = fw ? fw.svcRev - fw.wageEstimate : 0;
         return (
-          <div className="stat-boxes" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && Object.keys(staffStats).length > 0) ? "0.75rem" : "2.5rem" }}>
-            <StatBox label={MONTHS[month-1] ?? ""} value={totalIncome} color="#527666" sub="havi bevétel" large />
-            {isAdmin && !isOwnView && !filterUserId && staffWageTotal > 0 && <StatBox label={wage > 0 ? "Bérek" : "Várható bér"} value={staffWageTotal} color="#7256a0" sub={wage > 0 ? "kiadás" : "becslés"} />}
-            {isAdmin && !filterUserId && overheadTotal > 0 && <StatBox label="Kiadások" value={overheadTotal} color="#e87171" sub="rezsi, bérleti díj…" />}
-            {isAdmin && canSeeProfit && !filterUserId && totalIncome > 0 && <StatBox label="Nyereség" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={`${Math.round((profit / totalIncome) * 100)}% árrés`} large />}
+          <>
+          <div className="stat-boxes" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: (!filterUserId && Object.keys(staffStats).length > 0) ? "0.75rem" : "1rem" }}>
+            <StatBox label="Áthaladó pénz" value={totalIncome} color="#527666" sub={`${fmt(revenue)} szolg. + ${fmt(material)} anyag`} large />
+            {isAdmin && !isOwnView && !filterUserId && staffWageTotal > 0 && <StatBox label={wage > 0 ? "Kifizetett bér" : "Bérköltség"} value={staffWageTotal} color="#7256a0" sub={wage > 0 ? "dolgozóknak" : "dolgozók 60%-a (becsült)"} />}
+            {isAdmin && !filterUserId && overheadTotal > 0 && <StatBox label="Rezsi / kiadás" value={overheadTotal} color="#e87171" sub="bérleti díj, rezsi…" />}
+            {isAdmin && canSeeProfit && !filterUserId && totalIncome > 0 && <StatBox label="Nyereség (tiéd)" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={`szolg. − bér − rezsi`} large />}
             {fw && fw.material > 0 && <StatBox label="Anyagköltség" value={fw.material} color="#a06830" sub="kiadás" />}
             {fw && fw.wageEstimate > 0 && <StatBox label={fw.wage > 0 ? "Bér" : "60% bér"} value={fw.wage > 0 ? fw.wage : fw.wageEstimate} color={fwColor} sub={fw.wage > 0 ? "rögzített" : "számított"} />}
             {fw && fw.expenses > 0 && <StatBox label="Kiadásaid" value={fw.expenses} color="#f87171" sub="levonva béredből" />}
@@ -160,6 +161,14 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
             {!isAdmin && <StatBox label={wage > 0 ? "Béred" : "Neked jár"} value={Math.max(0, (wage > 0 ? wage : staffNet) - myExpenseTotal)} color="#a78bfa" sub="havi nettó" large />}
             {!isAdmin && myExpenseTotal > 0 && <StatBox label="Kiadásaid" value={myExpenseTotal} color="#f87171" sub="levonva" />}
           </div>
+          {isAdmin && !filterUserId && totalIncome > 0 && (
+            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.86rem", color: "var(--text-soft)", fontStyle: "italic", lineHeight: 1.5, marginBottom: "2rem", maxWidth: 640 }}>
+              <b style={{ color: "var(--text-primary)" }}>Áthaladó pénz</b> = szolgáltatás + anyag (amit a vendégek összesen fizettek).
+              A dolgozók a szolgáltatásuk <b style={{ color: "#7256a0" }}>60%-át</b> kapják bérként — ez a „Bérköltség"; amíg nincs tényleges bér rögzítve, ez pontos becslés.
+              A <b style={{ color: "#527666" }}>nyereség</b> = szolgáltatás-bevétel − dolgozói bér − rezsi (az anyag átfolyó tétel, nem számít bele).
+            </div>
+          )}
+          </>
         );
       })()}
 
