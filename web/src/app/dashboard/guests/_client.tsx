@@ -347,7 +347,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
   const { data: categories = [] } = api.services.listCategories.useQuery();
 
   const createGuest   = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
-  const createCard    = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
+  const createCard    = api.guests.createCard.useMutation({ onSuccess: () => { void utils.guests.guestBook.invalidate(); void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); } });
   const createFinance = api.finance.create.useMutation({ onSuccess: () => void utils.finance.list.invalidate() });
 
   const [guestSearch, setGuestSearch] = useState(prefillGuestName ?? "");

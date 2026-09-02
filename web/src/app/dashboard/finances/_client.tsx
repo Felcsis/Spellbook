@@ -75,7 +75,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   const createFinance      = api.finance.create.useMutation();
   const incrementEarnings  = api.calendar.incrementEarnings.useMutation();
   const createGuest        = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
-  const createCard         = api.guests.createCard.useMutation({ onSuccess: () => void utils.guests.guestBook.invalidate() });
+  const createCard         = api.guests.createCard.useMutation({ onSuccess: () => { void utils.guests.guestBook.invalidate(); void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); } });
 
   function switchWorker(id: string) { onWorkerChange(id); setSelSvcs([]); setIsManual(false); setManualAmt(""); }
 
