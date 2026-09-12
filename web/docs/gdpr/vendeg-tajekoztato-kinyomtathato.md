@@ -1,7 +1,7 @@
 # Rövid adatvédelmi tájékoztató vendégeknek
 
 *Nyomtasd ki és tedd ki a pultra, vagy mutasd meg az első alkalommal érkező vendégnek.
-A részletes változat: **[a szalon weboldala]/adatkezeles***
+A részletes változat: **spellbook.colormecrazy.hu/adatkezeles***
 
 ---
 
@@ -42,11 +42,11 @@ Bármikor, ingyen, indoklás nélkül kérheted, hogy
 **megmutassuk, mi van rólad · javítsuk, ami pontatlan · töröljük az adataidat ·
 adjuk ki fájlban, hogy máshova vidd.**
 
-Szólj a szalonban, vagy írj: **[e-mail cím]**
+Szólj a szalonban, vagy írj: **pinterfelicia8@gmail.com**
 
 Ha úgy érzed, valamit rosszul csinálunk, panaszt tehetsz a NAIH-nál
 (1055 Budapest, Falk Miksa u. 9-11. · ugyfelszolgalat@naih.hu).
 
 ---
 
-*[cégnév] · [cím] · [dátum]*
+*Color Me Crazy Extrém Fodrász Szalon (Pintér Felícia e.v.) · 6723 Szeged, Hont Ferenc utca 11/b 2/6 · 2026. szeptember 12.*

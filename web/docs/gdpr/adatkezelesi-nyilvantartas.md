@@ -6,8 +6,8 @@ tudni bemutatni. Ha változik a működés (új adatkör, új szolgáltató), ez
 | | |
 |---|---|
 | **Rendszer** | Salon Spellbook |
-| **Utolsó frissítés** | 2026-09-05 |
-| **Kitöltötte** | *[név]* |
+| **Utolsó frissítés** | 2026-09-12 |
+| **Kitöltötte** | Pintér Felícia |
 
 ---
 
@@ -15,15 +15,16 @@ tudni bemutatni. Ha változik a működés (új adatkör, új szolgáltató), ez
 
 | Mező | Érték |
 |---|---|
-| Név | *[cégnév / e.v. neve]* |
-| Székhely | *[cím]* |
-| Adószám / nyilvántartási szám | *[szám]* |
-| Képviselő | *[név]* |
-| Kapcsolattartó adatvédelmi ügyekben | *[név, e-mail, telefon]* |
+| Név | Pintér Felícia e.v. (Color Me Crazy Extrém Fodrász Szalon) |
+| Székhely | 6723 Szeged, Hont Ferenc utca 11/b 2/6 |
+| Adószám / nyilvántartási szám | 68694203-1-26 |
+| Képviselő | Pintér Felícia |
+| Kapcsolattartó adatvédelmi ügyekben | Pintér Felícia · pinterfelicia8@gmail.com · +36 30 089 4587 |
 | Adatvédelmi tisztviselő | Nincs — a 37. cikk szerinti kötelező esetek egyike sem áll fenn (nem közhatalmi szerv, nem végzünk nagy számban rendszeres és szisztematikus megfigyelést, a különleges adatok kezelése nem fő tevékenység, hanem eseti és a szolgáltatáshoz kapcsolódó) |
 
-> A fenti mezőket ki kell tölteni, és ugyanezeket az adatokat kell beállítani a
-> `GDPR_CONTROLLER_*` környezeti változókban is, hogy a nyilvános tájékoztató is helyes legyen.
+> Ugyanezek az adatok vannak beállítva a `GDPR_CONTROLLER_*` környezeti változókban is
+> (Railway → Spellbook service), hogy a nyilvános tájékoztató is ezt mutassa. Ha itt
+> változtatsz, ott is át kell írni.
 
 ---
 

@@ -10,8 +10,8 @@
 
 ## Élesítés előtti teendők
 
-- [ ] `GDPR_CONTROLLER_*` környezeti változók kitöltése a Railway-en (`.env.example` mutatja a listát) — enélkül a `/adatkezeles` oldalon `[szögletes zárójeles]` helyőrzők látszanak
-- [ ] `adatkezelesi-nyilvantartas.md` `[szögletes zárójeles]` mezőinek kitöltése
+- [x] `GDPR_CONTROLLER_*` környezeti változók kitöltve a Railway-en (Spellbook service, 2026-09-12)
+- [x] `adatkezelesi-nyilvantartas.md` adatkezelő-mezői kitöltve (2026-09-12)
 - [ ] Railway DPA elfogadása a fiókban, a példány elmentése ide
 - [ ] Google Cloud DPA elfogadása, ha a naptár-szinkron használatban van
 - [ ] A vendégtájékoztató kinyomtatása és kihelyezése
