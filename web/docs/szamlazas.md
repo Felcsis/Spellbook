@@ -26,7 +26,7 @@ Nálunk csak a bizonylatszám marad meg, hogy a vendégkártyáról visszakeresh
    | Változó | Mi ez |
    |---|---|
    | `SZAMLAZZ_AGENT_KEY` | a Számla Agent kulcs (ez kapcsolja be a funkciót) |
-   | `SZAMLAZZ_PREFIX_NYUGTA` | a nyugtatömb előtagja (Számlázz.hu → Beállítások → Előtagok) |
+   | `SZAMLAZZ_PREFIX_NYUGTA` | a nyugtatömb előtagja — **kötelező**, enélkül nem készül nyugta (Számlázz.hu → Beállítások → Előtagok) |
    | `SZAMLAZZ_PREFIX_SZAMLA` | a számlatömb előtagja — **a kettő nem ugyanaz** |
    | `SZAMLAZZ_VAT_KEY` | áfakulcs — alanyi adómentesnél `AAM`, ÁFA-alanynál pl. `27` |
 

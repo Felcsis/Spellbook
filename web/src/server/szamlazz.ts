@@ -58,10 +58,12 @@ export function isConfigured(): boolean {
 
 /**
  * A nyugtának és a számlának KÜLÖN előtagja (bizonylattömbje) van a Számlázz.hu-ban,
- * ezért két külön beállítás. A nyugta sémájában az `elotag` ráadásul kötelező elem
- * (a számláéban nem), ezért ott üres elemet küldünk, ha nincs beállítva — ilyenkor
- * a fiók alapértelmezett nyugtatömbje dönt. Nem létező előtagot a Számlázz.hu nem
- * hoz létre, hanem hibával elutasítja.
+ * ezért két külön beállítás.
+ *
+ * A nyugtánál az előtag tényleg kötelező — sem kihagyni nem lehet (57-es séma-hiba),
+ * sem üresen küldeni ("Hiányzó adat: nyugtaszám előtag", 7-es hiba). A számlánál
+ * viszont elhagyható, olyankor a fiók alapértelmezett számlatömbje dönt.
+ * Nem létező előtagot a Számlázz.hu nem hoz létre, hanem hibával elutasítja.
  */
 function receiptPrefixTag(): string {
   return `<elotag>${esc(env.SZAMLAZZ_PREFIX_NYUGTA?.trim() ?? "")}</elotag>`;
