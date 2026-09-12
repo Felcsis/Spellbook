@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { log } from "~/server/api/routers/gdpr";
-import { dueGuests, suggestFromRecipe } from "~/server/guest-match";
+import { suggestFromRecipe } from "~/server/guest-match";
 
 const MaterialInput = z.object({
   name:      z.string().min(1),
@@ -70,23 +70,6 @@ export const guestsRouter = createTRPCRouter({
           services:  c.services,
         })),
       );
-    }),
-
-  /** Kinek esedékes most időpontja — a látogatásai tipikus ritmusa alapján. */
-  due: protectedProcedure
-    .input(z.object({ limit: z.number().min(1).max(50).default(8) }).default({ limit: 8 }))
-    .query(async ({ ctx, input }) => {
-      const visits = await ctx.db.guestCard.findMany({
-        orderBy: { date: "desc" },
-        take:    3000,
-        select:  { guestId: true, date: true, guest: { select: { name: true } } },
-      });
-
-      return dueGuests(
-        visits.map(v => ({ guestId: v.guestId, guestName: v.guest.name, date: v.date })),
-      )
-        .filter(g => g.dueInDays <= 7)   // már késik, vagy egy héten belül esedékes
-        .slice(0, input.limit);
     }),
 
   /**

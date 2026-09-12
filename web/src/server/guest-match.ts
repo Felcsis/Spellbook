@@ -1,12 +1,11 @@
 /**
  * Vendég-felismerés: melyik vendéghez tartozik egy név vagy egy recept.
  *
- * Három helyről jön a kérdés:
+ * Két helyről jön a kérdés:
  *  - Google-időpont címéből ("Kovács Anna 14:00 festés") → melyik vendégünk ez
  *  - a rögzítéskor beírt szín-receptből → kinél volt már pont ilyen
- *  - esedékesség → ki jár ilyenkor
  *
- * Mindhárom csak JAVASOL. A rossz találat itt drágább, mint a kihagyott találat:
+ * Mindkettő csak JAVASOL. A rossz találat itt drágább, mint a kihagyott találat:
  * egy téves vendéghez könyvelt festés utólag nehezen bogozható ki, ezért a
  * küszöbök inkább szigorúak.
  */
@@ -165,58 +164,4 @@ export function suggestFromRecipe(input: RecipeInput, cards: RecipeCard[], now =
     .filter(s => s.score >= 0.5)
     .sort((a, b) => b.score - a.score)
     .slice(0, 4);
-}
-
-// ── esedékesség ───────────────────────────────────────────────────────────────
-
-export type DueGuest = {
-  guestId:     string;
-  guestName:   string;
-  lastVisit:   Date;
-  intervalDays: number;
-  dueInDays:   number;   // negatív = már késik
-};
-
-/**
- * Ki jár ilyenkor. A látogatások közti tipikus (medián) szünetből számolunk —
- * az átlagot egyetlen fél éves kihagyás is elrontaná.
- *
- * Két látogatás alatt nem tippelünk: egyetlen szünetből nem derül ki a szokás.
- */
-export function dueGuests(
-  visits: { guestId: string; guestName: string; date: Date }[],
-  now = new Date(),
-): DueGuest[] {
-  const byGuest = new Map<string, { name: string; dates: Date[] }>();
-  for (const v of visits) {
-    const e = byGuest.get(v.guestId) ?? { name: v.guestName, dates: [] };
-    e.dates.push(v.date);
-    byGuest.set(v.guestId, e);
-  }
-
-  const out: DueGuest[] = [];
-  for (const [guestId, { name, dates }] of byGuest) {
-    if (dates.length < 3) continue;   // legalább két szünet kell a mediánhoz
-    const sorted = [...dates].sort((a, b) => a.getTime() - b.getTime());
-
-    const gaps: number[] = [];
-    for (let i = 1; i < sorted.length; i++)
-      gaps.push((sorted[i]!.getTime() - sorted[i - 1]!.getTime()) / (1000 * 60 * 60 * 24));
-
-    gaps.sort((a, b) => a - b);
-    const median = gaps[Math.floor(gaps.length / 2)]!;
-    if (median < 7 || median > 400) continue;   // életszerűtlen ritmus
-
-    const last     = sorted[sorted.length - 1]!;
-    const sinceDays = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
-
-    out.push({
-      guestId, guestName: name, lastVisit: last,
-      intervalDays: Math.round(median),
-      dueInDays:    Math.round(median - sinceDays),
-    });
-  }
-
-  // A legrégebben esedékes elöl.
-  return out.sort((a, b) => a.dueInDays - b.dueInDays);
 }
