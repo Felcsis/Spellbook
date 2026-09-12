@@ -57,13 +57,14 @@ export function isConfigured(): boolean {
 }
 
 /**
- * A nyugta sémájában az `elotag` KÖTELEZŐ elem, a számláéban nem. A Számlázz.hu a
- * nem létező előtagot nem hozza létre, üresen hagyva viszont a fiók első
- * (alapértelmezett) bizonylattömbjét használja — ezért itt üres elemet küldünk,
- * ha nincs beállítva előtag.
+ * A nyugtának és a számlának KÜLÖN előtagja (bizonylattömbje) van a Számlázz.hu-ban,
+ * ezért két külön beállítás. A nyugta sémájában az `elotag` ráadásul kötelező elem
+ * (a számláéban nem), ezért ott üres elemet küldünk, ha nincs beállítva — ilyenkor
+ * a fiók alapértelmezett nyugtatömbje dönt. Nem létező előtagot a Számlázz.hu nem
+ * hoz létre, hanem hibával elutasítja.
  */
-function prefixTag(): string {
-  return `<elotag>${esc(env.SZAMLAZZ_PREFIX?.trim() ?? "")}</elotag>`;
+function receiptPrefixTag(): string {
+  return `<elotag>${esc(env.SZAMLAZZ_PREFIX_NYUGTA?.trim() ?? "")}</elotag>`;
 }
 
 function agentKey(): string {
@@ -168,7 +169,7 @@ export async function createReceipt(opts: {
     <pdfLetoltes>true</pdfLetoltes>
   </beallitasok>
   <fejlec>
-    ${prefixTag()}
+    ${receiptPrefixTag()}
     ${tag("fizmod", opts.payment)}
     <penznem>Ft</penznem>
     ${tag("megjegyzes", opts.comment)}
@@ -255,7 +256,7 @@ export async function createInvoice(opts: {
     <penznem>Ft</penznem>
     <szamlaNyelve>hu</szamlaNyelve>
     ${tag("megjegyzes", opts.comment)}
-    ${tag("elotag", env.SZAMLAZZ_PREFIX)}
+    ${tag("elotag", env.SZAMLAZZ_PREFIX_SZAMLA)}
     ${tag("rendelesSzam", opts.orderRef)}
   </fejlec>
   <elado></elado>

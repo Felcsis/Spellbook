@@ -30,7 +30,9 @@ export const env = createEnv({
     // Számlázz.hu Számla Agent — nyugta/számla kiállítása és NAV-adatszolgáltatás.
     // Agent kulcs nélkül a bizonylat-funkció egyszerűen nem jelenik meg.
     SZAMLAZZ_AGENT_KEY: z.string().optional(),
-    SZAMLAZZ_PREFIX:    z.string().optional(),  // bizonylatszám előtag, pl. "SB"
+    // A nyugtának és a számlának külön előtagja (bizonylattömbje) van a Számlázz.hu-ban.
+    SZAMLAZZ_PREFIX_NYUGTA: z.string().optional(),
+    SZAMLAZZ_PREFIX_SZAMLA: z.string().optional(),
     SZAMLAZZ_VAT_KEY:   z.string().optional(),  // áfakulcs: "AAM" (alanyi adómentes) vagy pl. "27"
   },
 
@@ -63,7 +65,8 @@ export const env = createEnv({
     GDPR_CONTROLLER_PHONE:   process.env.GDPR_CONTROLLER_PHONE,
 
     SZAMLAZZ_AGENT_KEY: process.env.SZAMLAZZ_AGENT_KEY,
-    SZAMLAZZ_PREFIX:    process.env.SZAMLAZZ_PREFIX,
+    SZAMLAZZ_PREFIX_NYUGTA: process.env.SZAMLAZZ_PREFIX_NYUGTA,
+    SZAMLAZZ_PREFIX_SZAMLA: process.env.SZAMLAZZ_PREFIX_SZAMLA,
     SZAMLAZZ_VAT_KEY:   process.env.SZAMLAZZ_VAT_KEY,
   },
   /**
