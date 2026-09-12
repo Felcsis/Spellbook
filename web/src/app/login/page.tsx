@@ -9,7 +9,6 @@ import { useIsMobile } from "~/app/_responsive";
 const USERS = [
   { name: "Felicia", email: "felicia@salon-spellbook.local", sigil: "✦", color: "#c9906a", glowRgb: "201,144,106" },
   { name: "Gitta",   email: "gitta@salon-spellbook.local",   sigil: "◈", color: "#9878b8", glowRgb: "152,120,184" },
-  { name: "Lili",    email: "lili@salon-spellbook.local",    sigil: "♦", color: "#e8a0b8", glowRgb: "232,160,184" },
 ] as const;
 
 function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) {
@@ -83,7 +82,7 @@ function UserCard({ name, email, sigil, color, glowRgb }: typeof USERS[number]) 
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Rejtett felhasználónév-mező — ettől ajánlja fel a böngésző a jelszó mentését,
-            és három különböző fiókként tárolja Feliciát/Gittát/Lilit. */}
+            és külön fiókként tárolja Feliciát és Gittát. */}
         <input
           type="email"
           name="username"
