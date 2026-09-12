@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
 import { CardEditById } from "~/app/dashboard/_card-edit-modal";
+import { StarfieldBg } from "./_starfield-bg";
+import { TimeGrid, hourRange, type GridBand, type GridEvent } from "./_time-grid";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -625,124 +627,14 @@ function SaveBtn({ loading }: { loading: boolean }) {
   );
 }
 
-// ── Worker chip ───────────────────────────────────────────────────────────────
-function WorkerChip({ entry, color, expanded, onClick }: { entry: WorkDay; color: string; expanded: boolean; onClick: () => void }) {
-  return (
-    <div onClick={e => { e.stopPropagation(); onClick(); }}
-      style={{ padding: expanded ? "0.8rem 0.9rem" : "0.28rem 0.55rem", borderRadius: "9px", background: expanded ? `${color}20` : `${color}14`, border: `1px solid ${expanded ? color + "66" : color + "28"}`, cursor: "pointer", transition: "all 0.25s", marginBottom: "0.25rem", boxShadow: expanded ? `0 4px 16px ${color}20` : "none" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-        <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0, boxShadow: `0 0 5px ${color}99` }} />
-        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color, flex: 1 }}>{entry.user.name}</span>
-        {hoursOf(entry.startTime, entry.endTime) > 0 && (
-          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", color: `${color}cc`, flexShrink: 0, letterSpacing: "0.03em" }}>{fmtH(hoursOf(entry.startTime, entry.endTime))}</span>
-        )}
-        <span style={{ fontFamily: "var(--font-playfair)", fontSize: expanded ? "0.95rem" : "0.72rem", color, fontWeight: 700, flexShrink: 0 }}>{expanded ? fmt(entry.earnings) : `${Math.round(entry.earnings / 1000)}k`}</span>
-      </div>
-      {expanded && entry.startTime && entry.endTime && <div style={{ marginTop: "0.3rem", fontSize: "0.78rem", color: `${color}aa`, fontFamily: "var(--font-cinzel)", letterSpacing: "0.04em" }}>🕐 {entry.startTime}–{entry.endTime}</div>}
-      {expanded && entry.notes && <div style={{ marginTop: "0.3rem", paddingTop: "0.3rem", borderTop: `1px solid ${color}22`, fontStyle: "italic", fontSize: "0.82rem", color: `${color}bb`, fontFamily: "var(--font-cormorant)" }}>{entry.notes}</div>}
-    </div>
-  );
-}
-
-// ── Day column ────────────────────────────────────────────────────────────────
-// ── Google Naptár időpont ─────────────────────────────────────────────────────
 /**
- * Egy behozott naptári időpont. Ha még nincs hozzá vendégkártya, egy kattintással
- * nyitható — a vendéget az esemény címe alapján keressük meg vagy hozzuk létre.
+ * Egy nap "fényereje" 0 és 1 között, a bevételből. A csillagtérképen ez adja,
+ * mennyire ragyog a napszám — így egy pillantásból látszik, mely napok erősek.
+ * A 150 ezer forint a felső határ: efölött már nem világít tovább.
  */
-function EventChip({ ev, onOpenCard }: { ev: GEvent; onOpenCard: (ev: GEvent) => void }) {
-  const col  = "#6a8fb0";
-  const time = ev.allDay
-    ? "egész nap"
-    : new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" });
-
-  return (
-    <div style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: `${col}12`, border: `1px solid ${col}30`, marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: col, flexShrink: 0 }}>{time}</span>
-      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: col, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {ev.title}
-      </span>
-      {ev.cardId ? (
-        <span title="Már van hozzá vendégkártya" style={{ fontSize: "0.66rem", color: col, flexShrink: 0 }}>♦</span>
-      ) : (
-        <button onClick={() => onOpenCard(ev)} title="Vendégkártya nyitása ebből az időpontból"
-          style={{ background: "none", border: "none", cursor: "pointer", color: col, fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.08em", padding: 0, flexShrink: 0 }}>
-          + KÁRTYA
-        </button>
-      )}
-    </div>
-  );
-}
-
-function DayColumn({ date, workEntries, costEntries, guestCards = [], events = [], onOpenCard, userColors, isToday, onOpen, compact = false, colMinWidth = 0 }: {
-  date: Date; workEntries: WorkDay[]; costEntries: FinanceEntry[]; guestCards?: GuestCard[];
-  events?: GEvent[]; onOpenCard?: (ev: GEvent) => void;
-  userColors: Record<string, string>; isToday: boolean; onOpen: (ds: string) => void; compact?: boolean; colMinWidth?: number;
-}) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const dateStr    = toDateStr(date);
-  const revenue    = workEntries.reduce((s, e) => s + e.earnings, 0);
-  const costs      = costEntries.reduce((s, e) => s + e.amount, 0);
-  const profit     = revenue - costs;
-  const dow        = (date.getDay() + 6) % 7;
-
-  return (
-    <div style={{ flex: 1, minWidth: colMinWidth || 0, background: isToday ? "var(--bg-today)" : "transparent", border: isToday ? "1px solid var(--border)" : "1px solid var(--bg-highlight)", borderRadius: "14px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Header */}
-      <div onClick={() => onOpen(dateStr)}
-        style={{ padding: compact ? "0.55rem 0.7rem" : "0.85rem 1rem", borderBottom: "1px solid var(--bg-highlight)", cursor: "pointer", background: isToday ? "var(--bg-highlight)" : "var(--bg-panel)", transition: "background 0.2s" }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "var(--bg-highlight)" : "var(--bg-panel)"; }}>
-        <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.08em", color: isToday ? "var(--color-teal)" : "var(--text-muted)", textTransform: "uppercase" }}>{DAYS_L[dow]}</div>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "var(--font-playfair)", fontSize: compact ? "1.05rem" : "1.35rem", color: isToday ? "var(--color-teal)" : "var(--text-primary)", lineHeight: 1.1 }}>
-            {date.getDate()}
-            {!compact && <span style={{ fontSize: "0.78rem", color: "rgba(44,36,32,0.35)", marginLeft: "0.35rem" }}>{MONTHS[date.getMonth()]}</span>}
-          </div>
-          {revenue > 0 && (
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#7a9e8c", fontWeight: 700 }}>{fmt(revenue)}</div>
-              {costs > 0 && <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: "#c49060" }}>−{fmt(costs)}</div>}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: "0.55rem", flex: 1, display: "flex", flexDirection: "column" }}>
-        {onOpenCard && events.map(ev => (
-          <EventChip key={ev.id} ev={ev} onOpenCard={onOpenCard} />
-        ))}
-        {workEntries.map(e => (
-          <WorkerChip key={e.id} entry={e} color={userColors[e.userId] ?? "#c4926e"} expanded={expandedId === e.id} onClick={() => setExpandedId(expandedId === e.id ? null : e.id)} />
-        ))}
-        {costEntries.map(e => {
-          const col = e.type === "material" ? "#c49060" : "#9278b0";
-          return (
-            <div key={e.id} style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: `${col}12`, border: `1px solid ${col}25`, marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-              <div style={{ width: 5, height: 5, borderRadius: "50%", background: col, flexShrink: 0 }} />
-              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: col, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</span>
-              {e.createdBy.name && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", color: `${col}99`, flexShrink: 0 }}>{e.createdBy.name}</span>}
-              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.66rem", color: col, fontWeight: 700 }}>−{Math.round(e.amount / 1000)}k</span>
-            </div>
-          );
-        })}
-        {guestCards.map(c => (
-          <div key={c.id} style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: "rgba(192,152,152,0.1)", border: "1px solid rgba(192,152,152,0.2)", marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
-            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: "#c09898", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>♦ {c.guest.name}</span>
-            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.66rem", color: "#c09898", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
-          </div>
-        ))}
-        <div onClick={() => onOpen(dateStr)}
-          style={{ marginTop: "auto", padding: "0.22rem", borderRadius: "6px", border: "1px dashed var(--border)", color: "var(--border)", fontSize: "0.72rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em", transition: "all 0.2s" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--border)"; }}>
-          + bejegyzés
-        </div>
-      </div>
-    </div>
-  );
+function glow(revenue: number): number {
+  if (revenue <= 0) return 0;
+  return Math.min(1, revenue / 150000);
 }
 
 // ── Month view ────────────────────────────────────────────────────────────────
@@ -782,8 +674,25 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, byEventDa
               style={{ minHeight: 110, padding: "0.38rem", borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: isToday ? "var(--bg-today)" : "transparent", cursor: "pointer", transition: "background 0.18s", position: "relative" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-today)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "var(--bg-today)" : "transparent"; }}>
-              {/* Day number */}
-              <div style={{ width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.72rem", color: isToday ? "#fff" : "var(--text-primary)", background: isToday ? "var(--color-teal)" : "transparent", marginBottom: "0.3rem" }}>{day}</div>
+              {/* A napszám csillagként: minél nagyobb az aznapi bevétel, annál fényesebb.
+                  A mai nap külön pulzál — ez a csillagtérkép legfényesebb pontja. */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.3rem" }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "var(--font-cinzel)", fontSize: "0.72rem",
+                  color: isToday ? "var(--color-bg)" : "var(--text-primary)",
+                  background: isToday ? "var(--color-teal)" : "transparent",
+                  border: isToday ? "none" : `1px solid ${glow(revenue) > 0 ? "var(--border)" : "transparent"}`,
+                  boxShadow: isToday
+                    ? "0 0 14px var(--color-teal-dim)"
+                    : glow(revenue) > 0 ? `0 0 ${6 + glow(revenue) * 10}px var(--color-teal-dim)` : "none",
+                  animation: isToday ? "goldPulse 3.2s ease-in-out infinite" : "none",
+                }}>{day}</div>
+                {glow(revenue) > 0 && !isToday && (
+                  <span style={{ fontSize: "0.5rem", color: "var(--color-teal)", opacity: 0.35 + glow(revenue) * 0.5 }}>✦</span>
+                )}
+              </div>
 
               {/* Work entries */}
               {wEntries.map(e => {
@@ -1100,15 +1009,29 @@ export default function CalendarClient() {
   const modalGuestCards   = modalDate ? (byGuestCardDate[modalDate] ?? []) : [];
 
   return (
-    <div style={{ animation: "fadeInUp 0.5s ease" }}>
+    <div style={{ animation: "fadeInUp 0.5s ease", position: "relative" }}>
+      <StarfieldBg />
+
+      {/* A csillagtér pozicionált, ezért a tartalmat külön rétegbe emeljük fölé. */}
+      <div style={{ position: "relative", zIndex: 1 }}>
       {modalDate && (
         <DayModal dateStr={modalDate} workEntries={modalWorkEntries} costEntries={modalCostEntries}
           guestCards={modalGuestCards} users={activeUsers} userColors={userColors} onClose={() => setModalDate(null)} />
       )}
 
       <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite" }}>Munkanaptár ✦</h1>
-        <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)" }}>Ki mikor dolgozott, mennyit keresett, és mi a napi profit</p>
+        <h1 style={{
+          fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)",
+          animation: "float 4s ease-in-out infinite", margin: 0,
+          textShadow: "0 0 18px var(--color-teal-dim)",
+        }}>
+          <span style={{ opacity: 0.6, marginRight: "0.4rem" }}>☾</span>
+          Csillagtérkép
+          <span style={{ opacity: 0.6, marginLeft: "0.4rem" }}>✦</span>
+        </h1>
+        <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", margin: "0.3rem 0 0" }}>
+          Ki mikor dolgozott, mennyit keresett, és mi vár ma rátok
+        </p>
       </div>
 
       {/* Toolbar */}
@@ -1169,21 +1092,62 @@ export default function CalendarClient() {
       )}
       {openCardId && <CardEditById cardId={openCardId} onClose={() => setOpenCardId(null)} />}
 
-      {(view === "week" || view === "3day" || view === "day") && (
-        <div style={{ display: "flex", gap: "0.6rem", overflowX: isMobile && view !== "day" ? "auto" : "visible", paddingBottom: isMobile && view !== "day" ? "0.5rem" : 0 }}>
-          {columnDays().map(date => (
-            <DayColumn key={toDateStr(date)} date={date}
-              workEntries={byDate[toDateStr(date)] ?? []}
-              costEntries={byCostDate[toDateStr(date)] ?? []}
-              guestCards={byGuestCardDate[toDateStr(date)] ?? []}
-              events={byEventDate[toDateStr(date)] ?? []}
-              onOpenCard={openCardFromEvent}
-              userColors={userColors} isToday={toDateStr(date) === todayStr}
-              onOpen={setModalDate} compact={view === "week"}
-              colMinWidth={isMobile && view !== "day" ? 158 : 0} />
-          ))}
-        </div>
-      )}
+      {(view === "week" || view === "3day" || view === "day") && (() => {
+        // A rács napjai: időpontok órára, minden más az "egész nap" sávba.
+        const gridDays = columnDays().map(date => {
+          const ds    = toDateStr(date);
+          const works = byDate[ds] ?? [];
+          const costs = byCostDate[ds] ?? [];
+          const cards = byGuestCardDate[ds] ?? [];
+          const evs   = (byEventDate[ds] ?? []) as GridEvent[];
+
+          const bands: GridBand[] = works.map(w => ({
+            id:    w.id,
+            label: w.user.name ?? "?",
+            start: w.startTime ?? null,
+            end:   w.endTime ?? null,
+            color: userColors[w.userId] ?? "#c4926e",
+          }));
+
+          return {
+            date, isToday: ds === todayStr,
+            label: DAYS_L[(date.getDay() + 6) % 7]!,
+            sub:   String(date.getDate()),
+            events: evs,
+            bands,
+            allDay: [
+              // A munkanap akkor is látszik, ha nincs hozzá óra megadva.
+              ...works.filter(w => !w.startTime || !w.endTime).map(w => ({
+                id: `w-${w.id}`, text: `${w.user.name ?? "?"} · ${fmt(w.earnings)}`,
+                color: userColors[w.userId] ?? "#c4926e",
+              })),
+              ...cards.map(c => ({ id: `c-${c.id}`, text: `♦ ${c.guest.name}`, color: "#c09898" })),
+              ...costs.map(e => ({
+                id: `e-${e.id}`, text: `− ${e.description}`,
+                color: e.type === "material" ? "#c49060" : "#9278b0",
+              })),
+            ],
+          };
+        });
+
+        const allEvents = gridDays.flatMap(d => d.events);
+        const allBands  = gridDays.flatMap(d => d.bands);
+        const [fromHour, toHour] = hourRange(allEvents, allBands);
+
+        return (
+          <div style={{ overflowX: isMobile && view !== "day" ? "auto" : "visible" }}>
+            <div style={{ minWidth: isMobile && view === "week" ? 640 : undefined }}>
+              <TimeGrid days={gridDays} fromHour={fromHour} toHour={toHour}
+                onOpenDay={setModalDate}
+                onOpenCard={(ev, date) => openCardFromEvent({
+                  ...ev, userId: (byEventDate[toDateStr(date)] ?? []).find(x => x.id === ev.id)?.userId ?? "",
+                  userName: "", start: ev.start, end: ev.end,
+                })} />
+            </div>
+          </div>
+        );
+      })()}
+      </div>
     </div>
   );
 }

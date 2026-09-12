@@ -313,6 +313,12 @@ html, body {
   0%, 100% { opacity: 0;   transform: scale(0.5); }
   50%       { opacity: 1;   transform: scale(1.4); filter: drop-shadow(0 0 4px var(--color-teal-light)); }
 }
+/* Csillagtérkép háttér — finom pislákolás, a csillag sosem tűnik el teljesen.
+   Az alap fényerőt a fill-opacity adja, ez csak modulálja. */
+@keyframes starPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
 @keyframes drift {
   0%   { opacity: 0;   transform: translateY(0)      rotate(0deg);   }
   10%  { opacity: 0.8; }
