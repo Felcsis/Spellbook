@@ -64,6 +64,14 @@ function needsMaterial(svcs: SelSvc[]) {
   );
 }
 
+/** Vendég-javaslat gomb: felismerés a receptből vagy az esedékességből. */
+const suggestChip: React.CSSProperties = {
+  padding: "0.25rem 0.6rem", borderRadius: 999,
+  border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
+  color: "#a78bfa", fontFamily: "var(--font-cormorant)", fontSize: "0.92rem",
+  cursor: "pointer", transition: "all 0.2s",
+};
+
 /** Bizonylat-választó és fizetési mód gombjai a rögzítő űrlapon. */
 function chip(active: boolean): React.CSSProperties {
   return {
@@ -109,6 +117,9 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
 
   // Guest
   const [guestSearch,   setGuestSearch]   = useState("");
+  // "Kire gondolsz?" — ha nincs vendég kiválasztva, a beírt recept és az
+  // esedékesség alapján javaslunk. Csak javaslat: a választás mindig a tiéd.
+  const [suggestOff, setSuggestOff] = useState(false);
   const [guestId,       setGuestId]       = useState("");
   const [guestOpen,     setGuestOpen]     = useState(false);
   const [showNewGuest,  setShowNewGuest]  = useState(false);
@@ -170,6 +181,25 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   });
 
   function closeAll() { setSvcOpen(false); setGuestOpen(false); setMatOpen(false); }
+
+  // A javaslat-lekérdezés csak akkor fut, ha van mire alapozni és nincs még vendég.
+  const recipeKey = {
+    materials: matRows
+      .filter(r => r.name.trim())
+      .map(r => ({ name: r.name, brand: r.brand || null, colorCode: r.colorCode || null })),
+    services: selSvcs.map(sv => sv.name),
+  };
+  const canSuggest = !guestId && !showNewGuest && !suggestOff && recipeKey.materials.length > 0;
+  const { data: recipeHits = [] } = api.guests.suggestByRecipe.useQuery(recipeKey, { enabled: canSuggest });
+
+  const showDue = !guestId && !showNewGuest && !suggestOff && recipeKey.materials.length === 0;
+  const { data: dueList = [] } = api.guests.due.useQuery({ limit: 6 }, { enabled: showDue });
+
+  function pickGuest(id: string, name: string) {
+    setGuestId(id);
+    setGuestSearch(name);
+    setGuestOpen(false);
+  }
 
   const filtGuests = guestSearch.trim()
     ? allGuests.filter(g => g.name.toLowerCase().includes(guestSearch.toLowerCase()))
@@ -591,6 +621,38 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <input value={newGuestName} onChange={e => setNewGuestName(e.target.value)} placeholder="Új vendég neve…" autoFocus style={{ ...inputStyle, flex: 1, borderColor: "rgba(167,139,250,0.4)" }} />
               <button type="button" onClick={() => { setShowNewGuest(false); setNewGuestName(""); }} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-soft)", cursor: "pointer", padding: "0 0.75rem" }}>✕</button>
+            </div>
+          )}
+          {(recipeHits.length > 0 || dueList.length > 0) && (
+            <div style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
+                {recipeHits.length > 0 ? "Kire gondolsz?" : "Most esedékes"}
+              </span>
+
+              {recipeHits.map(h => (
+                <button key={h.guestId} type="button" onClick={() => pickGuest(h.guestId, h.guestName)}
+                  title={h.reason}
+                  style={suggestChip}>
+                  {h.guestName}
+                  <span style={{ opacity: 0.6, marginLeft: "0.35rem", fontSize: "0.78rem" }}>{h.reason}</span>
+                </button>
+              ))}
+
+              {recipeHits.length === 0 && dueList.map(d => (
+                <button key={d.guestId} type="button" onClick={() => pickGuest(d.guestId, d.guestName)}
+                  title={`${d.intervalDays} naponta jár, utoljára ${new Date(d.lastVisit).toLocaleDateString("hu-HU")}`}
+                  style={suggestChip}>
+                  {d.guestName}
+                  <span style={{ opacity: 0.6, marginLeft: "0.35rem", fontSize: "0.78rem" }}>
+                    {d.dueInDays < 0 ? `${-d.dueInDays} napja esedékes` : d.dueInDays === 0 ? "ma esedékes" : `${d.dueInDays} nap múlva`}
+                  </span>
+                </button>
+              ))}
+
+              <button type="button" onClick={() => setSuggestOff(true)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                elrejt
+              </button>
             </div>
           )}
         </div>

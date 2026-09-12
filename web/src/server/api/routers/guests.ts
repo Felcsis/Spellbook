@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { log } from "~/server/api/routers/gdpr";
+import { dueGuests, suggestFromRecipe } from "~/server/guest-match";
 
 const MaterialInput = z.object({
   name:      z.string().min(1),
@@ -24,6 +25,69 @@ export const guestsRouter = createTRPCRouter({
   listGuests: protectedProcedure.query(({ ctx }) =>
     ctx.db.guest.findMany({ orderBy: { name: "asc" } })
   ),
+
+  /**
+   * "Kire gondolsz?" — a beírt szín-recept alapján javasol vendéget.
+   *
+   * Csak az elmúlt 18 hónap kártyáit nézzük: egy két éve használt szín már nem
+   * mond semmit arról, ki ül most a székben, viszont sokat lassítana.
+   */
+  suggestByRecipe: protectedProcedure
+    .input(z.object({
+      materials: z.array(z.object({
+        name:      z.string(),
+        brand:     z.string().optional().nullable(),
+        colorCode: z.string().optional().nullable(),
+      })),
+      services: z.array(z.string()),
+    }))
+    .query(async ({ ctx, input }) => {
+      if (input.materials.length === 0 && input.services.length === 0) return [];
+
+      const since = new Date();
+      since.setMonth(since.getMonth() - 18);
+
+      const cards = await ctx.db.guestCard.findMany({
+        where:   { date: { gte: since } },
+        orderBy: { date: "desc" },
+        take:    1500,
+        select: {
+          date:      true,
+          guestId:   true,
+          guest:     { select: { name: true } },
+          materials: { select: { name: true, brand: true, colorCode: true } },
+          services:  { select: { name: true } },
+        },
+      });
+
+      return suggestFromRecipe(
+        input,
+        cards.map(c => ({
+          guestId:   c.guestId,
+          guestName: c.guest.name,
+          date:      c.date,
+          materials: c.materials,
+          services:  c.services,
+        })),
+      );
+    }),
+
+  /** Kinek esedékes most időpontja — a látogatásai tipikus ritmusa alapján. */
+  due: protectedProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).default(8) }).default({ limit: 8 }))
+    .query(async ({ ctx, input }) => {
+      const visits = await ctx.db.guestCard.findMany({
+        orderBy: { date: "desc" },
+        take:    3000,
+        select:  { guestId: true, date: true, guest: { select: { name: true } } },
+      });
+
+      return dueGuests(
+        visits.map(v => ({ guestId: v.guestId, guestName: v.guest.name, date: v.date })),
+      )
+        .filter(g => g.dueInDays <= 7)   // már késik, vagy egy héten belül esedékes
+        .slice(0, input.limit);
+    }),
 
   /**
    * Vendég keresése név alapján, és ha nincs, létrehozása. A Google Naptárból

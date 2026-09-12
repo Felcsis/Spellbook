@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { isConfigured, listEvents, type CalendarEvent } from "~/server/google";
+import { AUTO_MATCH, nameScore } from "~/server/guest-match";
 
 /**
  * Google Naptár — dolgozónkénti összekötés.
@@ -69,14 +70,25 @@ export const gcalRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.guestCard.findUnique({ where: { googleEventId: input.eventId } });
-      if (existing) return { cardId: existing.id, created: false };
+      if (existing) return { cardId: existing.id, created: false, matched: true, guestName: null };
 
       // Staff csak a saját nevére nyithat kártyát.
       const workerId = ctx.session.user.role === "admin" ? input.workerId : ctx.session.user.id;
 
-      const name  = input.title.trim();
-      const guest = await ctx.db.guest.findFirst({ where: { name: { equals: name, mode: "insensitive" } } })
-        ?? await ctx.db.guest.create({ data: { name } });
+      // Az esemény címe ritkán pont a vendég neve ("Kovács Anna 14:00 festés"),
+      // ezért nem szó szerint keresünk. Új vendéget csak akkor hozunk létre, ha
+      // biztosan nincs találat — egy téves párosítás rosszabb, mint egy duplikátum.
+      const name    = input.title.trim();
+      const guests  = await ctx.db.guest.findMany({ select: { id: true, name: true } });
+      const scored  = guests
+        .map(g => ({ g, score: nameScore(name, g.name) }))
+        .sort((a, b) => b.score - a.score);
+      const top = scored[0];
+
+      const guest = top && top.score >= AUTO_MATCH
+        ? top.g
+        : await ctx.db.guest.create({ data: { name } });
+      const matched = Boolean(top && top.score >= AUTO_MATCH);
 
       const card = await ctx.db.guestCard.create({
         data: {
@@ -87,7 +99,7 @@ export const gcalRouter = createTRPCRouter({
           googleEventId: input.eventId,
         },
       });
-      return { cardId: card.id, created: true };
+      return { cardId: card.id, created: true, matched, guestName: guest.name };
     }),
 
   /** Egy időszak időpontjai a naptárból. */
