@@ -200,6 +200,156 @@ function exportCardPdf(guestName: string, card: GuestCardData) {
 }
 
 // ── Single visit card ─────────────────────────────────────────────────────────
+// ── Bizonylat panel ───────────────────────────────────────────────────────────
+/**
+ * Nyugta / számla kiállítása egy vendégkártyáról a Számlázz.hu-n keresztül.
+ * A NAV felé a 2026-09-01-től kötelező nyugta-adatszolgáltatást a Számlázz.hu
+ * végzi — itt csak kiállítjuk a bizonylatot és megjegyezzük a számát.
+ */
+const PAYMENTS = ["készpénz", "bankkártya", "átutalás"] as const;
+type Payment = typeof PAYMENTS[number];
+
+function BillingPanel({ card }: { card: GuestCardData }) {
+  const utils    = api.useUtils();
+  const status   = api.billing.status.useQuery();
+  const receipts = api.billing.forCard.useQuery(
+    { cardId: card.id },
+    { enabled: status.data?.configured === true },
+  );
+
+  const [payment, setPayment] = useState<Payment>("készpénz");
+  const [wantsInvoice, setWantsInvoice] = useState(false);
+  const [buyer, setBuyer] = useState({ name: "", zip: "", city: "", address: "", email: "" });
+  const [error, setError] = useState("");
+
+  const refresh = () => void utils.billing.forCard.invalidate({ cardId: card.id });
+  const fail    = (e: { message: string }) => setError(e.message);
+
+  const issueReceipt = api.billing.issueReceipt.useMutation({ onSuccess: refresh, onError: fail });
+  const issueInvoice = api.billing.issueInvoice.useMutation({ onSuccess: refresh, onError: fail });
+  const storno       = api.billing.storno.useMutation({ onSuccess: refresh, onError: fail });
+  const pdf          = api.billing.pdf.useMutation({
+    onSuccess: d => { if (d) downloadPdf(d.number, d.pdf); },
+    onError:   fail,
+  });
+
+  if (!status.data?.configured) return null;
+
+  const busy = issueReceipt.isPending || issueInvoice.isPending || storno.isPending;
+  const list = receipts.data ?? [];
+
+  return (
+    <div>
+      <div style={{ ...labelStyle, color: "var(--text-muted)", marginBottom: "0.4rem" }}>⛬ Bizonylat</div>
+
+      {list.map(r => (
+        <div key={r.id} style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.3rem 0", borderBottom: "1px solid var(--bg-panel)" }}>
+          <span style={{
+            fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream,
+            textDecoration: r.stornoedAt ? "line-through" : "none",
+            opacity: r.stornoedAt ? 0.55 : 1,
+          }}>
+            {r.kind === "nyugta" ? "Nyugta" : "Számla"} · {r.number}
+          </span>
+          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dim, flex: 1 }}>
+            {r.paymentMethod}
+            {r.buyerName && ` · ${r.buyerName}`}
+            {r.stornoedAt && ` · sztornózva (${r.stornoNumber})`}
+          </span>
+          {r.kind === "nyugta" && (
+            <button onClick={() => pdf.mutate({ id: r.id })} disabled={pdf.isPending} style={miniBtn("rgba(201,168,76,0.6)")}>
+              PDF
+            </button>
+          )}
+          {!r.stornoedAt && (
+            <button
+              onClick={() => { if (confirm(`Biztosan sztornózod ezt: ${r.number}?`)) storno.mutate({ id: r.id }); }}
+              disabled={busy}
+              style={miniBtn("rgba(248,113,113,0.5)")}
+            >
+              Sztornó
+            </button>
+          )}
+        </div>
+      ))}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center", marginTop: "0.6rem" }}>
+        {PAYMENTS.map(p => (
+          <button key={p} onClick={() => setPayment(p)} style={{
+            ...miniBtn(payment === p ? gold : dim),
+            border: `1px solid ${payment === p ? gold : "var(--border)"}`,
+            borderRadius: 6, padding: "0.2rem 0.55rem",
+          }}>
+            {p}
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button onClick={() => { setError(""); issueReceipt.mutate({ cardId: card.id, payment }); }} disabled={busy} style={miniBtn(gold)}>
+          {issueReceipt.isPending ? "Kiállítás…" : "Nyugta kiállítása"}
+        </button>
+        <button onClick={() => { setError(""); setWantsInvoice(v => !v); }} style={miniBtn("rgba(122,158,140,0.7)")}>
+          {wantsInvoice ? "Mégsem" : "Számlát kér"}
+        </button>
+      </div>
+
+      {wantsInvoice && (
+        <div style={{ marginTop: "0.6rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.5rem" }}>
+          {([
+            ["name",    "Vevő neve"],
+            ["zip",     "Irányítószám"],
+            ["city",    "Település"],
+            ["address", "Cím"],
+            ["email",   "E-mail (nem kötelező)"],
+          ] as const).map(([key, label]) => (
+            <div key={key}>
+              <label style={labelStyle}>{label}</label>
+              <input
+                style={inputStyle}
+                value={buyer[key]}
+                onChange={e => setBuyer(b => ({ ...b, [key]: e.target.value }))}
+              />
+            </div>
+          ))}
+          <div style={{ gridColumn: "1 / -1" }}>
+            <button
+              onClick={() => { setError(""); issueInvoice.mutate({ cardId: card.id, payment, buyer }); }}
+              disabled={busy || !buyer.name || !buyer.zip || !buyer.city || !buyer.address}
+              style={miniBtn(gold)}
+            >
+              {issueInvoice.isPending ? "Kiállítás…" : "Számla kiállítása"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ marginTop: "0.5rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#a03050", fontStyle: "italic" }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function miniBtn(color: string): React.CSSProperties {
+  return {
+    background: "none", border: "none", cursor: "pointer", color,
+    fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em",
+    textTransform: "uppercase", padding: 0,
+  };
+}
+
+/** A base64-ben érkező bizonylat PDF-et letölti a böngészőben. */
+function downloadPdf(number: string, base64: string) {
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const url   = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const a     = document.createElement("a");
+  a.href = url;
+  a.download = `${number}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function VisitCard({ card, onDelete, onEdit, isAdmin, guestName }: { card: GuestCardData; onDelete: () => void; onEdit: () => void; isAdmin: boolean; guestName: string }) {
   const [open, setOpen] = useState(false);
 
@@ -267,6 +417,8 @@ function VisitCard({ card, onDelete, onEdit, isAdmin, guestName }: { card: Guest
               {card.notes}
             </div>
           )}
+
+          <BillingPanel card={card} />
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.4rem", borderTop: "1px solid var(--bg-highlight)" }}>
             <div style={{ display: "flex", gap: "0.75rem" }}>

@@ -26,6 +26,12 @@ export const env = createEnv({
     GDPR_CONTROLLER_REGNO:   z.string().optional(),
     GDPR_CONTROLLER_EMAIL:   z.string().optional(),
     GDPR_CONTROLLER_PHONE:   z.string().optional(),
+
+    // Számlázz.hu Számla Agent — nyugta/számla kiállítása és NAV-adatszolgáltatás.
+    // Agent kulcs nélkül a bizonylat-funkció egyszerűen nem jelenik meg.
+    SZAMLAZZ_AGENT_KEY: z.string().optional(),
+    SZAMLAZZ_PREFIX:    z.string().optional(),  // bizonylatszám előtag, pl. "SB"
+    SZAMLAZZ_VAT_KEY:   z.string().optional(),  // áfakulcs: "AAM" (alanyi adómentes) vagy pl. "27"
   },
 
   /**
@@ -55,6 +61,10 @@ export const env = createEnv({
     GDPR_CONTROLLER_REGNO:   process.env.GDPR_CONTROLLER_REGNO,
     GDPR_CONTROLLER_EMAIL:   process.env.GDPR_CONTROLLER_EMAIL,
     GDPR_CONTROLLER_PHONE:   process.env.GDPR_CONTROLLER_PHONE,
+
+    SZAMLAZZ_AGENT_KEY: process.env.SZAMLAZZ_AGENT_KEY,
+    SZAMLAZZ_PREFIX:    process.env.SZAMLAZZ_PREFIX,
+    SZAMLAZZ_VAT_KEY:   process.env.SZAMLAZZ_VAT_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

@@ -168,6 +168,39 @@ model GdprLog {
     @@schema("spellbook")
 }
 
+// Kiállított bizonylat (nyugta vagy számla). A bizonylatot a Számlázz.hu állítja
+// ki és ő végzi a NAV-adatszolgáltatást is — nálunk csak a hivatkozás marad,
+// hogy a vendégkártyáról vissza lehessen keresni. A PDF-et szándékosan NEM
+// tároljuk: bármikor letölthető a bizonylatszám alapján.
+model Receipt {
+    id            String    @id @default(cuid())
+    card          GuestCard? @relation(fields: [cardId], references: [id], onDelete: SetNull)
+    cardId        String?
+    kind          String    // "nyugta" | "szamla"
+    number        String    @unique // nyugtaszám / számlaszám a Számlázz.hu-tól
+    total         Float
+    paymentMethod String    // "készpénz" | "bankkártya" | "átutalás"
+
+    // Csak számlánál — az Áfa tv. 169. §-a szerint kötelező vevőadatok
+    buyerName    String?
+    buyerZip     String?
+    buyerCity    String?
+    buyerAddress String?
+    buyerEmail   String?
+
+    // Sztornó: a sztornó bizonylat száma és ideje az eredeti soron marad
+    stornoNumber String?
+    stornoedAt   DateTime?
+
+    issuedAt     DateTime @default(now())
+    issuedById   String?
+    issuedByName String?
+
+    @@index([cardId])
+    @@index([issuedAt])
+    @@schema("spellbook")
+}
+
 model GuestCard {
     id            String              @id @default(cuid())
     date          DateTime            @db.Date
@@ -181,6 +214,7 @@ model GuestCard {
     services       GuestCardService[]
     materials      GuestCardMaterial[]
     financeEntries FinanceEntry[]
+    receipts       Receipt[]
 
     @@index([guestId])
     @@index([date])

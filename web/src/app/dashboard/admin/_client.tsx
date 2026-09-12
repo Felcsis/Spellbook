@@ -508,7 +508,80 @@ export default function AdminClient() {
       {settleUser    && <SettlementModal user={settleUser}  onClose={() => setSettleUser(null)} />}
 
       <BackupSection />
+      <BillingSection />
       <GdprSection />
+    </div>
+  );
+}
+
+// ── Bizonylat szekció ─────────────────────────────────────────────────────────
+
+/**
+ * A kiállított nyugták és számlák listája. A bizonylatokat a Számlázz.hu állítja
+ * ki és ő végzi a NAV felé a kötelező nyugta-adatszolgáltatást is; itt csak
+ * visszanézni lehet őket. Kiállítani a vendégkártyáról lehet.
+ */
+function BillingSection() {
+  const status   = api.billing.status.useQuery();
+  const receipts = api.billing.list.useQuery(
+    { limit: 100 },
+    { enabled: status.data?.configured === true },
+  );
+
+  const rows = receipts.data ?? [];
+
+  return (
+    <div style={{ marginTop: "2.5rem", borderTop: "1px solid var(--border)", paddingTop: "2rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+        ⛬ Bizonylatok
+      </div>
+      <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.4rem", color: "var(--color-teal)", margin: "0 0 0.4rem" }}>Nyugták &amp; számlák</h2>
+
+      {!status.data?.configured ? (
+        <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: 0 }}>
+          A bizonylatolás nincs bekapcsolva. Ehhez a Számlázz.hu Számla Agent kulcsot kell beállítani
+          (<code>SZAMLAZZ_AGENT_KEY</code>), és a Számlázz.hu fiókot össze kell kötni a NAV-val.
+        </p>
+      ) : (
+        <>
+          <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: "0 0 1.5rem" }}>
+            A vendégkártyáról kiállított bizonylatok. A NAV felé az adatszolgáltatást a Számlázz.hu
+            végzi, külön teendő nincs. Hibás bizonylatot törölni nem lehet, csak sztornózni.
+          </p>
+
+          <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", maxHeight: 360, overflowY: "auto" }}>
+            {receipts.isLoading ? (
+              <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", margin: 0 }}>Betöltés…</p>
+            ) : rows.length === 0 ? (
+              <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", margin: 0 }}>Még nincs kiállított bizonylat.</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-cormorant)", fontSize: "0.88rem" }}>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} style={{ borderBottom: "1px solid var(--border)", opacity: r.stornoedAt ? 0.55 : 1 }}>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                        {new Date(r.issuedAt).toLocaleString("hu-HU")}
+                      </td>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--color-teal)", whiteSpace: "nowrap" }}>
+                        {r.kind === "nyugta" ? "Nyugta" : "Számla"}
+                      </td>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-primary)", textDecoration: r.stornoedAt ? "line-through" : "none" }}>
+                        {r.number}
+                      </td>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-soft)", whiteSpace: "nowrap" }}>{r.paymentMethod}</td>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-soft)" }}>{r.buyerName ?? ""}</td>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-primary)", textAlign: "right", whiteSpace: "nowrap" }}>
+                        {Math.round(r.total).toLocaleString("hu-HU")} Ft
+                      </td>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>{r.issuedByName ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
