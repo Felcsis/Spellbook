@@ -56,6 +56,16 @@ export function isConfigured(): boolean {
   return Boolean(env.SZAMLAZZ_AGENT_KEY?.trim());
 }
 
+/**
+ * A nyugta sémájában az `elotag` KÖTELEZŐ elem, a számláéban nem. A Számlázz.hu a
+ * nem létező előtagot nem hozza létre, üresen hagyva viszont a fiók első
+ * (alapértelmezett) bizonylattömbjét használja — ezért itt üres elemet küldünk,
+ * ha nincs beállítva előtag.
+ */
+function prefixTag(): string {
+  return `<elotag>${esc(env.SZAMLAZZ_PREFIX?.trim() ?? "")}</elotag>`;
+}
+
 function agentKey(): string {
   const key = env.SZAMLAZZ_AGENT_KEY?.trim();
   if (!key)
@@ -158,7 +168,7 @@ export async function createReceipt(opts: {
     <pdfLetoltes>true</pdfLetoltes>
   </beallitasok>
   <fejlec>
-    ${tag("elotag", env.SZAMLAZZ_PREFIX)}
+    ${prefixTag()}
     ${tag("fizmod", opts.payment)}
     <penznem>Ft</penznem>
     ${tag("megjegyzes", opts.comment)}
