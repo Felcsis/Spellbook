@@ -33,7 +33,16 @@ export const env = createEnv({
     // A nyugtának és a számlának külön előtagja (bizonylattömbje) van a Számlázz.hu-ban.
     SZAMLAZZ_PREFIX_NYUGTA: z.string().optional(),
     SZAMLAZZ_PREFIX_SZAMLA: z.string().optional(),
-    SZAMLAZZ_VAT_KEY:   z.string().optional(),  // áfakulcs: "AAM" (alanyi adómentes) vagy pl. "27"
+    SZAMLAZZ_VAT_KEY:   z.string().optional(),  // régi név, a BILLING_VAT_KEY váltotta
+
+    // Számlázó szolgáltató: "szamlazz" vagy "billingo". A már kiállított
+    // bizonylatok akkor is az eredeti szolgáltatónál maradnak, ha ez átáll.
+    BILLING_PROVIDER: z.enum(["szamlazz", "billingo"]).optional(),
+    BILLING_VAT_KEY:  z.string().optional(),  // "AAM" (alanyi adómentes) vagy pl. "27"
+
+    BILLINGO_API_KEY:       z.string().optional(),
+    BILLINGO_BLOCK_RECEIPT: z.string().optional(),  // csak ha nem az elsőt akarjuk
+    BILLINGO_BLOCK_INVOICE: z.string().optional(),
   },
 
   /**
@@ -68,6 +77,13 @@ export const env = createEnv({
     SZAMLAZZ_PREFIX_NYUGTA: process.env.SZAMLAZZ_PREFIX_NYUGTA,
     SZAMLAZZ_PREFIX_SZAMLA: process.env.SZAMLAZZ_PREFIX_SZAMLA,
     SZAMLAZZ_VAT_KEY:   process.env.SZAMLAZZ_VAT_KEY,
+
+    BILLING_PROVIDER: process.env.BILLING_PROVIDER,
+    BILLING_VAT_KEY:  process.env.BILLING_VAT_KEY ?? process.env.SZAMLAZZ_VAT_KEY,
+
+    BILLINGO_API_KEY:       process.env.BILLINGO_API_KEY,
+    BILLINGO_BLOCK_RECEIPT: process.env.BILLINGO_BLOCK_RECEIPT,
+    BILLINGO_BLOCK_INVOICE: process.env.BILLINGO_BLOCK_INVOICE,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

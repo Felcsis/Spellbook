@@ -10,9 +10,31 @@ A fodrászat (TEÁOR 96.21) **nincs** a pénztárgép-kötelezettek között, te
 e-pénztárgépet venni: elég egy olyan számlázó szoftver, ami elvégzi az adatszolgáltatást.
 
 Saját adatszolgáltatót azért nem építünk, mert ahhoz NAV-engedély kell, és a számlázó
-programokra külön jogszabályi követelmények vonatkoznak. Ehelyett a **Számlázz.hu Számla
-Agent** API-ját hívjuk: a bizonylatot ők állítják ki, és ők küldik az adatot a NAV-nak.
+programokra külön jogszabályi követelmények vonatkoznak. Ehelyett egy engedélyezett
+szolgáltató API-ját hívjuk: a bizonylatot ők állítják ki, és ők küldik az adatot a NAV-nak.
 Nálunk csak a bizonylatszám marad meg, hogy a vendégkártyáról visszakereshető legyen.
+
+## Melyik szolgáltató
+
+Két szolgáltató van beépítve, és cserélhetők: **Billingo** és **Számlázz.hu**.
+
+| Változó | Mit csinál |
+|---|---|
+| `BILLING_PROVIDER` | `billingo` vagy `szamlazz`. Ha üres, azt használjuk, amelyikhez van kulcs. |
+| `BILLINGO_API_KEY` | a Billingo API kulcsa |
+| `SZAMLAZZ_AGENT_KEY` | a Számlázz.hu Számla Agent kulcsa |
+| `BILLING_VAT_KEY` | áfakulcs — alanyi adómentesnél `AAM` |
+
+**A váltás nem visszamenőleges, és ez szándékos.** Minden bizonylat sorára elmentjük,
+melyik szolgáltató állította ki (`Receipt.provider`). A régi nyugta sztornója és PDF-je
+továbbra is a Számlázz.hu-ra megy, az újak a Billingóra — különben a korábbi bizonylatok
+sztornózhatatlanná válnának.
+
+A sorszámozás a váltáskor újraindul az új szolgáltató tömbjében. Ez nem probléma:
+külön bizonylattömbről van szó, a folytonosság tömbön belül értelmezett.
+
+A Billingónál a bizonylattömböt („block") nem kell megadni — a fiókból kiolvassuk.
+Ha több van és nem az elsőt akarod, `BILLINGO_BLOCK_RECEIPT` / `BILLINGO_BLOCK_INVOICE`.
 
 ## Mit kell egyszer beállítani
 
@@ -28,7 +50,9 @@ Nálunk csak a bizonylatszám marad meg, hogy a vendégkártyáról visszakeresh
    | `SZAMLAZZ_AGENT_KEY` | a Számla Agent kulcs (ez kapcsolja be a funkciót) |
    | `SZAMLAZZ_PREFIX_NYUGTA` | a nyugtatömb előtagja — **kötelező**, enélkül nem készül nyugta (Számlázz.hu → Beállítások → Előtagok) |
    | `SZAMLAZZ_PREFIX_SZAMLA` | a számlatömb előtagja — **a kettő nem ugyanaz** |
-   | `SZAMLAZZ_VAT_KEY` | áfakulcs — alanyi adómentesnél `AAM`, ÁFA-alanynál pl. `27` |
+
+*(Billingónál ehelyett csak a `BILLINGO_API_KEY` kell, és a fiókot ott is össze kell
+kötni a NAV-val a nyugta-adatszolgáltatáshoz.)*
 
 Amíg nincs `SZAMLAZZ_AGENT_KEY`, a bizonylat-funkció nem is látszik az appban.
 

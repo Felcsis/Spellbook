@@ -539,14 +539,17 @@ function BillingSection() {
 
       {!status.data?.configured ? (
         <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: 0 }}>
-          A bizonylatolás nincs bekapcsolva. Ehhez a Számlázz.hu Számla Agent kulcsot kell beállítani
-          (<code>SZAMLAZZ_AGENT_KEY</code>), és a Számlázz.hu fiókot össze kell kötni a NAV-val.
+          A bizonylatolás nincs bekapcsolva. Ehhez egy számlázó szolgáltató kulcsa kell
+          (<code>BILLINGO_API_KEY</code> vagy <code>SZAMLAZZ_AGENT_KEY</code>), és a fiókot
+          össze kell kötni a NAV-val.
         </p>
       ) : (
         <>
           <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: "0 0 1.5rem" }}>
-            A vendégkártyáról kiállított bizonylatok. A NAV felé az adatszolgáltatást a Számlázz.hu
-            végzi, külön teendő nincs. Hibás bizonylatot törölni nem lehet, csak sztornózni.
+            A vendégkártyáról kiállított bizonylatok. Az új bizonylatokat a(z){" "}
+            <strong>{status.data.provider}</strong> állítja ki, és a NAV felé az adatszolgáltatást is
+            ő végzi. Hibás bizonylatot törölni nem lehet, csak sztornózni. A korábbi bizonylatok
+            annál a szolgáltatónál maradnak, ahol készültek.
           </p>
 
           <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", maxHeight: 360, overflowY: "auto" }}>
@@ -574,6 +577,9 @@ function BillingSection() {
                         {Math.round(r.total).toLocaleString("hu-HU")} Ft
                       </td>
                       <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>{r.issuedByName ?? ""}</td>
+                      <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-dim)", whiteSpace: "nowrap", fontSize: "0.78rem" }}>
+                        {r.provider === "billingo" ? "Billingo" : "Számlázz.hu"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

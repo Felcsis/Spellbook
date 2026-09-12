@@ -12,48 +12,25 @@
  */
 
 import { env } from "~/env";
+import {
+  BillingError,
+  type BillingProvider,
+  type Buyer,
+  type DocRef,
+  type IssuedDoc,
+  type Line,
+  type PaymentMethod,
+} from "~/server/billing-types";
 
 const ENDPOINT = "https://www.szamlazz.hu/szamla/";
 
-/** A bizonylat egy sora. Alanyi adómentesnél (AAM) net === gross és vat === 0. */
-export type Line = {
-  name:  string;
-  qty:   number;
-  unit:  string;
-  net:   number;
-  gross: number;
-};
-
-export type Buyer = {
-  name:    string;
-  zip:     string;
-  city:    string;
-  address: string;
-  email?:  string;
-};
-
-export type PaymentMethod = "készpénz" | "bankkártya" | "átutalás";
-
-export type IssuedDoc = {
-  number: string;   // nyugtaszám vagy számlaszám
-  pdf:    string | null; // base64
-};
-
-export class SzamlazzError extends Error {
-  constructor(message: string, readonly code?: string) {
-    super(message);
-    this.name = "SzamlazzError";
-  }
-}
+/** A Számlázz.hu a bizonylatszámmal azonosít, külön belső azonosító nem kell. */
+const byNumber = (number: string, pdf: string | null): IssuedDoc =>
+  ({ number, externalId: null, pdf });
 
 /** Az áfakulcs: alanyi adómentesnél "AAM", egyébként a százalék ("27"). */
-export function vatKey(): string {
-  return env.SZAMLAZZ_VAT_KEY?.trim() ?? "AAM";
-}
-
-/** A számlázás csak akkor él, ha van Agent kulcs. Enélkül a UI el is rejti. */
-export function isConfigured(): boolean {
-  return Boolean(env.SZAMLAZZ_AGENT_KEY?.trim());
+function vatKey(): string {
+  return env.BILLING_VAT_KEY?.trim() ?? "AAM";
 }
 
 /**
@@ -72,7 +49,7 @@ function receiptPrefixTag(): string {
 function agentKey(): string {
   const key = env.SZAMLAZZ_AGENT_KEY?.trim();
   if (!key)
-    throw new SzamlazzError(
+    throw new BillingError(
       "Nincs beállítva a Számlázz.hu Agent kulcs (SZAMLAZZ_AGENT_KEY), így nem tudok bizonylatot kiállítani."
     );
   return key;
@@ -132,8 +109,8 @@ async function post(action: string, xml: string): Promise<string> {
   const headerError = res.headers.get("szlahu_error");
   const headerCode  = res.headers.get("szlahu_error_code");
   if (headerError)
-    throw new SzamlazzError(decodeURIComponent(headerError.replace(/\+/g, " ")), headerCode ?? undefined);
-  if (!res.ok) throw new SzamlazzError(`Számlázz.hu hiba (HTTP ${res.status}).`);
+    throw new BillingError(decodeURIComponent(headerError.replace(/\+/g, " ")), headerCode ?? undefined);
+  if (!res.ok) throw new BillingError(`Számlázz.hu hiba (HTTP ${res.status}).`);
 
   return body;
 }
@@ -148,7 +125,7 @@ function assertSuccess(xml: string): void {
   if (pick(xml, "sikeres") === "false") {
     const msg  = pick(xml, "hibauzenet") ?? "Ismeretlen hiba a Számlázz.hu-nál.";
     const code = pick(xml, "hibakod") ?? undefined;
-    throw new SzamlazzError(msg, code);
+    throw new BillingError(msg, code);
   }
 }
 
@@ -158,7 +135,7 @@ function assertSuccess(xml: string): void {
  * Nyugta kiállítása. A Számlázz.hu ezt géppel előállított nyugtaként kezeli, és
  * a NAV felé az adatszolgáltatást is elvégzi.
  */
-export async function createReceipt(opts: {
+async function createReceipt(opts: {
   lines:   Line[];
   payment: PaymentMethod;
   comment?: string;
@@ -185,12 +162,13 @@ export async function createReceipt(opts: {
   const res = await post("action-szamla_agent_nyugta_create", xml);
   assertSuccess(res);
   const number = pick(res, "nyugtaszam");
-  if (!number) throw new SzamlazzError("A Számlázz.hu nem adott vissza nyugtaszámot.");
-  return { number, pdf: pick(res, "nyugtaPdf") };
+  if (!number) throw new BillingError("A Számlázz.hu nem adott vissza nyugtaszámot.");
+  return byNumber(number, pick(res, "nyugtaPdf"));
 }
 
 /** Nyugta sztornózása — a sztornó bizonylat száma jön vissza. */
-export async function stornoReceipt(number: string): Promise<IssuedDoc> {
+async function stornoReceipt(doc: DocRef): Promise<IssuedDoc> {
+  const number = doc.number;
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <xmlnyugtast xmlns="http://www.szamlazz.hu/xmlnyugtast">
   <beallitasok>
@@ -205,12 +183,13 @@ export async function stornoReceipt(number: string): Promise<IssuedDoc> {
   const res = await post("action-szamla_agent_nyugta_storno", xml);
   assertSuccess(res);
   const stornoNumber = pick(res, "nyugtaszam");
-  if (!stornoNumber) throw new SzamlazzError("A Számlázz.hu nem adott vissza sztornó nyugtaszámot.");
-  return { number: stornoNumber, pdf: pick(res, "nyugtaPdf") };
+  if (!stornoNumber) throw new BillingError("A Számlázz.hu nem adott vissza sztornó nyugtaszámot.");
+  return byNumber(stornoNumber, pick(res, "nyugtaPdf"));
 }
 
 /** Egy korábbi nyugta PDF-je, hogy ne kelljen a bizonylatot nálunk tárolni. */
-export async function getReceiptPdf(number: string): Promise<string | null> {
+async function getReceiptPdf(doc: DocRef): Promise<string | null> {
+  const number = doc.number;
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <xmlnyugtaget xmlns="http://www.szamlazz.hu/xmlnyugtaget">
   <beallitasok>
@@ -231,7 +210,7 @@ export async function getReceiptPdf(number: string): Promise<string | null> {
  * Számla kiállítása — akkor, ha a vendég számlát kér. A vevő nevét és címét
  * ilyenkor kötelező megadni (az Áfa tv. 169. §-a szerint).
  */
-export async function createInvoice(opts: {
+async function createInvoice(opts: {
   lines:    Line[];
   buyer:    Buyer;
   payment:  PaymentMethod;
@@ -278,12 +257,13 @@ export async function createInvoice(opts: {
   const res = await post("action-xmlagentxmlfile", xml);
   assertSuccess(res);
   const number = pick(res, "szamlaszam");
-  if (!number) throw new SzamlazzError("A Számlázz.hu nem adott vissza számlaszámot.");
-  return { number, pdf: pick(res, "pdf") };
+  if (!number) throw new BillingError("A Számlázz.hu nem adott vissza számlaszámot.");
+  return byNumber(number, pick(res, "pdf"));
 }
 
 /** Számla sztornózása. */
-export async function stornoInvoice(number: string, reason?: string): Promise<IssuedDoc> {
+async function stornoInvoice(doc: DocRef, reason?: string): Promise<IssuedDoc> {
+  const number = doc.number;
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <xmlszamlast xmlns="http://www.szamlazz.hu/xmlszamlast">
   <beallitasok>
@@ -301,5 +281,16 @@ export async function stornoInvoice(number: string, reason?: string): Promise<Is
   const res = await post("action-szamla_agent_st", xml);
   assertSuccess(res);
   const stornoNumber = pick(res, "szamlaszam") ?? number;
-  return { number: stornoNumber, pdf: pick(res, "pdf") };
+  return byNumber(stornoNumber, pick(res, "pdf"));
 }
+
+export const szamlazzProvider: BillingProvider = {
+  name:  "szamlazz",
+  label: "Számlázz.hu",
+  isConfigured: () => Boolean(env.SZAMLAZZ_AGENT_KEY?.trim()),
+  createReceipt,
+  stornoReceipt,
+  getReceiptPdf,
+  createInvoice,
+  stornoInvoice,
+};

@@ -2,17 +2,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { PrismaClient } from "../../../../generated/prisma";
-import {
-  createInvoice,
-  createReceipt,
-  getReceiptPdf,
-  isConfigured,
-  stornoInvoice,
-  stornoReceipt,
-  SzamlazzError,
-  type Line,
-  type PaymentMethod,
-} from "~/server/szamlazz";
+import { activeProvider, isConfigured, providerFor } from "~/server/billing-provider";
+import { BillingError, type Line, type PaymentMethod } from "~/server/billing-types";
 
 /**
  * Bizonylatolás — nyugta alapból, számla ha a vendég kéri.
@@ -45,7 +36,7 @@ const BuyerInput = z.object({
 
 /** A Számlázz.hu hibáit érthető üzenetként adjuk vissza, ne 500-as hibaként. */
 function wrap(e: unknown): never {
-  if (e instanceof SzamlazzError)
+  if (e instanceof BillingError)
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: e.code ? `${e.message} (Számlázz.hu hibakód: ${e.code})` : e.message,
@@ -55,7 +46,10 @@ function wrap(e: unknown): never {
 
 export const billingRouter = createTRPCRouter({
   /** A UI ebből tudja, hogy a bizonylat-gombokat egyáltalán meg kell-e jeleníteni. */
-  status: protectedProcedure.query(() => ({ configured: isConfigured() })),
+  status: protectedProcedure.query(() => ({
+    configured: isConfigured(),
+    provider:   activeProvider().label,
+  })),
 
   /** Egy vendégkártya bizonylatai (nyugta, számla, sztornózott is). */
   forCard: protectedProcedure
@@ -81,20 +75,23 @@ export const billingRouter = createTRPCRouter({
   issueReceipt: protectedProcedure
     .input(SourceInput.extend({ payment: z.enum(PAYMENTS) }))
     .mutation(async ({ ctx, input }) => {
-      const src = await resolve(ctx.db, input);
+      const src      = await resolve(ctx.db, input);
+      const provider = activeProvider();
       try {
-        const doc = await createReceipt({
+        const doc = await provider.createReceipt({
           lines:    src.lines,
           payment:  input.payment,
           comment:  src.comment,
           orderRef: src.cardId ?? undefined,
         });
         return await save(ctx, {
-          cardId:  src.cardId,
-          kind:    "nyugta",
-          number:  doc.number,
-          total:   src.total,
-          payment: input.payment,
+          cardId:     src.cardId,
+          kind:       "nyugta",
+          number:     doc.number,
+          externalId: doc.externalId,
+          provider:   provider.name,
+          total:      src.total,
+          payment:    input.payment,
         });
       } catch (e) { wrap(e); }
     }),
@@ -106,10 +103,11 @@ export const billingRouter = createTRPCRouter({
   issueInvoice: protectedProcedure
     .input(SourceInput.extend({ payment: z.enum(PAYMENTS), buyer: BuyerInput }))
     .mutation(async ({ ctx, input }) => {
-      const src   = await resolve(ctx.db, input);
-      const email = input.buyer.email === "" ? undefined : input.buyer.email;
+      const src      = await resolve(ctx.db, input);
+      const provider = activeProvider();
+      const email    = input.buyer.email === "" ? undefined : input.buyer.email;
       try {
-        const doc = await createInvoice({
+        const doc = await provider.createInvoice({
           lines:    src.lines,
           buyer:    { ...input.buyer, email },
           payment:  input.payment,
@@ -118,12 +116,14 @@ export const billingRouter = createTRPCRouter({
           orderRef: src.cardId ?? undefined,
         });
         return await save(ctx, {
-          cardId:  src.cardId,
-          kind:    "szamla",
-          number:  doc.number,
-          total:   src.total,
-          payment: input.payment,
-          buyer:   { ...input.buyer, email },
+          cardId:     src.cardId,
+          kind:       "szamla",
+          number:     doc.number,
+          externalId: doc.externalId,
+          provider:   provider.name,
+          total:      src.total,
+          payment:    input.payment,
+          buyer:      { ...input.buyer, email },
         });
       } catch (e) { wrap(e); }
     }),
@@ -137,10 +137,12 @@ export const billingRouter = createTRPCRouter({
       if (receipt.stornoedAt)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Ez a bizonylat már sztornózva van." });
 
+      const provider = providerFor(receipt.provider);
+      const ref      = { number: receipt.number, externalId: receipt.externalId };
       try {
         const doc = receipt.kind === "nyugta"
-          ? await stornoReceipt(receipt.number)
-          : await stornoInvoice(receipt.number, input.reason);
+          ? await provider.stornoReceipt(ref)
+          : await provider.stornoInvoice(ref, input.reason);
         return await ctx.db.receipt.update({
           where: { id: receipt.id },
           data:  { stornoNumber: doc.number, stornoedAt: new Date() },
@@ -160,7 +162,8 @@ export const billingRouter = createTRPCRouter({
           message: "A számla PDF-je a Számlázz.hu fiókban érhető el.",
         });
       try {
-        const pdf = await getReceiptPdf(receipt.number);
+        const pdf = await providerFor(receipt.provider)
+          .getReceiptPdf({ number: receipt.number, externalId: receipt.externalId });
         if (!pdf) throw new TRPCError({ code: "NOT_FOUND", message: "Nem jött vissza PDF." });
         return { number: receipt.number, pdf };
       } catch (e) { wrap(e); }
@@ -243,18 +246,22 @@ type SaveCtx = {
 };
 
 async function save(ctx: SaveCtx, r: {
-  cardId:  string | null;
-  kind:    "nyugta" | "szamla";
-  number:  string;
-  total:   number;
-  payment: PaymentMethod;
-  buyer?:  { name: string; zip: string; city: string; address: string; email?: string };
+  cardId:     string | null;
+  kind:       "nyugta" | "szamla";
+  number:     string;
+  externalId: string | null;
+  provider:   string;
+  total:      number;
+  payment:    PaymentMethod;
+  buyer?:     { name: string; zip: string; city: string; address: string; email?: string };
 }) {
   return ctx.db.receipt.create({
     data: {
       cardId:        r.cardId ?? null,
       kind:          r.kind,
       number:        r.number,
+      externalId:    r.externalId,
+      provider:      r.provider,
       total:         r.total,
       paymentMethod: r.payment,
       buyerName:     r.buyer?.name    ?? null,

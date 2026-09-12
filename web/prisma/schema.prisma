@@ -187,7 +187,13 @@ model Receipt {
     card          GuestCard? @relation(fields: [cardId], references: [id], onDelete: SetNull)
     cardId        String?
     kind          String    // "nyugta" | "szamla"
-    number        String    @unique // nyugtaszám / számlaszám a Számlázz.hu-tól
+    number        String    @unique // nyugtaszám / számlaszám
+
+    // Melyik szolgáltató állította ki: "szamlazz" | "billingo". A szolgáltató
+    // cserélhető, de egy régi bizonylat sztornója és PDF-je csak ott érhető el,
+    // ahol készült — ezért kell megjegyezni.
+    provider      String    @default("szamlazz")
+    externalId    String?   // a szolgáltató belső azonosítója (Billingónál kell)
     total         Float
     paymentMethod String    // "készpénz" | "bankkártya" | "átutalás"
 
