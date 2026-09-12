@@ -64,6 +64,29 @@ function needsMaterial(svcs: SelSvc[]) {
   );
 }
 
+/** Bizonylat-választó és fizetési mód gombjai a rögzítő űrlapon. */
+function chip(active: boolean): React.CSSProperties {
+  return {
+    padding: "0.3rem 0.7rem", borderRadius: 7,
+    border: active ? "1px solid rgba(82,118,102,0.6)" : "1px solid var(--border)",
+    background: active ? "rgba(82,118,102,0.14)" : "transparent",
+    color: active ? "#527666" : "var(--text-soft)",
+    fontFamily: "var(--font-cormorant)", fontSize: "0.9rem",
+    cursor: "pointer", transition: "all 0.2s",
+  };
+}
+
+/** A base64-ben érkező bizonylat PDF-et letölti a böngészőben. */
+function downloadBase64Pdf(number: string, base64: string) {
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const url   = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const a     = document.createElement("a");
+  a.href = url;
+  a.download = `${number}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange }: {
   onSaved: () => void; userId: string; isAdmin: boolean;
   selectedWorkerId: string; onWorkerChange: (id: string) => void;
@@ -132,6 +155,20 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   const [saving,    setSaving]    = useState(false);
   const [saveErr,   setSaveErr]   = useState<string | null>(null);
 
+  // Bizonylat: a rögzítéssel egy mozdulatban állítjuk ki, mert ez az eladás pillanata.
+  const billing = api.billing.status.useQuery();
+  const [docKind, setDocKind] = useState<"nyugta" | "szamla" | "nincs">("nyugta");
+  const [payment, setPayment] = useState<"készpénz" | "bankkártya" | "átutalás">("készpénz");
+  const [buyer,   setBuyer]   = useState({ name: "", zip: "", city: "", address: "", email: "" });
+  const [issued,  setIssued]  = useState<{ id: string; kind: string; number: string } | null>(null);
+  const [billErr, setBillErr] = useState<string | null>(null);
+  const issueReceipt = api.billing.issueReceipt.useMutation();
+  const issueInvoice = api.billing.issueInvoice.useMutation();
+  const receiptPdf   = api.billing.pdf.useMutation({
+    onSuccess: d => { if (d) downloadBase64Pdf(d.number, d.pdf); },
+    onError:   e => setBillErr(e.message),
+  });
+
   function closeAll() { setSvcOpen(false); setGuestOpen(false); setMatOpen(false); }
 
   const filtGuests = guestSearch.trim()
@@ -154,9 +191,13 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   const validMats    = matRows.filter(r => r.name.trim() && parseFloat(r.grams) > 0);
   const matOk        = !requiresMat || validMats.length > 0;
   const validMatTotal = validMats.reduce((s, r) => s + r.lineTotal, 0);
-  const canSave      = isFamilyMode
+  // Számlához a vevő neve és címe kötelező (Áfa tv. 169. §) — enélkül ne is mentsünk,
+  // mert a bejegyzés már bent lenne, a bizonylat meg nem.
+  const buyerOk      = docKind !== "szamla" || !billing.data?.configured || isFamilyMode
+    || Boolean(buyer.name.trim() && buyer.zip.trim() && buyer.city.trim() && buyer.address.trim());
+  const canSave      = (isFamilyMode
     ? true
-    : ((total > 0 || (validMats.length > 0 && matTotal > 0)) && matOk);
+    : ((total > 0 || (validMats.length > 0 && matTotal > 0)) && matOk)) && buyerOk;
 
   // Auto-open material section when color service is selected
   useEffect(() => {
@@ -178,6 +219,40 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     });
   }
 
+  /** A vendég nélküli bejegyzés bizonylat-sorai. Vendégesnél a kártya adja őket. */
+  function docLines() {
+    const lines: { name: string; amount: number }[] = [];
+    if (isManual) {
+      if (total > 0)
+        lines.push({ name: selSvcs.map(sv => sv.name).join(", ") || "Szolgáltatás", amount: total });
+    } else {
+      for (const sv of selSvcs)
+        lines.push({ name: sv.hours !== 1 ? `${sv.name} (${sv.hours} óra)` : sv.name, amount: sv.price * sv.hours });
+      if (discountAmt > 0) lines.push({ name: "Kedvezmény", amount: -discountAmt });
+    }
+    for (const m of validMats)
+      lines.push({ name: `${m.name} (${m.grams} g)`, amount: m.lineTotal });
+    return lines;
+  }
+
+  /**
+   * A bizonylat kiállítása a bejegyzés mentése UTÁN fut. Ha a Számlázz.hu hibát ad,
+   * a bejegyzés attól még megmarad — csak a bizonylatot kell később pótolni a
+   * vendégkártyáról.
+   */
+  async function issueDocument(cardId: string | null) {
+    if (docKind === "nincs" || isFamilyMode || !billing.data?.configured) return;
+    const source = cardId ? { cardId } : { lines: docLines() };
+    try {
+      const r = docKind === "nyugta"
+        ? await issueReceipt.mutateAsync({ ...source, payment })
+        : await issueInvoice.mutateAsync({ ...source, payment, buyer });
+      if (r) setIssued({ id: r.id, kind: r.kind, number: r.number });
+    } catch (e) {
+      setBillErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   function reset() {
     setSelSvcs([]); setSvcSearch(""); setSvcOpen(false);
     setGuestSearch(""); setGuestId(""); setShowNewGuest(false); setNewGuestName("");
@@ -185,6 +260,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     setManualAmt(""); setIsManual(false); setPrevOpen(false); setIsFamilyMode(false);
     setDiscountVal(""); setDiscountType("%");
     setDate(new Date().toISOString().slice(0, 10));
+    setBuyer({ name: "", zip: "", city: "", address: "", email: "" });
   }
 
   function loadPrevCard(card: typeof guestCards[0]) {
@@ -210,6 +286,9 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     if (!canSave || saving) return;
     setSaving(true);
     setSaveErr(null);
+    setBillErr(null);
+    setIssued(null);
+    let issuedCardId: string | null = null;
     try {
       const visitGroupId = crypto.randomUUID();
       // 1. Guest card first (so we can link it)
@@ -266,7 +345,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
         });
         // Csak a naptár napi összesítőt frissítjük (finance entry már létrejött a createCard-ban)
         await incrementEarnings.mutateAsync({ date, userId: workerId, amount: total, createFinanceEntry: false });
-        void card; // cardId nincs tovább szükség
+        issuedCardId = card.id;
       } else {
         // Vendég nélküli bejegyzés: finance entry-ket itt hozzuk létre
         const baseSvcDesc = selSvcs.map(s => s.hours !== 1 ? `${s.name} (${s.hours} óra)` : s.name).join(", ") || "Vendég nélküli bevétel";
@@ -297,6 +376,8 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
           });
         }
       }
+
+      await issueDocument(issuedCardId);
 
       onSaved();
       reset();
@@ -703,6 +784,70 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
               placeholder="0"
               style={{ ...inputStyle, borderColor: total > 0 ? "rgba(82,118,102,0.4)" : "var(--border)" }} />
           </div>}
+          {billing.data?.configured && !isFamilyMode && (
+            <div style={{ flexBasis: "100%", borderTop: "1px solid var(--border)", paddingTop: "0.85rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ ...lbl, marginBottom: 0 }}>⛬ Bizonylat</span>
+                {(["nyugta", "szamla", "nincs"] as const).map(k => (
+                  <button key={k} type="button" onClick={() => setDocKind(k)}
+                    style={chip(docKind === k)}>
+                    {k === "nyugta" ? "Nyugta" : k === "szamla" ? "Számla" : "Nem kell"}
+                  </button>
+                ))}
+
+                {docKind !== "nincs" && (
+                  <>
+                    <span style={{ ...lbl, marginBottom: 0, marginLeft: "0.6rem" }}>Fizetés</span>
+                    {(["készpénz", "bankkártya", "átutalás"] as const).map(pm => (
+                      <button key={pm} type="button" onClick={() => setPayment(pm)}
+                        style={chip(payment === pm)}>
+                        {pm}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+
+              {docKind === "szamla" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.5rem" }}>
+                  {([
+                    ["name",    "Vevő neve"],
+                    ["zip",     "Irányítószám"],
+                    ["city",    "Település"],
+                    ["address", "Cím"],
+                    ["email",   "E-mail (nem kötelező)"],
+                  ] as const).map(([key, label]) => (
+                    <div key={key}>
+                      <span style={lbl}>{label}</span>
+                      <input value={buyer[key]}
+                        onChange={e => setBuyer(b => ({ ...b, [key]: e.target.value }))}
+                        style={inputStyle} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {issued && (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", background: "rgba(82,118,102,0.1)", border: "1px solid rgba(82,118,102,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "#527666" }}>
+                  ✓ {issued.kind === "nyugta" ? "Nyugta" : "Számla"} kiállítva: <strong>{issued.number}</strong>
+                  {issued.kind === "nyugta" && (
+                    <button type="button" onClick={() => receiptPdf.mutate({ id: issued.id })} disabled={receiptPdf.isPending}
+                      style={{ ...chip(false), marginLeft: "auto" }}>
+                      {receiptPdf.isPending ? "PDF…" : "PDF"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {billErr && (
+                <div style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
+                  ⚠ A bejegyzés elmentve, de a bizonylat nem készült el: {billErr}
+                  <br />Pótolni a vendég kártyájáról lehet (Vendégek → kártya → Bizonylat).
+                </div>
+              )}
+            </div>
+          )}
+
           {saveErr && (
             <div style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
               ⚠ {saveErr}

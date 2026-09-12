@@ -33,6 +33,16 @@ Amíg nincs `SZAMLAZZ_AGENT_KEY`, a bizonylat-funkció nem is látszik az appban
 
 ## Hogyan használod
 
+**A napi munkában: Pénzügyek → Rögzítés.** A rögzítő űrlap alján ott a *Bizonylat* sor:
+kiválasztod, hogy **Nyugta**, **Számla** vagy **Nem kell**, mellette a fizetési módot,
+és a *Rögzítés ◈* gomb a bejegyzéssel egy mozdulatban kiállítja a bizonylatot is.
+A bizonylatszám rögtön megjelenik, a nyugta PDF-je onnan letölthető.
+
+Ha a bizonylat valamiért nem sikerül (pl. nincs net), **a bejegyzés akkor is elmentődik** —
+a bizonylatot utólag a vendég kártyájáról lehet pótolni.
+
+Utólag vagy egyedi esetben:
+
 - **Vendégek → a vendég kártyája → lenyit → Bizonylat**
   - fizetési mód kiválasztása (készpénz / bankkártya / átutalás)
   - **Nyugta kiállítása** — ez az alapeset

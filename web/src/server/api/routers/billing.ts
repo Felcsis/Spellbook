@@ -24,6 +24,17 @@ import {
 
 const PAYMENTS = ["készpénz", "bankkártya", "átutalás"] as const;
 
+/**
+ * A bizonylat forrása. Vendéges bejegyzésnél a vendégkártya (`cardId`), vendég
+ * nélküli bejegyzésnél a tételek közvetlenül (`lines`) — a Pénzügyek oldalon
+ * ilyen is rögzíthető.
+ */
+const SourceInput = z.object({
+  cardId: z.string().optional(),
+  lines:  z.array(z.object({ name: z.string().min(1), amount: z.number() })).optional(),
+  label:  z.string().optional(),
+});
+
 const BuyerInput = z.object({
   name:    z.string().min(1, "A vevő neve kötelező."),
   zip:     z.string().min(1, "Az irányítószám kötelező."),
@@ -68,24 +79,21 @@ export const billingRouter = createTRPCRouter({
    * és a NAV-adatszolgáltatás ezzel megtörtént.
    */
   issueReceipt: protectedProcedure
-    .input(z.object({
-      cardId:  z.string(),
-      payment: z.enum(PAYMENTS),
-    }))
+    .input(SourceInput.extend({ payment: z.enum(PAYMENTS) }))
     .mutation(async ({ ctx, input }) => {
-      const { card, lines } = await cardLines(ctx.db, input.cardId);
+      const src = await resolve(ctx.db, input);
       try {
         const doc = await createReceipt({
-          lines,
+          lines:    src.lines,
           payment:  input.payment,
-          comment:  `${card.guest.name} — ${card.date.toISOString().slice(0, 10)}`,
-          orderRef: card.id,
+          comment:  src.comment,
+          orderRef: src.cardId ?? undefined,
         });
         return await save(ctx, {
-          cardId:  card.id,
+          cardId:  src.cardId,
           kind:    "nyugta",
           number:  doc.number,
-          total:   card.total,
+          total:   src.total,
           payment: input.payment,
         });
       } catch (e) { wrap(e); }
@@ -96,28 +104,24 @@ export const billingRouter = createTRPCRouter({
    * rögzíteni kell, ezek nélkül a számla nem állítható ki.
    */
   issueInvoice: protectedProcedure
-    .input(z.object({
-      cardId:  z.string(),
-      payment: z.enum(PAYMENTS),
-      buyer:   BuyerInput,
-    }))
+    .input(SourceInput.extend({ payment: z.enum(PAYMENTS), buyer: BuyerInput }))
     .mutation(async ({ ctx, input }) => {
-      const { card, lines } = await cardLines(ctx.db, input.cardId);
+      const src   = await resolve(ctx.db, input);
       const email = input.buyer.email === "" ? undefined : input.buyer.email;
       try {
         const doc = await createInvoice({
-          lines,
+          lines:    src.lines,
           buyer:    { ...input.buyer, email },
           payment:  input.payment,
-          date:     card.date,
-          comment:  `${card.guest.name} — ${card.date.toISOString().slice(0, 10)}`,
-          orderRef: card.id,
+          date:     src.date,
+          comment:  src.comment,
+          orderRef: src.cardId ?? undefined,
         });
         return await save(ctx, {
-          cardId:  card.id,
+          cardId:  src.cardId,
           kind:    "szamla",
           number:  doc.number,
-          total:   card.total,
+          total:   src.total,
           payment: input.payment,
           buyer:   { ...input.buyer, email },
         });
@@ -165,13 +169,40 @@ export const billingRouter = createTRPCRouter({
 
 // ── segéd ─────────────────────────────────────────────────────────────────────
 
+type Source = {
+  cardId:  string | null;
+  lines:   Line[];
+  total:   number;
+  date:    Date;
+  comment: string;
+};
+
 /**
- * A vendégkártyából bizonylat-sorokat épít: szolgáltatások, felhasznált anyagok,
+ * A bizonylat sorait vagy a vendégkártyából, vagy a kapott tételekből építi fel.
+ *
+ * Vendégkártyánál: minden szolgáltatás egy sor, minden felhasznált anyag egy sor,
  * és — ha volt — egy negatív kedvezmény-sor. A kedvezményt a kártya nem tárolja
  * külön, de kiszámolható: a tételek összege mínusz a ténylegesen fizetett összeg.
- * A sorok végösszegének egyeznie kell a kártya `total` értékével.
+ * Így a sorok végösszege mindig megegyezik a kártya `total` értékével.
  */
-async function cardLines(db: PrismaClient, cardId: string) {
+async function resolve(
+  db: PrismaClient,
+  input: { cardId?: string; lines?: { name: string; amount: number }[]; label?: string },
+): Promise<Source> {
+  if (input.cardId) return cardSource(db, input.cardId);
+
+  if (!input.lines?.length)
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Nincs mit bizonylatolni." });
+
+  const lines = input.lines.map(l => line(l.name, l.amount));
+  const total = sum(lines);
+  if (total <= 0)
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Nulla összegről nem állítható ki bizonylat." });
+
+  return { cardId: null, lines, total, date: new Date(), comment: input.label ?? "" };
+}
+
+async function cardSource(db: PrismaClient, cardId: string): Promise<Source> {
   const card = await db.guestCard.findUnique({
     where:   { id: cardId },
     include: { guest: true, services: true, materials: true },
@@ -180,24 +211,30 @@ async function cardLines(db: PrismaClient, cardId: string) {
   if (card.total <= 0)
     throw new TRPCError({ code: "BAD_REQUEST", message: "Nulla összegű kártyáról nem állítható ki bizonylat." });
 
-  const lines: Line[] = [];
-  for (const s of card.services)
-    lines.push({ name: s.name, qty: 1, unit: "db", net: s.price, gross: s.price });
-  for (const m of card.materials)
-    lines.push({
-      name:  `${m.name}${m.grams ? ` (${m.grams} g)` : ""}`,
-      qty:   1,
-      unit:  "db",
-      net:   m.lineTotal,
-      gross: m.lineTotal,
-    });
+  const lines: Line[] = [
+    ...card.services.map(s => line(s.name, s.price)),
+    ...card.materials.map(m => line(`${m.name}${m.grams ? ` (${m.grams} g)` : ""}`, m.lineTotal)),
+  ];
 
-  const sum      = lines.reduce((a, l) => a + l.gross, 0);
-  const discount = Math.round(sum - card.total);
-  if (discount > 0)
-    lines.push({ name: "Kedvezmény", qty: 1, unit: "db", net: -discount, gross: -discount });
+  const discount = Math.round(sum(lines) - card.total);
+  if (discount > 0) lines.push(line("Kedvezmény", -discount));
 
-  return { card, lines };
+  return {
+    cardId:  card.id,
+    lines,
+    total:   card.total,
+    date:    card.date,
+    comment: `${card.guest.name} — ${card.date.toISOString().slice(0, 10)}`,
+  };
+}
+
+/** Alanyi adómentesnél a nettó és a bruttó azonos, ezért elég egy összeg. */
+function line(name: string, amount: number): Line {
+  return { name, qty: 1, unit: "db", net: amount, gross: amount };
+}
+
+function sum(lines: Line[]): number {
+  return lines.reduce((a, l) => a + l.gross, 0);
 }
 
 type SaveCtx = {
@@ -206,7 +243,7 @@ type SaveCtx = {
 };
 
 async function save(ctx: SaveCtx, r: {
-  cardId:  string;
+  cardId:  string | null;
   kind:    "nyugta" | "szamla";
   number:  string;
   total:   number;
@@ -215,7 +252,7 @@ async function save(ctx: SaveCtx, r: {
 }) {
   return ctx.db.receipt.create({
     data: {
-      cardId:        r.cardId,
+      cardId:        r.cardId ?? null,
       kind:          r.kind,
       number:        r.number,
       total:         r.total,
