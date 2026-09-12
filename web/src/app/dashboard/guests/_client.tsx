@@ -27,8 +27,85 @@ const labelStyle: React.CSSProperties = {
 
 type GuestWithCards = {
   id: string; name: string; phone: string | null; notes: string | null;
+  consentAt: Date | null; consentSource: string | null;
   cards: GuestCardData[];
 };
+
+// ── GDPR panel ────────────────────────────────────────────────────────────────
+/**
+ * Érintetti jogok egy vendégre: hozzájárulás rögzítése (9. cikk) és az adatai
+ * kiadása géppel olvasható formában (15. és 20. cikk).
+ */
+function GdprPanel({ guest }: { guest: GuestWithCards }) {
+  const utils = api.useUtils();
+  const [busy, setBusy] = useState(false);
+
+  const setConsent = api.gdpr.setConsent.useMutation({
+    onSuccess: () => void utils.guests.guestBook.invalidate(),
+  });
+  const exportGuest = api.gdpr.exportGuest.useMutation();
+
+  async function handleExport() {
+    setBusy(true);
+    try {
+      const data = await exportGuest.mutateAsync({ guestId: guest.id });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      const slug = guest.name.toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
+      a.href = url;
+      a.download = `adatkiadas-${slug || "vendeg"}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Az adatkiadás nem sikerült: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const granted = guest.consentAt !== null;
+
+  return (
+    <div style={{ borderTop: "1px dashed var(--border)", marginTop: "0.4rem", paddingTop: "0.7rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+        Adatvédelem
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: granted ? "var(--color-teal)" : "var(--text-dim)" }}>
+          {granted
+            ? `✓ Hozzájárult az egészségi adatok kezeléséhez — ${new Date(guest.consentAt!).toLocaleDateString("hu-HU")}${guest.consentSource ? ` (${guest.consentSource})` : ""}`
+            : "Nincs rögzített hozzájárulás — allergiát, fejbőrproblémát csak ezután írj a jegyzetbe"}
+        </span>
+        <button type="button"
+          onClick={() => {
+            if (granted) {
+              if (confirm("Visszavonod a hozzájárulást? Ilyenkor az egészségi adatot törölni kell a jegyzetből.")) {
+                setConsent.mutate({ guestId: guest.id, granted: false, source: "szóban" });
+              }
+            } else {
+              setConsent.mutate({ guestId: guest.id, granted: true, source: "szóban" });
+            }
+          }}
+          disabled={setConsent.isPending}
+          style={{ marginLeft: "auto", padding: "0.3rem 0.7rem", borderRadius: 7, cursor: "pointer",
+            border: "1px solid var(--border)", background: "transparent",
+            color: granted ? "var(--text-dim)" : "var(--color-teal)",
+            fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>
+          {setConsent.isPending ? "…" : granted ? "Visszavonás" : "Hozzájárulás rögzítése"}
+        </button>
+      </div>
+
+      <button type="button" onClick={handleExport} disabled={busy}
+        style={{ alignSelf: "flex-start", padding: "0.3rem 0.7rem", borderRadius: 7, cursor: "pointer",
+          border: "1px solid var(--border)", background: "var(--bg-highlight)", color: "var(--text-muted)",
+          fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>
+        {busy ? "Készül…" : "⬇ Adatkiadás a vendégnek (JSON)"}
+      </button>
+    </div>
+  );
+}
 
 // ── PDF export ────────────────────────────────────────────────────────────────
 function exportCardPdf(guestName: string, card: GuestCardData) {
@@ -314,6 +391,8 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
               {guest.notes && !editNotes && (
                 <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: dim, fontStyle: "italic", padding: "0.3rem 0.5rem", borderLeft: "2px solid var(--border)" }}>{guest.notes}</div>
               )}
+
+              <GdprPanel guest={guest} />
             </div>
           )}
 

@@ -18,6 +18,14 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID:     z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     GOOGLE_REDIRECT_URI:  z.string().optional(),
+
+    // GDPR — az adatkezelő adatai, a /adatkezeles oldalra és az adatexportba.
+    GDPR_CONTROLLER_NAME:    z.string().optional(),
+    GDPR_CONTROLLER_LEGAL:   z.string().optional(),
+    GDPR_CONTROLLER_ADDRESS: z.string().optional(),
+    GDPR_CONTROLLER_REGNO:   z.string().optional(),
+    GDPR_CONTROLLER_EMAIL:   z.string().optional(),
+    GDPR_CONTROLLER_PHONE:   z.string().optional(),
   },
 
   /**
@@ -40,6 +48,13 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID:     process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     GOOGLE_REDIRECT_URI:  process.env.GOOGLE_REDIRECT_URI,
+
+    GDPR_CONTROLLER_NAME:    process.env.GDPR_CONTROLLER_NAME,
+    GDPR_CONTROLLER_LEGAL:   process.env.GDPR_CONTROLLER_LEGAL,
+    GDPR_CONTROLLER_ADDRESS: process.env.GDPR_CONTROLLER_ADDRESS,
+    GDPR_CONTROLLER_REGNO:   process.env.GDPR_CONTROLLER_REGNO,
+    GDPR_CONTROLLER_EMAIL:   process.env.GDPR_CONTROLLER_EMAIL,
+    GDPR_CONTROLLER_PHONE:   process.env.GDPR_CONTROLLER_PHONE,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

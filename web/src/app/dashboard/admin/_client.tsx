@@ -508,9 +508,149 @@ export default function AdminClient() {
       {settleUser    && <SettlementModal user={settleUser}  onClose={() => setSettleUser(null)} />}
 
       <BackupSection />
+      <GdprSection />
     </div>
   );
 }
+
+// ── GDPR szekció ──────────────────────────────────────────────────────────────
+
+/**
+ * Megőrzési idő és elszámoltathatóság. A takarítás azokat a vendégeket törli,
+ * akik a megőrzési időn belül nem jártak nálunk — a bevételi tételeik név nélkül
+ * maradnak meg, mert azokat a számviteli törvény 8 évig őrizni kell.
+ */
+function GdprSection() {
+  const utils = api.useUtils();
+  const [confirming, setConfirming] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [showLogs, setShowLogs] = useState(false);
+
+  const preview = api.gdpr.retentionPreview.useQuery();
+  const logs    = api.gdpr.logs.useQuery({ limit: 100 }, { enabled: showLogs });
+
+  const run = api.gdpr.runRetention.useMutation({
+    onSuccess: (r) => {
+      setMsg(r.deleted === 0
+        ? "Nem volt törlendő vendég."
+        : `${r.deleted} vendég adatai törölve: ${r.names.join(", ")}`);
+      setConfirming(false);
+      void utils.gdpr.retentionPreview.invalidate();
+      void utils.gdpr.logs.invalidate();
+      void utils.guests.guestBook.invalidate();
+    },
+    onError: (e) => { setMsg("Hiba: " + e.message); setConfirming(false); },
+  });
+
+  const affected = preview.data?.affected ?? [];
+  const years    = preview.data?.retentionYears ?? 3;
+
+  const btnStyle: React.CSSProperties = {
+    padding: "0.6rem 1.2rem", borderRadius: 9, border: "1px solid var(--border)",
+    background: "var(--bg-card)", color: "var(--color-teal)",
+    fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.1em",
+    cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap",
+  };
+
+  return (
+    <div style={{ marginTop: "2.5rem", borderTop: "1px solid var(--border)", paddingTop: "2rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+        ◈ Adatvédelem
+      </div>
+      <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.4rem", color: "var(--color-teal)", margin: "0 0 0.4rem" }}>Megőrzési idő &amp; napló</h2>
+      <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: "0 0 1.5rem" }}>
+        A GDPR szerint a személyes adatokat nem őrizhetjük meg korlátlan ideig. Az a vendég,
+        aki {years} éve nem járt nálunk, törölhető — a bevételei név nélkül megmaradnak a könyvelésben.
+        Az adatkezelési tájékoztató a <a href="/adatkezeles" target="_blank" rel="noreferrer" style={{ color: "var(--color-teal)" }}>/adatkezeles</a> oldalon érhető el.
+      </p>
+
+      {preview.isLoading ? (
+        <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)" }}>Betöltés…</p>
+      ) : affected.length === 0 ? (
+        <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--color-teal)" }}>
+          ✓ Nincs {years} évnél régebbi, inaktív vendég — a megőrzési idő rendben.
+        </p>
+      ) : (
+        <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", marginBottom: "1rem" }}>
+          <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", marginBottom: "0.6rem" }}>
+            {affected.length} vendég lépte túl a {years} éves megőrzési időt:
+          </div>
+          <ul style={{ margin: 0, paddingLeft: "1.2rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--text-soft)", maxHeight: 220, overflowY: "auto" }}>
+            {affected.map((g) => (
+              <li key={g.id} style={{ marginBottom: "0.2rem" }}>
+                {g.name} — {g.lastVisit
+                  ? `utolsó látogatás ${new Date(g.lastVisit).toLocaleDateString("hu-HU")}`
+                  : "sosem járt itt"} ({g.cards} kártya)
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+        {affected.length > 0 && (
+          confirming ? (
+            <>
+              <button onClick={() => run.mutate({ confirm: true })} disabled={run.isPending}
+                style={{ ...btnStyle, color: "#c04040", borderColor: "rgba(200,60,60,0.4)", background: "rgba(200,60,60,0.07)" }}>
+                {run.isPending ? "⏳ Törlés…" : `Igen, töröld mind a(z) ${affected.length} vendéget`}
+              </button>
+              <button onClick={() => setConfirming(false)} style={{ ...btnStyle, color: "var(--text-dim)" }}>Mégsem</button>
+            </>
+          ) : (
+            <button onClick={() => { setMsg(null); setConfirming(true); }} style={{ ...btnStyle, color: "var(--color-pink)", borderColor: "rgba(180,100,120,0.3)" }}>
+              🗑 Megőrzési takarítás futtatása
+            </button>
+          )
+        )}
+        <button onClick={() => setShowLogs((v) => !v)} style={btnStyle}>
+          {showLogs ? "Napló elrejtése" : "📓 Adatvédelmi napló"}
+        </button>
+      </div>
+
+      {msg && (
+        <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: 10, border: "1px solid rgba(82,118,102,0.3)", background: "rgba(82,118,102,0.07)", fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)" }}>
+          {msg}
+        </div>
+      )}
+
+      {showLogs && (
+        <div style={{ marginTop: "1.25rem", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", maxHeight: 360, overflowY: "auto" }}>
+          {logs.isLoading ? (
+            <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", margin: 0 }}>Betöltés…</p>
+          ) : (logs.data?.length ?? 0) === 0 ? (
+            <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", margin: 0 }}>Még nincs bejegyzés.</p>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-cormorant)", fontSize: "0.88rem" }}>
+              <tbody>
+                {logs.data!.map((l) => (
+                  <tr key={l.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                    <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                      {new Date(l.createdAt).toLocaleString("hu-HU")}
+                    </td>
+                    <td style={{ padding: "0.4rem 0.5rem", color: "var(--color-teal)", whiteSpace: "nowrap" }}>
+                      {LOG_LABELS[l.action] ?? l.action}
+                    </td>
+                    <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-primary)" }}>{l.subject}</td>
+                    <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-soft)" }}>{l.detail}</td>
+                    <td style={{ padding: "0.4rem 0.5rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>{l.actorEmail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LOG_LABELS: Record<string, string> = {
+  export:    "Adatkiadás",
+  delete:    "Törlés (kérésre)",
+  retention: "Megőrzési takarítás",
+  consent:   "Hozzájárulás",
+};
 
 // ── Backup szekció ─────────────────────────────────────────────────────────────
 

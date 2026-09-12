@@ -7,6 +7,7 @@ import { guestsRouter } from "~/server/api/routers/guests";
 import { adminRouter } from "~/server/api/routers/admin";
 import { expensesRouter } from "~/server/api/routers/expenses";
 import { backupRouter } from "~/server/api/routers/backup";
+import { gdprRouter } from "~/server/api/routers/gdpr";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -19,6 +20,7 @@ export const appRouter = createTRPCRouter({
   admin: adminRouter,
   expenses: expensesRouter,
   backup: backupRouter,
+  gdpr: gdprRouter,
 });
 
 export type AppRouter = typeof appRouter;

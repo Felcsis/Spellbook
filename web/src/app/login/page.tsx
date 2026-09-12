@@ -286,6 +286,21 @@ export default function LoginPage() {
         >
           {USERS.map(u => <UserCard key={u.email} {...u} />)}
         </div>
+
+        <a
+          href="/adatkezeles"
+          style={{
+            marginTop: "2.5rem",
+            fontFamily: "var(--font-cinzel)",
+            fontSize: "0.55rem",
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: "var(--text-dim)",
+            textDecoration: "none",
+          }}
+        >
+          Adatkezelési tájékoztató
+        </a>
       </main>
     </>
   );

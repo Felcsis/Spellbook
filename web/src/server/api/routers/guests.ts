@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { log } from "~/server/api/routers/gdpr";
 
 const MaterialInput = z.object({
   name:      z.string().min(1),
@@ -213,7 +214,24 @@ export const guestsRouter = createTRPCRouter({
       ctx.db.guest.update({ where: { id: input.id }, data: { name: input.name, phone: input.phone ?? null, notes: input.notes ?? null } })
     ),
 
+  // A törlés naplózandó (GDPR 5. cikk (2) — elszámoltathatóság): a vendég és a
+  // kártyái eltűnnek, ezért a bizonyíték csak a GdprLog-ban marad meg.
   deleteGuest: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ ctx, input }) => ctx.db.guest.delete({ where: { id: input.id } })),
+    .mutation(async ({ ctx, input }) => {
+      const guest = await ctx.db.guest.findUnique({
+        where: { id: input.id },
+        select: { id: true, name: true, _count: { select: { cards: true } } },
+      });
+      const deleted = await ctx.db.guest.delete({ where: { id: input.id } });
+      if (guest) {
+        await log(ctx, {
+          action: "delete",
+          subject: guest.name,
+          subjectId: guest.id,
+          detail: `${guest._count.cards} kártya`,
+        });
+      }
+      return deleted;
+    }),
 });

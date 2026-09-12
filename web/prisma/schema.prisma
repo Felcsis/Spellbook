@@ -141,7 +141,30 @@ model Guest {
     createdAt DateTime    @default(now())
     cards     GuestCard[]
 
+    // GDPR — a vendéget tájékoztattuk az adatkezelésről (6. cikk (1) b) + a
+    // jegyzetbe kerülő egészségi adatokhoz (9. cikk (2) a) hozzájárult.
+    consentAt     DateTime?
+    consentSource String?   // "szóban" | "papíron" | "online"
+
     @@index([name])
+    @@schema("spellbook")
+}
+
+// GDPR elszámoltathatóság (5. cikk (2)): ki, mikor, milyen érintetti kérést
+// teljesített. Szándékosan nem hivatkozik a Guest-re, hogy a vendég törlése
+// után is megmaradjon a bizonyíték a törlés megtörténtéről.
+model GdprLog {
+    id          String   @id @default(cuid())
+    action      String   // "export" | "delete" | "retention" | "consent"
+    subject     String   // a vendég neve a művelet pillanatában
+    subjectId   String?  // a vendég id-ja (törlés után már nem létezik)
+    detail      String?
+    actorId     String?  // melyik felhasználó végezte
+    actorEmail  String?
+    createdAt   DateTime @default(now())
+
+    @@index([createdAt])
+    @@index([action])
     @@schema("spellbook")
 }
 
