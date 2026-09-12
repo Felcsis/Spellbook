@@ -68,6 +68,13 @@ model User {
     active         Boolean        @default(true)      // false = archivált (nem léphet be, nem választható új munkához)
     archivedAt     DateTime?
     priceListType  String         @default("beginner") // "master" | "beginner" — melyik árlistán dolgozik
+
+    // Google Naptár — dolgozónként külön fiók. A refresh token hosszú életű
+    // hozzáférés, ezért csak a szervezen olvassuk, a kliens sosem látja.
+    googleRefreshToken String?
+    googleCalendarId   String?   // melyik naptár; üresen a "primary"
+    googleEmail        String?   // melyik fiókkal kötötte össze — ez látszik a UI-on
+    googleConnectedAt  DateTime?
     accounts       Account[]
     sessions       Session[]
     posts          Post[]
@@ -93,6 +100,9 @@ model WorkDay {
     endTime       String?          // távozás "HH:MM"
     financeEntry  FinanceEntry?
     services      WorkDayService[]
+
+    // A munkaidőhöz kiküldött Google-esemény — hogy módosításkor ne új jöjjön létre.
+    googleEventId String?
 
     @@unique([date, userId])
     @@index([date])
@@ -211,6 +221,10 @@ model GuestCard {
     total         Float               @default(0)
     notes         String?
     createdAt     DateTime            @default(now())
+
+    // Melyik Google-időpontból készült — hogy ugyanabból ne legyen két kártya.
+    googleEventId String?             @unique
+
     services       GuestCardService[]
     materials      GuestCardMaterial[]
     financeEntries FinanceEntry[]
@@ -277,15 +291,6 @@ model Expense {
 
     @@index([date])
     @@index([assignedToId])
-    @@schema("spellbook")
-}
-
-model SalonSetting {
-    id                   String   @id @default("singleton")
-    googleRefreshToken   String?
-    googleCalendarId     String?
-    updatedAt            DateTime @updatedAt
-
     @@schema("spellbook")
 }
 

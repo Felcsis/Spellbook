@@ -25,6 +25,20 @@ export const guestsRouter = createTRPCRouter({
     ctx.db.guest.findMany({ orderBy: { name: "asc" } })
   ),
 
+  /**
+   * Vendég keresése név alapján, és ha nincs, létrehozása. A Google Naptárból
+   * behozott időpont címe ilyen néven érkezik, és nem akarunk duplikátumot.
+   */
+  findOrCreateGuest: protectedProcedure
+    .input(z.object({ name: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const name     = input.name.trim();
+      const existing = await ctx.db.guest.findFirst({
+        where: { name: { equals: name, mode: "insensitive" } },
+      });
+      return existing ?? ctx.db.guest.create({ data: { name } });
+    }),
+
   createGuest: protectedProcedure
     .input(z.object({ name: z.string().min(1), phone: z.string().optional() }))
     .mutation(({ ctx, input }) =>
@@ -120,6 +134,9 @@ export const guestsRouter = createTRPCRouter({
       services:  z.array(ServiceInput),
       materials: z.array(MaterialInput),
       discount:  z.number().min(0).default(0),
+      // Ha Google Naptár-időpontból készült, ide kerül az esemény azonosítója —
+      // így ugyanabból az időpontból nem lesz két kártya.
+      googleEventId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const svcTotal = input.services.reduce((s, x) => s + x.price, 0);
@@ -133,6 +150,7 @@ export const guestsRouter = createTRPCRouter({
           date,
           notes:    input.notes,
           total:    discountedSvcTotal + matTotal,
+          googleEventId: input.googleEventId ?? null,
           services:  { create: input.services },
           materials: { create: input.materials },
         },

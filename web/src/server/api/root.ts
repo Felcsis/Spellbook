@@ -9,6 +9,7 @@ import { expensesRouter } from "~/server/api/routers/expenses";
 import { backupRouter } from "~/server/api/routers/backup";
 import { gdprRouter } from "~/server/api/routers/gdpr";
 import { billingRouter } from "~/server/api/routers/billing";
+import { gcalRouter } from "~/server/api/routers/gcal";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
   backup: backupRouter,
   gdpr: gdprRouter,
   billing: billingRouter,
+  gcal: gcalRouter,
 });
 
 export type AppRouter = typeof appRouter;

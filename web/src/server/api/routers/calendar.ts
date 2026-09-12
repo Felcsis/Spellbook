@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pushWorkDay } from "~/server/api/routers/calendar-google";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const calendarRouter = createTRPCRouter({
@@ -179,6 +180,10 @@ export const calendarRouter = createTRPCRouter({
         create: { type: "revenue", description, amount: input.earnings, date, createdById: ctx.session.user.id, workDayId: workDay.id },
         update: { amount: input.earnings, description },
       });
+
+      // Spellbook → Google: a munkaidő kikerül a dolgozó naptárába. Ha ez nem
+      // sikerül, a munkanap attól még el van mentve — a naptár nem kritikus út.
+      await pushWorkDay(ctx.db, workDay.id, serviceNames);
 
       return workDay;
     }),

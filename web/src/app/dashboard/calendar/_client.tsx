@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
+import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -16,6 +17,12 @@ const COST_CONFIG = {
 } as const;
 
 type View = "month" | "week" | "3day" | "day" | "year";
+
+/** Egy Google Naptár-időpont, ahogy a szerver adja. */
+type GEvent = {
+  id: string; title: string; start: string; end: string; allDay: boolean;
+  userId: string; userName: string; cardId: string | null;
+};
 type CostType = keyof typeof COST_CONFIG;
 
 type ServiceItem = { id: string; name: string; price: number; duration: number };
@@ -638,8 +645,38 @@ function WorkerChip({ entry, color, expanded, onClick }: { entry: WorkDay; color
 }
 
 // ── Day column ────────────────────────────────────────────────────────────────
-function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors, isToday, onOpen, compact = false, colMinWidth = 0 }: {
+// ── Google Naptár időpont ─────────────────────────────────────────────────────
+/**
+ * Egy behozott naptári időpont. Ha még nincs hozzá vendégkártya, egy kattintással
+ * nyitható — a vendéget az esemény címe alapján keressük meg vagy hozzuk létre.
+ */
+function EventChip({ ev, onOpenCard }: { ev: GEvent; onOpenCard: (ev: GEvent) => void }) {
+  const col  = "#6a8fb0";
+  const time = ev.allDay
+    ? "egész nap"
+    : new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" });
+
+  return (
+    <div style={{ padding: "0.22rem 0.5rem", borderRadius: "7px", background: `${col}12`, border: `1px solid ${col}30`, marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.62rem", color: col, flexShrink: 0 }}>{time}</span>
+      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: col, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {ev.title}
+      </span>
+      {ev.cardId ? (
+        <span title="Már van hozzá vendégkártya" style={{ fontSize: "0.66rem", color: col, flexShrink: 0 }}>♦</span>
+      ) : (
+        <button onClick={() => onOpenCard(ev)} title="Vendégkártya nyitása ebből az időpontból"
+          style={{ background: "none", border: "none", cursor: "pointer", color: col, fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.08em", padding: 0, flexShrink: 0 }}>
+          + KÁRTYA
+        </button>
+      )}
+    </div>
+  );
+}
+
+function DayColumn({ date, workEntries, costEntries, guestCards = [], events = [], onOpenCard, userColors, isToday, onOpen, compact = false, colMinWidth = 0 }: {
   date: Date; workEntries: WorkDay[]; costEntries: FinanceEntry[]; guestCards?: GuestCard[];
+  events?: GEvent[]; onOpenCard?: (ev: GEvent) => void;
   userColors: Record<string, string>; isToday: boolean; onOpen: (ds: string) => void; compact?: boolean; colMinWidth?: number;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -673,6 +710,9 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
 
       {/* Content */}
       <div style={{ padding: "0.55rem", flex: 1, display: "flex", flexDirection: "column" }}>
+        {onOpenCard && events.map(ev => (
+          <EventChip key={ev.id} ev={ev} onOpenCard={onOpenCard} />
+        ))}
         {workEntries.map(e => (
           <WorkerChip key={e.id} entry={e} color={userColors[e.userId] ?? "#c4926e"} expanded={expandedId === e.id} onClick={() => setExpandedId(expandedId === e.id ? null : e.id)} />
         ))}
@@ -706,8 +746,8 @@ function DayColumn({ date, workEntries, costEntries, guestCards = [], userColors
 }
 
 // ── Month view ────────────────────────────────────────────────────────────────
-function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColors, today, onOpen, isMobile = false }: {
-  year: number; month: number;
+function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, byEventDate = {}, userColors, today, onOpen, isMobile = false }: {
+  year: number; month: number; byEventDate?: Record<string, GEvent[]>;
   byDate: Record<string, WorkDay[]>; byCostDate: Record<string, FinanceEntry[]>;
   byGuestCardDate: Record<string, GuestCard[]>;
   userColors: Record<string, string>; today: string; onOpen: (d: string) => void; isMobile?: boolean;
@@ -761,6 +801,17 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, userColor
                   </div>
                 );
               })}
+
+              {/* Google-időpontok — a hónap nézetben csak jelzés, kártyát a napi nézetben lehet nyitni */}
+              {(byEventDate[ds] ?? []).map(ev => (
+                <div key={ev.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: "rgba(106,143,176,0.1)", border: "1px solid rgba(106,143,176,0.25)", marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.6rem", color: "#6a8fb0", flexShrink: 0 }}>
+                    {ev.allDay ? "◷" : new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "#6a8fb0", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</span>
+                  {ev.cardId && <span style={{ fontSize: "0.62rem", color: "#6a8fb0" }}>♦</span>}
+                </div>
+              ))}
 
               {/* Cost chips */}
               {cEntries.map(e => {
@@ -861,6 +912,78 @@ function YearView({ year, userColors }: { year: number; userColors: Record<strin
   );
 }
 
+// ── Google Naptár panel ───────────────────────────────────────────────────────
+/**
+ * Az összekötés dolgozónként történik: mindenki a saját Google-fiókját köti be,
+ * és a saját időpontjait látja (az admin mindenkiét). Az összekötés az
+ * /api/google/connect útvonalon indul, a token szerveroldalon marad.
+ */
+const GOOGLE_MSG: Record<string, string> = {
+  ok:                "✓ A Google Naptár összekötve.",
+  elutasitva:        "A Google oldalán elutasítottad a hozzáférést.",
+  sikertelen:        "Az összekötés nem sikerült. Próbáld újra.",
+  "hibas-keres":     "Érvénytelen visszatérés a Google-től. Indítsd újra az összekötést.",
+  "nincs-beallitva": "A Google-összekötés nincs beállítva (hiányzó GOOGLE_* változók).",
+};
+
+function GooglePanel() {
+  const utils  = api.useUtils();
+  const status = api.gcal.status.useQuery();
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const disconnect = api.gcal.disconnect.useMutation({
+    onSuccess: () => { void utils.gcal.status.invalidate(); void utils.gcal.events.invalidate(); },
+  });
+
+  // A visszatérés állapotát az URL hozza — elolvassuk, majd kitakarítjuk a címsort.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("google");
+    if (!p) return;
+    setMsg(GOOGLE_MSG[p] ?? null);
+    void utils.gcal.status.invalidate();
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [utils]);
+
+  if (!status.data?.configured) return null;
+
+  const connected = status.data.connected;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.6rem", marginBottom: "1rem", padding: "0.5rem 0.85rem", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 10 }}>
+      <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+        ◷ Google Naptár
+      </span>
+      {connected ? (
+        <>
+          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#6a8fb0" }}>
+            összekötve{status.data.email ? ` — ${status.data.email}` : ""}
+          </span>
+          <button onClick={() => { if (confirm("Biztosan bontod a Google Naptár összekötést?")) disconnect.mutate(); }}
+            disabled={disconnect.isPending}
+            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "rgba(196,120,120,0.7)", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            Kapcsolat bontása
+          </button>
+        </>
+      ) : (
+        <>
+          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--text-soft)", fontStyle: "italic" }}>
+            Kösd össze, és az időpontjaid itt is látszanak, a munkaidőd pedig kikerül a naptáradba.
+          </span>
+          <a href="/api/google/connect"
+            style={{ marginLeft: "auto", padding: "0.35rem 0.8rem", borderRadius: 7, border: "1px solid rgba(106,143,176,0.5)", background: "rgba(106,143,176,0.1)", color: "#6a8fb0", textDecoration: "none", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            Összekötés
+          </a>
+        </>
+      )}
+      {msg && (
+        <span style={{ flexBasis: "100%", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: msg.startsWith("✓") ? "#527666" : "#c47878" }}>
+          {msg}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CalendarClient() {
   const now = new Date();
@@ -878,6 +1001,37 @@ export default function CalendarClient() {
     api.calendar.month.useQuery({ year: qYear, month: qMonth });
 
   const { workDays, financeEntries, guestCards } = monthData;
+
+  // Google Naptár. A hónap két héttel kibővítve, hogy a hónapokon átnyúló hét
+  // nézetben se tűnjenek el az időpontok.
+  const gcalStatus = api.gcal.status.useQuery();
+  const gFrom = new Date(qYear, qMonth - 1, 1);  gFrom.setDate(gFrom.getDate() - 14);
+  const gTo   = new Date(qYear, qMonth, 0);      gTo.setDate(gTo.getDate() + 14);
+  const { data: gEvents = [] } = api.gcal.events.useQuery(
+    { from: gFrom.toISOString(), to: gTo.toISOString() },
+    { enabled: gcalStatus.data?.configured === true },
+  );
+
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const cardFromEvent = api.gcal.cardFromEvent.useMutation({
+    onSuccess: r => {
+      void utils.gcal.events.invalidate();
+      void utils.calendar.month.invalidate();
+      setOpenCardId(r.cardId);
+    },
+  });
+
+  const byEventDate: Record<string, GEvent[]> = {};
+  gEvents.forEach(e => { (byEventDate[e.start.slice(0, 10)] ??= []).push(e as GEvent); });
+
+  function openCardFromEvent(ev: GEvent) {
+    cardFromEvent.mutate({
+      eventId:  ev.id,
+      title:    ev.title,
+      date:     ev.start.slice(0, 10),
+      workerId: ev.userId,
+    });
+  }
 
   const userColors: Record<string, string> = {};
   users.forEach((u, i) => { userColors[u.id] = USER_COLORS[i % USER_COLORS.length]!; });
@@ -958,6 +1112,8 @@ export default function CalendarClient() {
       </div>
 
       {/* Toolbar */}
+      <GooglePanel />
+
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
         {/* View switcher */}
         <div style={{ display: "flex", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "10px", padding: "3px", gap: "3px" }}>
@@ -1009,8 +1165,10 @@ export default function CalendarClient() {
       )}
       {view === "month" && (
         <MonthView year={qYear} month={qMonth} byDate={byDate} byCostDate={byCostDate}
-          byGuestCardDate={byGuestCardDate} userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile} />
+          byGuestCardDate={byGuestCardDate} byEventDate={byEventDate} userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile} />
       )}
+      {openCardId && <CardEditById cardId={openCardId} onClose={() => setOpenCardId(null)} />}
+
       {(view === "week" || view === "3day" || view === "day") && (
         <div style={{ display: "flex", gap: "0.6rem", overflowX: isMobile && view !== "day" ? "auto" : "visible", paddingBottom: isMobile && view !== "day" ? "0.5rem" : 0 }}>
           {columnDays().map(date => (
@@ -1018,6 +1176,8 @@ export default function CalendarClient() {
               workEntries={byDate[toDateStr(date)] ?? []}
               costEntries={byCostDate[toDateStr(date)] ?? []}
               guestCards={byGuestCardDate[toDateStr(date)] ?? []}
+              events={byEventDate[toDateStr(date)] ?? []}
+              onOpenCard={openCardFromEvent}
               userColors={userColors} isToday={toDateStr(date) === todayStr}
               onOpen={setModalDate} compact={view === "week"}
               colMinWidth={isMobile && view !== "day" ? 158 : 0} />
