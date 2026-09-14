@@ -1203,7 +1203,9 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
         const sections: DaySection[] = single ? [
           {
             title: "Munkanap", icon: "◈",
-            empty: "Nincs rögzített munkanap. Enélkül nem tudunk szabad időpontot ajánlani.",
+            empty: "Nincs rögzített munkanap erre a napra. Az érkezés–távozás megadása után "
+                 + "tudunk szabad időpontot ajánlani, és a munkaidő kimegy a Google Naptárba is.",
+            emptyAction: "＋ Munkaidő rögzítése",
             entries: works.map(w => ({
               id: w.id,
               text: w.user.name ?? "?",

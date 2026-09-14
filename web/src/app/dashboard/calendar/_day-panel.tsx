@@ -26,6 +26,8 @@ export type DaySection = {
   entries: DayEntry[];
   /** Mit írjunk ki, ha üres. Ha nincs megadva, üresen nem jelenik meg a szakasz. */
   empty?:  string;
+  /** Ha az üres állapotból tenni is lehet valamit, ez a gomb felirata. */
+  emptyAction?: string;
 };
 
 export function DayPanel({ sections, revenue, costs, onAdd }: {
@@ -76,8 +78,21 @@ export function DayPanel({ sections, revenue, costs, onAdd }: {
           </div>
 
           {section.entries.length === 0 ? (
-            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: "var(--text-dim)", fontStyle: "italic" }}>
-              {section.empty}
+            <div>
+              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: "var(--text-dim)", fontStyle: "italic" }}>
+                {section.empty}
+              </div>
+              {section.emptyAction && onAdd && (
+                <button onClick={onAdd} style={{
+                  marginTop: "0.45rem", padding: "0.35rem 0.7rem", borderRadius: 8,
+                  border: "1px solid var(--border-strong)", background: "var(--bg-active)",
+                  color: "var(--color-teal)", cursor: "pointer",
+                  fontFamily: "var(--font-cinzel)", fontSize: "0.52rem",
+                  letterSpacing: "0.1em", textTransform: "uppercase",
+                }}>
+                  {section.emptyAction}
+                </button>
+              )}
             </div>
           ) : section.entries.map(e => (
             <div key={e.id} style={{
