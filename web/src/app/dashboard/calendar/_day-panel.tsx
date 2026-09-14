@@ -32,10 +32,12 @@ export type DaySection = {
   emptyAction?: string;
 };
 
-export function DayPanel({ sections, revenue, costs, title, onAdd }: {
+/** Egy sor a nap mérlegében. */
+export type Total = { label: string; value: number; color: string; strong?: boolean };
+
+export function DayPanel({ sections, totals, title, onAdd }: {
   sections: DaySection[];
-  revenue:  number;
-  costs:    number;
+  totals:   Total[];
   /** A nap felirata az ablak fejlécén. */
   title?:   string;
   onAdd?:   () => void;
@@ -86,24 +88,27 @@ export function DayPanel({ sections, revenue, costs, title, onAdd }: {
         background: "var(--bg-panel)", border: "1px solid var(--border)",
         borderRadius: 10, padding: "0.6rem 0.8rem",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
-            Bevétel
-          </span>
-          <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: "#7a9e8c", fontWeight: 700 }}>
-            {fmt(revenue)}
-          </span>
-        </div>
-        {costs > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "0.25rem" }}>
-            <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
-              Költség
+        {totals.map((t, i) => (
+          <div key={t.label} style={{
+            display: "flex", justifyContent: "space-between", alignItems: "baseline",
+            marginTop: i === 0 ? 0 : "0.25rem",
+            paddingTop:  t.strong ? "0.35rem" : 0,
+            borderTop:   t.strong ? "1px solid var(--border)" : "none",
+          }}>
+            <span style={{
+              fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em",
+              textTransform: "uppercase", color: t.strong ? "var(--text-muted)" : "var(--text-dim)",
+            }}>
+              {t.label}
             </span>
-            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.92rem", color: "#c49060", fontWeight: 700 }}>
-              −{fmt(costs)}
+            <span style={{
+              fontFamily: "var(--font-playfair)", fontWeight: 700, color: t.color,
+              fontSize: t.strong ? "1.15rem" : "0.92rem",
+            }}>
+              {t.value < 0 ? `−${fmt(Math.abs(t.value))}` : fmt(t.value)}
             </span>
           </div>
-        )}
+        ))}
       </div>
 
       {visible.map(section => (

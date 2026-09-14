@@ -9,7 +9,7 @@ import { StarfieldBg } from "./_starfield-bg";
 import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent } from "./_time-grid";
 import { BookingModal } from "./_booking-modal";
 import { MiniCalendar } from "./_mini-calendar";
-import { DayPanel, type DaySection } from "./_day-panel";
+import { DayPanel, type DaySection, type Total } from "./_day-panel";
 import { SelectionBar } from "./_selection-bar";
 import { toDateStr } from "~/lib/date";
 
@@ -1390,6 +1390,14 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
         const cards  = single ? byGuestCardDate[ds] ?? [] : [];
         const costs  = single ? byCostDate[ds] ?? [] : [];
 
+        // A nap költségei típusonként. A vendégkártya anyagai már pénzügyi
+        // tételként is szerepelnek, ezért CSAK innen számoljuk őket — különben
+        // az anyagköltség kétszer jelenne meg.
+        const materialCost = costs.filter(e => e.type === "material").reduce((sum, e) => sum + e.amount, 0);
+        const wageCost     = costs.filter(e => e.type === "wage").reduce((sum, e) => sum + e.amount, 0);
+        const dayRevenue   = works.reduce((sum, w) => sum + w.earnings, 0);
+        const paidTotal    = cards.reduce((sum, c) => sum + c.total, 0);
+
         const sections: DaySection[] = single ? [
           {
             title: "Munkanap", icon: "◈",
@@ -1399,31 +1407,55 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
             entries: works.map(w => ({
               id: w.id,
               text: w.user.name ?? "?",
-              sub: w.startTime && w.endTime ? `${w.startTime}–${w.endTime}` : "nincs megadva óra",
+              sub: w.startTime && w.endTime
+                ? `${w.startTime}–${w.endTime} · ${fmtH(hoursOf(w.startTime, w.endTime))}`
+                : "nincs megadva óra",
               amount: w.earnings > 0 ? w.earnings : undefined,
               color: userColors[w.userId] ?? "#c4926e",
             })),
           },
           {
-            title: "Vendégkártyák", icon: "♦",
-            entries: cards.map(c => ({
-              id: c.id, text: c.guest.name, amount: c.total, color: "#c09898",
-            })),
+            title: "Ki mennyit fizetett", icon: "♦",
+            empty: "Még nincs vendégkártya ezen a napon.",
+            entries: [
+              ...cards.map(c => ({
+                id: c.id,
+                text: c.guest.name,
+                sub: [
+                  c.worker?.name,
+                  c.services.length ? c.services.map(sv => sv.name).join(", ") : null,
+                ].filter(Boolean).join(" · ") || undefined,
+                amount: c.total,
+                color: "#c09898",
+              })),
+              ...(cards.length > 1
+                ? [{ id: "paid-sum", text: "Összesen", amount: paidTotal, color: "var(--color-teal)" }]
+                : []),
+            ],
           },
           {
             title: "Költségek", icon: "✦",
             entries: costs.map(e => ({
               id: e.id,
               text: e.description,
-              sub: e.createdBy.name ?? undefined,
+              sub: [e.type === "material" ? "anyag" : "bér", e.createdBy.name].filter(Boolean).join(" · "),
               amount: e.amount,
               color: e.type === "material" ? "#c49060" : "#9278b0",
             })),
           },
         ] : [];
 
-        const dayRevenue = works.reduce((sum, w) => sum + w.earnings, 0);
-        const dayCosts   = costs.reduce((sum, e) => sum + e.amount, 0);
+        // A mérleg: mi jött be, mi ment el, mi maradt.
+        const totals: Total[] = [
+          { label: "Bevétel", value: dayRevenue, color: "#7a9e8c" },
+          ...(materialCost > 0 ? [{ label: "Anyagköltség", value: -materialCost, color: "#c49060" }] : []),
+          ...(wageCost     > 0 ? [{ label: "Bér",          value: -wageCost,     color: "#9278b0" }] : []),
+          {
+            label: "Marad", value: dayRevenue - materialCost - wageCost,
+            color: dayRevenue - materialCost - wageCost >= 0 ? "var(--color-teal)" : "#c47878",
+            strong: true,
+          },
+        ];
 
         const grid = (
           <div style={{ overflowX: isMobile && view !== "day" ? "auto" : "visible" }}>
@@ -1461,7 +1493,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <MiniCalendar selected={anchor} marked={miniMarks}
                 onSelect={d => setAnchor(d)} />
-              <DayPanel sections={sections} revenue={dayRevenue} costs={dayCosts}
+              <DayPanel sections={sections} totals={totals}
                 title={single.date.toLocaleDateString("hu-HU", { month: "short", day: "numeric" })}
                 onAdd={() => setModalDate(ds)} />
             </div>
