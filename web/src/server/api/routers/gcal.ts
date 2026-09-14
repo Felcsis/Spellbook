@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { isConfigured, listEvents, type CalendarEvent } from "~/server/google";
-import { AUTO_MATCH, nameScore } from "~/server/guest-match";
+import { AUTO_MATCH, cleanGuestName, nameScore } from "~/server/guest-match";
 
 /**
  * Google Naptár — dolgozónkénti összekötés.
@@ -87,16 +87,19 @@ export const gcalRouter = createTRPCRouter({
       // Az esemény címe ritkán pont a vendég neve ("Kovács Anna 14:00 festés"),
       // ezért nem szó szerint keresünk. Új vendéget csak akkor hozunk létre, ha
       // biztosan nincs találat — egy téves párosítás rosszabb, mint egy duplikátum.
-      const name    = input.title.trim();
+      // A párosítás a teljes címmel dolgozik (a zajt maga szűri), az ÚJ vendég
+      // viszont a megtisztított nevet kapja — különben a szolgáltatás is a nevébe
+      // kerülne ("Bence modell festés , barna és szőke tincs").
+      const title   = input.title.trim();
       const guests  = await ctx.db.guest.findMany({ select: { id: true, name: true } });
       const scored  = guests
-        .map(g => ({ g, score: nameScore(name, g.name) }))
+        .map(g => ({ g, score: nameScore(title, g.name) }))
         .sort((a, b) => b.score - a.score);
       const top = scored[0];
 
       const guest = top && top.score >= AUTO_MATCH
         ? top.g
-        : await ctx.db.guest.create({ data: { name } });
+        : await ctx.db.guest.create({ data: { name: cleanGuestName(title) } });
       const matched = Boolean(top && top.score >= AUTO_MATCH);
 
       const card = await ctx.db.guestCard.create({

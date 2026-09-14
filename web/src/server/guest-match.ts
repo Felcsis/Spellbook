@@ -12,11 +12,22 @@
 
 // ── név ───────────────────────────────────────────────────────────────────────
 
-/** A naptárcímekben rendszeresen ott ülő zaj, ami nem a vendég neve. */
+/**
+ * A naptárcímekben rendszeresen ott ülő zaj, ami nem a vendég neve.
+ * Szalonspecifikus: szolgáltatások, hajszínek és a szokásos töltelékszavak.
+ */
 const NOISE = new Set([
-  "festes", "festeni", "hajvagas", "vagas", "vago", "melir", "balayage", "ombre",
-  "szoke", "szokites", "toner", "pakolas", "mosas", "szarites", "berakas",
+  // szolgáltatások
+  "festes", "festeni", "hajfestes", "tofestes", "tovilagositas", "to",
+  "hajvagas", "vagas", "vago", "melir", "balayage", "ombre", "babylights",
+  "szokites", "toner", "pakolas", "mosas", "szarites", "szaritas", "berakas",
+  "dauer", "keratin", "hajhosszabbitas", "fonas", "konty", "alkalmi", "szakall",
+  "borotvalas", "gyogykezeles", "szinezes", "szin", "tincs", "modell",
+  // hajszínek, jelzők — soha nem nevek
+  "szoke", "barna", "fekete", "voros", "platina", "hamvas", "sotet", "vilagos",
+  // töltelék
   "frizura", "konzultacio", "idopont", "vendeg", "fodrasz", "haj", "es", "plusz",
+  "ora", "orakor", "delelott", "delutan",
 ]);
 
 /** Ékezet nélküli, kisbetűs alak — a magyar nevek ékezetei gépelésenként eltérnek. */
@@ -38,6 +49,31 @@ export function nameTokens(raw: string): string[] {
     .replace(/[^a-z\s]/g, " ")               // szám, írásjel, emoji
     .split(/\s+/)
     .filter(w => w.length >= 2 && !NOISE.has(w));
+}
+
+/**
+ * A naptárcímből kiszedi a vendég nevét.
+ *
+ * Erre azért van szükség, mert a párosítás tisztított szavakkal dolgozik, az ÚJ
+ * vendég létrehozása viszont a teljes címet használta — így született a
+ * "Bence modell festés , barna és szőke tincs" nevű vendég.
+ *
+ * A leírás jellemzően a név UTÁN jön, vesszővel vagy gondolatjellel elválasztva,
+ * ezért ott elvágjuk. Magyar név legfeljebb három szó, ennél többet nem tartunk meg.
+ */
+export function cleanGuestName(title: string): string {
+  const head = title.split(/[,(|]|\s[–—-]\s/)[0] ?? title;
+
+  const words = head
+    .replace(/\b\d{1,2}[:.]\d{2}\b/g, " ")               // 14:00, 9.30
+    .split(/\s+/)
+    .map(w => w.replace(/^[^\p{L}]+|[^\p{L}.]+$/gu, ""))   // körülvevő írásjelek
+    .filter(w => w.length > 0 && !/\d/.test(w))
+    .filter(w => !NOISE.has(fold(w)));
+
+  const name = words.slice(0, 3).join(" ").trim();
+  // Ha a tisztítás mindent elvitt, inkább az eredetit adjuk vissza, mint semmit.
+  return name || title.trim();
 }
 
 /** Levenshtein-távolság — elgépelt neveket is meg akarunk találni. */
