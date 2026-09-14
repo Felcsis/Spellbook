@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import { MiniCalendar } from "./_mini-calendar";
 
 const lbl: React.CSSProperties = {
   fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.15em",
@@ -44,6 +45,13 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
   const { data: workers = [] } = api.calendar.users.useQuery();
   const { data: guests = [] }  = api.guests.listGuests.useQuery();
 
+  // A keresés kezdőnapja állítható — nem csak arra a napra foglalhatsz, amire
+  // épp kattintottál.
+  const [day,      setDay]      = useState(() => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const [worker,   setWorker]   = useState(workerId);
   const [duration, setDuration] = useState(60);
   const [guestId,  setGuestId]  = useState("");
@@ -56,9 +64,16 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
   const [warning,  setWarning]  = useState("");
 
   const { data: days = [], isLoading: slotsLoading } = api.appointments.freeSlots.useQuery(
-    { workerId: worker, from: toDateStr(date), days: 7, durationMinutes: duration },
+    { workerId: worker, from: toDateStr(day), days: 14, durationMinutes: duration },
     { enabled: Boolean(worker) },
   );
+
+  // A mini naptárban zölddel jelöljük, hol van egyáltalán szabad idő.
+  const marked: Record<string, string> = {};
+  for (const d of days) marked[d.date] = "#527666";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const done = () => {
     void utils.appointments.list.invalidate();
@@ -187,13 +202,26 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
           </div>
         )}
 
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "1rem", marginBottom: "1rem", alignItems: "start" }}>
+          <div>
+            <span style={lbl}>Mikortól keressünk</span>
+            <MiniCalendar selected={day} minDate={today} marked={marked}
+              onSelect={d => { setDay(d); setSlot(null); }} />
+            <div style={{ marginTop: "0.4rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#527666", display: "inline-block" }} />
+              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: "var(--text-dim)" }}>
+                van szabad idő
+              </span>
+            </div>
+          </div>
+
+          <div>
           <span style={lbl}>Szabad időpontok</span>
           {slotsLoading ? (
             <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", margin: 0 }}>Keresem…</p>
           ) : days.length === 0 ? (
             <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-soft)", fontStyle: "italic", margin: 0, fontSize: "0.92rem" }}>
-              Nincs szabad idő a következő egy hétben. Ez akkor is előfordul, ha a dolgozónak
+              Nincs szabad idő a választott naptól számított két hétben. Ez akkor is előfordul, ha a dolgozónak
               nincs rögzítve munkaideje ezekre a napokra — a naptárban add meg az érkezést és
               a távozást, és utána itt megjelennek az időpontok.
             </p>
@@ -226,6 +254,7 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
               ))}
             </div>
           )}
+          </div>
         </div>
 
         {!moveId && (

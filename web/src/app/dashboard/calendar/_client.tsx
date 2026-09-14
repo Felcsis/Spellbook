@@ -8,6 +8,8 @@ import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { StarfieldBg } from "./_starfield-bg";
 import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent } from "./_time-grid";
 import { BookingModal } from "./_booking-modal";
+import { MiniCalendar } from "./_mini-calendar";
+import { DayPanel, type DaySection } from "./_day-panel";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -988,6 +990,11 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
 
   const todayStr = toDateStr(now);
 
+  // A mini naptárban pötty jelzi, ahol van foglalás vagy rögzített munkanap.
+  const miniMarks: Record<string, string> = {};
+  Object.keys(byDate).forEach(k => { miniMarks[k] = "#c4926e"; });
+  Object.keys(byBookingDate).forEach(k => { miniMarks[k] = "var(--color-teal)"; });
+
   // Monthly totals
   const userTotals: Record<string, number> = {};
   const userHours: Record<string, number> = {};
@@ -1185,7 +1192,48 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
         const allBookings = gridDays.flatMap(d => d.bookings);
         const [fromHour, toHour] = hourRange(allEvents, allBands, allBookings);
 
-        return (
+        // Napi nézetben az egyetlen nap bejegyzései külön oldalsávba kerülnek:
+        // egy oszlopba zsúfolva olvashatatlanok voltak.
+        const single = view === "day" ? gridDays[0] : null;
+        const ds     = single ? toDateStr(single.date) : "";
+        const works  = single ? byDate[ds] ?? [] : [];
+        const cards  = single ? byGuestCardDate[ds] ?? [] : [];
+        const costs  = single ? byCostDate[ds] ?? [] : [];
+
+        const sections: DaySection[] = single ? [
+          {
+            title: "Munkanap", icon: "◈",
+            empty: "Nincs rögzített munkanap. Enélkül nem tudunk szabad időpontot ajánlani.",
+            entries: works.map(w => ({
+              id: w.id,
+              text: w.user.name ?? "?",
+              sub: w.startTime && w.endTime ? `${w.startTime}–${w.endTime}` : "nincs megadva óra",
+              amount: w.earnings > 0 ? w.earnings : undefined,
+              color: userColors[w.userId] ?? "#c4926e",
+            })),
+          },
+          {
+            title: "Vendégkártyák", icon: "♦",
+            entries: cards.map(c => ({
+              id: c.id, text: c.guest.name, amount: c.total, color: "#c09898",
+            })),
+          },
+          {
+            title: "Költségek", icon: "✦",
+            entries: costs.map(e => ({
+              id: e.id,
+              text: e.description,
+              sub: e.createdBy.name ?? undefined,
+              amount: e.amount,
+              color: e.type === "material" ? "#c49060" : "#9278b0",
+            })),
+          },
+        ] : [];
+
+        const dayRevenue = works.reduce((sum, w) => sum + w.earnings, 0);
+        const dayCosts   = costs.reduce((sum, e) => sum + e.amount, 0);
+
+        const grid = (
           <div style={{ overflowX: isMobile && view !== "day" ? "auto" : "visible" }}>
             <div style={{ minWidth: isMobile && view === "week" ? 640 : undefined }}>
               <TimeGrid days={gridDays} fromHour={fromHour} toHour={toHour}
@@ -1197,6 +1245,24 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                   if (confirm(`Biztosan lemondod ${b.guestName} időpontját?`))
                     cancelBooking.mutate({ id: b.id });
                 }} />
+            </div>
+          </div>
+        );
+
+        if (!single) return grid;
+
+        return (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 300px",
+            gap: "1rem", alignItems: "start",
+          }}>
+            {grid}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <MiniCalendar selected={anchor} marked={miniMarks}
+                onSelect={d => setAnchor(d)} />
+              <DayPanel sections={sections} revenue={dayRevenue} costs={dayCosts}
+                onAdd={() => setModalDate(ds)} />
             </div>
           </div>
         );
