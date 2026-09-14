@@ -129,6 +129,83 @@ export const AUTO_MATCH = 0.95;
 /** Ennél magasabb pontszámot már érdemes javaslatként megmutatni. */
 export const SUGGEST_MIN = 0.5;
 
+// ── szolgáltatás a naptárcímből ───────────────────────────────────────────────
+
+export type CatalogService = {
+  id:       string;
+  name:     string;
+  category: string;
+  price:    number;
+  duration: number;
+};
+
+/**
+ * Melyik szolgáltatásokat említi a naptárcím ("Aliz hosszú hajvágás").
+ *
+ * A szabály szigorú: egy szolgáltatás csak akkor illik, ha a nevének MINDEN
+ * szava szerepel a címben. Így a "hosszú hajvágás" nem hozza be a "Rövid"-et
+ * vagy az "Extra hosszú"-t. Ha több marad, a kategória szavai döntenek — ez
+ * választja szét a "Hosszú" hajvágást a "Hosszú" festéstől.
+ *
+ * Inkább ne találjon semmit, mint rosszat: a téves szolgáltatás pénzben téved.
+ */
+export type ServiceMatch = {
+  /** Egyértelmű találat — ezt nyugodtan beírhatjuk a kártyára. */
+  matched:   CatalogService[];
+  /** Ugyanolyan erős, de egymást kizáró jelöltek — ezekből a felhasználó választ. */
+  ambiguous: CatalogService[];
+};
+
+export function matchServices(title: string, catalog: CatalogService[]): ServiceMatch {
+  const words = new Set(nameTokensRaw(title));
+  const empty: ServiceMatch = { matched: [], ambiguous: [] };
+  if (!words.size) return empty;
+
+  const hits = catalog
+    .map(sv => {
+      const nameWords = nameTokensRaw(sv.name).filter(w => w.length >= 3);
+      if (!nameWords.length) return null;
+      // A név minden szava szerepeljen a címben.
+      if (!nameWords.every(w => words.has(w))) return null;
+
+      const catWords = nameTokensRaw(sv.category).filter(w => w.length >= 3);
+      const catHits  = catWords.filter(w => words.has(w)).length;
+      return { sv, specificity: nameWords.length, catHits };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  if (!hits.length) return empty;
+
+  // A legtöbb kategória-egyezés nyer, azonosnál a részletesebb név.
+  hits.sort((a, b) => b.catHits - a.catHits || b.specificity - a.specificity);
+  const best   = hits[0]!;
+  const chosen = hits.filter(h => h.catHits === best.catHits && h.specificity === best.specificity);
+
+  // Ha ugyanaz a szolgáltatásnév több kategóriában is nyerne (pl. "Hosszú" a
+  // női és a férfi hajvágásban is), nem tippelünk — ott az ár is eltér.
+  const byName = new Map<string, CatalogService[]>();
+  for (const c of chosen) {
+    const key = fold(c.sv.name);
+    byName.set(key, [...(byName.get(key) ?? []), c.sv]);
+  }
+
+  const matched:   CatalogService[] = [];
+  const ambiguous: CatalogService[] = [];
+  for (const group of byName.values()) {
+    if (group.length === 1) matched.push(group[0]!);
+    else ambiguous.push(...group);
+  }
+  return { matched, ambiguous };
+}
+
+/** Szavakra bontás ékezet nélkül — a zajszűrés NÉLKÜL, mert itt a szolgáltatás a cél. */
+function nameTokensRaw(s: string): string[] {
+  return fold(s)
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w.length >= 2);
+}
+
 // ── recept ────────────────────────────────────────────────────────────────────
 
 export type RecipeInput = {

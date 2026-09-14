@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { isConfigured, listEvents, type CalendarEvent } from "~/server/google";
-import { AUTO_MATCH, cleanGuestName, nameScore } from "~/server/guest-match";
+import { AUTO_MATCH, cleanGuestName, matchServices, nameScore } from "~/server/guest-match";
 
 /**
  * Google Naptár — dolgozónkénti összekötés.
@@ -70,7 +70,7 @@ export const gcalRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.guestCard.findUnique({ where: { googleEventId: input.eventId } });
-      if (existing) return { cardId: existing.id, created: false, matched: true, guestName: null };
+      if (existing) return { cardId: existing.id, created: false, matched: true, guestName: null, addedServices: [], chooseFrom: [] };
 
       // Staff csak a saját nevére nyithat kártyát. Adminnál a kapott dolgozót
       // ellenőrizzük is: érvénytelen azonosítóval a létrehozás idegenkulcs-hibával
@@ -102,16 +102,46 @@ export const gcalRouter = createTRPCRouter({
         : await ctx.db.guest.create({ data: { name: cleanGuestName(title) } });
       const matched = Boolean(top && top.score >= AUTO_MATCH);
 
+      // A naptárcím a szolgáltatást is elárulja ("Aliz hosszú hajvágás").
+      // Az egyértelműt beírjuk; a kétértelműt (pl. "Hosszú" a női és a férfi
+      // listán is szerepel, eltérő áron) csak felajánljuk — ott az ár is téved.
+      const worker = await ctx.db.user.findUnique({
+        where: { id: workerId }, select: { priceListType: true },
+      });
+      const categories = await ctx.db.serviceCategory.findMany({
+        where:   { priceListType: worker?.priceListType ?? "master" },
+        include: { services: { where: { active: true } } },
+      });
+      const catalog = categories.flatMap(c =>
+        c.services.map(sv => ({
+          id: sv.id, name: sv.name, category: c.name, price: sv.price, duration: sv.duration,
+        })),
+      );
+      const svc = matchServices(title, catalog);
+
       const card = await ctx.db.guestCard.create({
         data: {
           guestId:       guest.id,
           workerId,
           date:          new Date(input.date),
-          total:         0,
+          total:         svc.matched.reduce((sum, m) => sum + m.price, 0),
           googleEventId: input.eventId,
+          services: {
+            create: svc.matched.map(m => ({
+              name:         m.name,
+              price:        m.price,
+              duration:     m.duration,
+              categoryName: m.category,
+            })),
+          },
         },
       });
-      return { cardId: card.id, created: true, matched, guestName: guest.name };
+
+      return {
+        cardId: card.id, created: true, matched, guestName: guest.name,
+        addedServices: svc.matched.map(m => m.name),
+        chooseFrom:    svc.ambiguous.map(m => ({ name: m.name, category: m.category, price: m.price })),
+      };
     }),
 
   /** Egy időszak időpontjai a naptárból. */

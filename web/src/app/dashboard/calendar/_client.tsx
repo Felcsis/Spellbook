@@ -1058,10 +1058,23 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       void utils.gcal.events.invalidate();
     },
   });
+  // Mit sikerült a naptárcímből kiolvasni — ezt a kártya megnyitásakor kiírjuk,
+  // hogy ne kelljen találgatni, mi került be automatikusan és mi vár választásra.
+  const [cardNote, setCardNote] = useState<string | null>(null);
+
   const cardFromEvent = api.gcal.cardFromEvent.useMutation({
     onSuccess: r => {
       void utils.gcal.events.invalidate();
       void utils.calendar.month.invalidate();
+
+      const parts: string[] = [];
+      if (r.addedServices.length)
+        parts.push(`Beírva a naptárcímből: ${r.addedServices.join(", ")}.`);
+      if (r.chooseFrom.length) {
+        const opts = r.chooseFrom.map(c => `${c.name} (${c.category}, ${Math.round(c.price)} Ft)`).join(" vagy ");
+        parts.push(`A cím alapján ez lehet: ${opts} — válaszd ki a listából.`);
+      }
+      setCardNote(parts.join(" ") || null);
       setOpenCardId(r.cardId);
     },
   });
@@ -1300,7 +1313,23 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
         );
       })()}
 
-      {openCardId && <CardEditById cardId={openCardId} onClose={() => setOpenCardId(null)} />}
+      {openCardId && (
+        <>
+          {cardNote && (
+            <div style={{
+              position: "fixed", top: "1rem", left: "50%", transform: "translateX(-50%)",
+              zIndex: 60, maxWidth: 560, padding: "0.6rem 1rem", borderRadius: 10,
+              background: "var(--bg-modal)", border: "1px solid var(--border-strong)",
+              boxShadow: "var(--shadow-modal)",
+              fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)",
+            }}>
+              {cardNote}
+            </div>
+          )}
+          <CardEditById cardId={openCardId}
+            onClose={() => { setOpenCardId(null); setCardNote(null); }} />
+        </>
+      )}
 
       {booking && (
         <BookingModal date={booking.date} moveId={booking.moveId}
