@@ -124,7 +124,7 @@ function layout<T extends { start: string; end: string }>(events: T[]): Placed<T
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, showAllDay = true }: {
   days: {
     date:     Date;
     label:    string;
@@ -140,6 +140,8 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   onOpenCard: (ev: GridEvent, date: Date) => void;
   onOpenDay:  (ds: string) => void;
   onNewBooking?: (date: Date) => void;
+  /** Napi nézetben a bejegyzések külön ablakban vannak, itt csak a menetrend kell. */
+  showAllDay?: boolean;
   /** Húzással kijelölt idősáv — ebből lesz időpont. */
   onSelectRange?: (date: Date, startMinutes: number, endMinutes: number) => void;
   onMove?:       (b: GridBooking) => void;
@@ -219,7 +221,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
       </div>
 
       {/* Egész napos sáv: aminek nincs órája */}
-      {days.some(d => d.allDay.length > 0) && (
+      {showAllDay && days.some(d => d.allDay.length > 0) && (
         <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "var(--bg-row)" }}>
           <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: "0.4rem" }}>
             <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.42rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase" }}>egész nap</span>

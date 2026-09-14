@@ -9,6 +9,8 @@
  * összesítőjével együtt.
  */
 
+import { useState } from "react";
+
 const fmt = (n: number) =>
   new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 
@@ -30,20 +32,59 @@ export type DaySection = {
   emptyAction?: string;
 };
 
-export function DayPanel({ sections, revenue, costs, onAdd }: {
+export function DayPanel({ sections, revenue, costs, title, onAdd }: {
   sections: DaySection[];
   revenue:  number;
   costs:    number;
+  /** A nap felirata az ablak fejlécén. */
+  title?:   string;
   onAdd?:   () => void;
 }) {
+  const [open, setOpen] = useState(true);
   const visible = sections.filter(s => s.entries.length > 0 || s.empty);
+  const count   = sections.reduce((n, s) => n + s.entries.length, 0);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+    <div style={{
+      border: "1px solid var(--border-strong)", borderRadius: 14,
+      background: "var(--bg-card)", boxShadow: "var(--shadow-card)", overflow: "hidden",
+    }}>
+      {/* Ablak-fejléc */}
+      <div onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          padding: "0.5rem 0.75rem", cursor: "pointer",
+          background: "var(--bg-highlight)", borderBottom: open ? "1px solid var(--border)" : "none",
+        }}>
+        <span style={{
+          fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.16em",
+          textTransform: "uppercase", color: "var(--color-teal)",
+        }}>
+          ◈ A nap bejegyzései
+        </span>
+        {count > 0 && (
+          <span style={{
+            fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "var(--text-dim)",
+          }}>{count}</span>
+        )}
+        <div style={{ flex: 1 }} />
+        {title && (
+          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-dim)" }}>
+            {title}
+          </span>
+        )}
+        <span style={{
+          color: "var(--text-soft)", fontSize: "0.7rem",
+          transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s",
+        }}>▾</span>
+      </div>
+
+      {open && (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", padding: "0.7rem" }}>
       {/* A nap mérlege */}
       <div style={{
         background: "var(--bg-panel)", border: "1px solid var(--border)",
-        borderRadius: 14, padding: "0.75rem 0.9rem",
+        borderRadius: 10, padding: "0.6rem 0.8rem",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-dim)" }}>
@@ -68,7 +109,7 @@ export function DayPanel({ sections, revenue, costs, onAdd }: {
       {visible.map(section => (
         <div key={section.title} style={{
           background: "var(--bg-panel)", border: "1px solid var(--border)",
-          borderRadius: 14, padding: "0.7rem 0.9rem",
+          borderRadius: 10, padding: "0.6rem 0.8rem",
         }}>
           <div style={{
             fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em",
@@ -129,6 +170,8 @@ export function DayPanel({ sections, revenue, costs, onAdd }: {
         }}>
           ＋ Bejegyzés ehhez a naphoz
         </button>
+      )}
+    </div>
       )}
     </div>
   );

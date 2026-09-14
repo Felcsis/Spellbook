@@ -1429,6 +1429,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           <div style={{ overflowX: isMobile && view !== "day" ? "auto" : "visible" }}>
             <div style={{ minWidth: isMobile && view === "week" ? 640 : undefined }}>
               <TimeGrid days={gridDays} fromHour={fromHour} toHour={toHour}
+                showAllDay={view !== "day"}
                 onOpenDay={setModalDate}
                 onOpenCard={ev => openCardFromEvent(ev)}
                 onNewBooking={date => setBooking({ date })}
@@ -1461,6 +1462,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
               <MiniCalendar selected={anchor} marked={miniMarks}
                 onSelect={d => setAnchor(d)} />
               <DayPanel sections={sections} revenue={dayRevenue} costs={dayCosts}
+                title={single.date.toLocaleDateString("hu-HU", { month: "short", day: "numeric" })}
                 onAdd={() => setModalDate(ds)} />
             </div>
           </div>
