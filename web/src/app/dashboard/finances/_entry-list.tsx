@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { userColor } from "./_client";
 import { entriesWageAmount, servicesWageAmount } from "~/lib/wage";
+import { toDateStr } from "~/lib/date";
 
 const iStyle: React.CSSProperties = {
   background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 9,
@@ -137,7 +138,7 @@ export function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 }
 
-function toDateStr(d: Date) { return d.toISOString().slice(0, 10); }
+
 
 const inputStyle: React.CSSProperties = {
   background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "10px",
@@ -573,11 +574,11 @@ export function StaffCardList({ cards, isLoading, emptyMessage }: {
   // Group by date
   const byDate: Record<string, StaffCard[]> = {};
   cards.forEach(c => {
-    const ds = new Date(c.date).toISOString().slice(0, 10);
+    const ds = toDateStr(new Date(c.date));
     (byDate[ds] ??= []).push(c);
   });
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = toDateStr(new Date());
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -630,7 +631,7 @@ export function EntryList({
   const [editDateVal, setEditDateVal] = useState("");
 
   function handleEditDateOpen(group: VisitGroup) {
-    setEditDateVal(new Date(group.entries[0]!.date).toISOString().slice(0, 10));
+    setEditDateVal(toDateStr(new Date(group.entries[0]!.date)));
     setEditDateKey(editDateKey === group.key ? null : group.key);
   }
 

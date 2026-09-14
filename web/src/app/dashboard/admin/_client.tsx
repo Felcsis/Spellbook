@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
+import { toDateStr } from "~/lib/date";
 
 const USER_COLORS: Record<string, string> = {
   Felicia: "#c9906a",
@@ -770,7 +771,7 @@ function BackupSection() {
       const blob = new Blob([json], { type: "application/json" });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
-      const date = new Date().toISOString().slice(0, 10);
+      const date = toDateStr(new Date());
       a.href     = url;
       a.download = `spellbook-backup-${date}.json`;
       a.click();

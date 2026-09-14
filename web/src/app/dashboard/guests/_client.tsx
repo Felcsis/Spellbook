@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
 import { EditCardModal, fmt, MAT_OPTIONS } from "~/app/dashboard/_card-edit-modal";
 import type { GuestCardData, MatRow, SvcRow } from "~/app/dashboard/_card-edit-modal";
 import { useIsMobile } from "~/app/_responsive";
+import { toDateStr } from "~/lib/date";
 
 const gold  = "var(--color-teal)";
 const cream = "var(--text-primary)";
@@ -54,7 +55,7 @@ function GdprPanel({ guest }: { guest: GuestWithCards }) {
       const a    = document.createElement("a");
       const slug = guest.name.toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
       a.href = url;
-      a.download = `adatkiadas-${slug || "vendeg"}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `adatkiadas-${slug || "vendeg"}-${toDateStr(new Date())}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -195,7 +196,7 @@ function exportCardPdf(guestName: string, card: GuestCardData) {
   doc.text("Vegosszeg:", 20, y);
   doc.text(`${total.toLocaleString("hu-HU")} Ft`, pageW - 20, y, { align: "right" });
 
-  const fileName = `${guestName.replace(/\s+/g, "_")}_${new Date(card.date).toISOString().slice(0, 10)}.pdf`;
+  const fileName = `${guestName.replace(/\s+/g, "_")}_${toDateStr(new Date(card.date))}.pdf`;
   doc.save(fileName);
 }
 
@@ -588,7 +589,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
   const [newGuest,    setNewGuest]    = useState(false);
 
   const [workerId, setWorkerId] = useState(workers[0]?.id ?? "");
-  const [date,     setDate]     = useState(() => new Date().toISOString().slice(0, 10));
+  const [date,     setDate]     = useState(() => toDateStr(new Date()));
   const [notes,    setNotes]    = useState("");
 
   const [svcSearch, setSvcSearch] = useState("");
@@ -1028,7 +1029,7 @@ export default function GuestsClient({ isAdmin = false }: { isAdmin?: boolean })
       margin: { left: 15, right: 15, top: 15 },
     });
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toDateStr(new Date());
     doc.save(`receptkonyv_${today}.pdf`);
   }
 

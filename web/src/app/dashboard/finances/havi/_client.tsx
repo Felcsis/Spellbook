@@ -5,12 +5,13 @@ import { api } from "~/trpc/react";
 import { userColor, buildVisitGroups } from "../_client";
 import { EntryList, StaffCardList } from "../_entry-list";
 import { entriesWageAmount } from "~/lib/wage";
+import { toDateStr } from "~/lib/date";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 }
-function toDateStr(d: Date) { return d.toISOString().slice(0, 10); }
+
 function weekBounds(d: Date) {
   const dow = (d.getDay() + 6) % 7;
   const mon = new Date(d); mon.setDate(d.getDate() - dow); mon.setHours(0,0,0,0);

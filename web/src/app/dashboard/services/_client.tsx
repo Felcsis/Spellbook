@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import type { ParsedCategory } from "~/app/api/import-pdf/route";
+import { toDateStr } from "~/lib/date";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Service = {
@@ -650,7 +651,7 @@ async function downloadPriceListPdf(
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
   }
 
-  doc.save(`arlista-${deHu(listLabel).toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`arlista-${deHu(listLabel).toLowerCase().replace(/\s+/g, "-")}-${toDateStr(new Date())}.pdf`);
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { api } from "~/trpc/react";
 import { EntryList } from "./_entry-list";
+import { toDateStr } from "~/lib/date";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
@@ -19,7 +20,7 @@ function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 }
 
-function toDateStr(d: Date) { return d.toISOString().slice(0, 10); }
+
 
 function weekBounds(d: Date) {
   const dow = (d.getDay() + 6) % 7;
@@ -154,7 +155,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   const [discountVal,  setDiscountVal]  = useState("");
 
   // Date + amount
-  const [date,      setDate]      = useState(() => new Date().toISOString().slice(0, 10));
+  const [date,      setDate]      = useState(() => toDateStr(new Date()));
 
   // A kiválasztott dolgozóhoz rendelt árlista dönt (dolgozónként állítható az adminban).
   const selectedWorker = allUsers.find((u: { id: string }) => u.id === selectedWorkerId);
@@ -287,7 +288,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     setShowMats(false); setMatRows([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
     setManualAmt(""); setIsManual(false); setPrevOpen(false); setIsFamilyMode(false);
     setDiscountVal(""); setDiscountType("%");
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(toDateStr(new Date()));
     setBuyer({ name: "", zip: "", city: "", address: "", email: "" });
   }
 
@@ -926,7 +927,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
 function OtherModal({ onClose, year, month, isAdmin }: { onClose: () => void; year: number; month: number; isAdmin: boolean }) {
   const utils = api.useUtils();
   const [type, setType] = useState<"material" | "wage">("material");
-  const [date, setDate] = useState(() => new Date(year, month - 1, new Date().getDate()).toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => toDateStr(new Date(year, month - 1, new Date().getDate())));
   const { data: allUsers = [] } = api.admin.listUsers.useQuery(undefined, { enabled: isAdmin });
   const staffUsers = allUsers.filter(u => u.role !== "admin");
   const [wageWorkerId, setWageWorkerId] = useState("");

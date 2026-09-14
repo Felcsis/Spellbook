@@ -3,11 +3,12 @@
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
+import { toDateStr } from "~/lib/date";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 }
-function toDateStr(d: Date) { return d.toISOString().slice(0, 10); }
+
 
 const PURPLE = "rgba(110,60,200,0.22)";
 const PURPLE_BORDER = "rgba(140,80,220,0.40)";

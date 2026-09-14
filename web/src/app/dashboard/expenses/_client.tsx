@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { toDateStr } from "~/lib/date";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
@@ -60,7 +61,7 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
   // Form state
   const [title,        setTitle]        = useState("");
   const [amount,       setAmount]       = useState("");
-  const [date,         setDate]         = useState(() => now.toISOString().slice(0, 10));
+  const [date,         setDate]         = useState(() => toDateStr(now));
   const [category,     setCategory]     = useState(CATEGORIES[0]!);
   const [notes,        setNotes]        = useState("");
   const [paid,         setPaid]         = useState(true);
@@ -89,13 +90,13 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
   });
   const del    = api.expenses.delete.useMutation({ onSuccess: inv });
 
-  function resetForm() { setTitle(""); setAmount(""); setDate(now.toISOString().slice(0, 10)); setCategory(CATEGORIES[0]!); setNotes(""); setPaid(true); setAssignedToId(""); }
+  function resetForm() { setTitle(""); setAmount(""); setDate(toDateStr(now)); setCategory(CATEGORIES[0]!); setNotes(""); setPaid(true); setAssignedToId(""); }
 
   function openEdit(e: typeof expenses[number]) {
     setEditId(e.id);
     setTitle(e.title);
     setAmount(String(e.amount));
-    setDate(new Date(e.date).toISOString().slice(0, 10));
+    setDate(toDateStr(new Date(e.date)));
     setCategory(e.category);
     setNotes(e.notes ?? "");
     setPaid(e.paid);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import { toDateStr } from "~/lib/date";
 
 export const fmt = (n: number) =>
   new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -84,7 +85,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
     },
   });
 
-  const [date,     setDate]     = useState(() => new Date(card.date).toISOString().slice(0, 10));
+  const [date,     setDate]     = useState(() => toDateStr(new Date(card.date)));
   const [workerId, setWorkerId] = useState(card.worker.id);
   const [notes,    setNotes]    = useState(card.notes ?? "");
 

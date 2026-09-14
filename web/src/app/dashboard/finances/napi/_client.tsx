@@ -5,11 +5,12 @@ import { api } from "~/trpc/react";
 import { buildVisitGroups, userColor } from "../_client";
 import { EntryList, StaffCardList } from "../_entry-list";
 import { entriesWageAmount } from "~/lib/wage";
+import { toDateStr } from "~/lib/date";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 }
-function toDateStr(d: Date) { return d.toISOString().slice(0, 10); }
+
 
 const navBtn: React.CSSProperties = {
   background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px",

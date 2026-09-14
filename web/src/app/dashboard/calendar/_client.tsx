@@ -10,6 +10,7 @@ import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent } 
 import { BookingModal } from "./_booking-modal";
 import { MiniCalendar } from "./_mini-calendar";
 import { DayPanel, type DaySection } from "./_day-panel";
+import { toDateStr } from "~/lib/date";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -57,7 +58,7 @@ type User = { id: string; name: string | null };
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
   new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
-const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
+
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function weekStart(d: Date) { const r = new Date(d); r.setDate(r.getDate() - ((r.getDay() + 6) % 7)); return r; }
 
