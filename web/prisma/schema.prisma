@@ -2,180 +2,183 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider        = "prisma-client-js"
-    output          = "../generated/prisma"
-    previewFeatures = ["multiSchema"]
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("SPELLBOOK_DATABASE_URL")
-    schemas  = ["spellbook"]
+  provider = "postgresql"
+  url      = env("SPELLBOOK_DATABASE_URL")
+  schemas  = ["spellbook"]
 }
 
 model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
 
-    @@index([name])
-    @@schema("spellbook")
+  @@index([name])
+  @@schema("spellbook")
 }
 
 // Necessary for Next auth
 model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? // @db.Text
+  access_token             String? // @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? // @db.Text
+  session_state            String?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refresh_token_expires_in Int?
 
-    @@unique([provider, providerAccountId])
-    @@schema("spellbook")
+  @@unique([provider, providerAccountId])
+  @@schema("spellbook")
 }
 
 model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@schema("spellbook")
+  @@schema("spellbook")
 }
 
 model User {
-    id             String         @id @default(cuid())
-    name           String?
-    email          String?        @unique
-    emailVerified  DateTime?
-    image          String?
-    password       String?
-    role           String         @default("staff")  // "admin" | "staff"
-    active         Boolean        @default(true)      // false = archivált (nem léphet be, nem választható új munkához)
-    archivedAt     DateTime?
-    priceListType  String         @default("beginner") // "master" | "beginner" — melyik árlistán dolgozik
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("staff") // "admin" | "staff"
+  active        Boolean   @default(true) // false = archivált (nem léphet be, nem választható új munkához)
+  archivedAt    DateTime?
+  priceListType String    @default("beginner") // "master" | "beginner" — melyik árlistán dolgozik
 
-    // Google Naptár — dolgozónként külön fiók. A refresh token hosszú életű
-    // hozzáférés, ezért csak a szervezen olvassuk, a kliens sosem látja.
-    googleRefreshToken String?
-    googleCalendarId   String?   // melyik naptár; üresen a "primary"
-    googleEmail        String?   // melyik fiókkal kötötte össze — ez látszik a UI-on
-    googleConnectedAt  DateTime?
-    accounts       Account[]
-    sessions       Session[]
-    posts          Post[]
-    financeEntries     FinanceEntry[]
-    workDays           WorkDay[]
-    serviceCategories  ServiceCategory[]
-    services           Service[]
-    guestCards         GuestCard[]
-    expenses           Expense[]  @relation("ExpenseCreatedBy")
-    assignedExpenses   Expense[]  @relation("ExpenseAssignedTo")
+  // Google Naptár — dolgozónként külön fiók. A refresh token hosszú életű
+  // hozzáférés, ezért csak a szervezen olvassuk, a kliens sosem látja.
+  googleRefreshToken String?
+  googleCalendarId   String? // melyik naptár; üresen a "primary"
+  googleEmail        String? // melyik fiókkal kötötte össze — ez látszik a UI-on
+  googleConnectedAt  DateTime?
+  accounts           Account[]
+  sessions           Session[]
+  posts              Post[]
+  financeEntries     FinanceEntry[]
+  workDays           WorkDay[]
+  serviceCategories  ServiceCategory[]
+  services           Service[]
+  guestCards         GuestCard[]
+  appointments       Appointment[]
+  expenses           Expense[]         @relation("ExpenseCreatedBy")
+  assignedExpenses   Expense[]         @relation("ExpenseAssignedTo")
 
-    @@schema("spellbook")
+  @@schema("spellbook")
 }
 
 model WorkDay {
-    id            String           @id @default(cuid())
-    date          DateTime         @db.Date
-    user          User             @relation(fields: [userId], references: [id])
-    userId        String
-    earnings      Float            @default(0)
-    notes         String?
-    startTime     String?          // érkezés "HH:MM"
-    endTime       String?          // távozás "HH:MM"
-    financeEntry  FinanceEntry?
-    services      WorkDayService[]
+  id           String           @id @default(cuid())
+  date         DateTime         @db.Date
+  user         User             @relation(fields: [userId], references: [id])
+  userId       String
+  earnings     Float            @default(0)
+  notes        String?
+  startTime    String? // érkezés "HH:MM"
+  endTime      String? // távozás "HH:MM"
+  financeEntry FinanceEntry?
+  services     WorkDayService[]
 
-    // A munkaidőhöz kiküldött Google-esemény — hogy módosításkor ne új jöjjön létre.
-    googleEventId String?
+  // A munkaidőhöz kiküldött Google-esemény — hogy módosításkor ne új jöjjön létre.
+  googleEventId String?
 
-    @@unique([date, userId])
-    @@index([date])
-    @@schema("spellbook")
+  @@unique([date, userId])
+  @@index([date])
+  @@schema("spellbook")
 }
 
 model WorkDayService {
-    id         String   @id @default(cuid())
-    workDay    WorkDay  @relation(fields: [workDayId], references: [id], onDelete: Cascade)
-    workDayId  String
-    service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-    serviceId  String
-    quantity   Int      @default(1)
-    priceSnap  Float    // ár a bejegyzés pillanatában
+  id        String  @id @default(cuid())
+  workDay   WorkDay @relation(fields: [workDayId], references: [id], onDelete: Cascade)
+  workDayId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId String
+  quantity  Int     @default(1)
+  priceSnap Float // ár a bejegyzés pillanatában
 
-    @@unique([workDayId, serviceId])
-    @@schema("spellbook")
+  @@unique([workDayId, serviceId])
+  @@schema("spellbook")
 }
 
 model FinanceEntry {
-    id          String     @id @default(cuid())
-    type        String     // "revenue" | "material" | "wage"
-    description String
-    amount      Float
-    date        DateTime   @default(now())
-    createdAt   DateTime   @default(now())
-    createdBy   User       @relation(fields: [createdById], references: [id])
-    createdById String
-    workDay     WorkDay?   @relation(fields: [workDayId], references: [id], onDelete: Cascade)
-    workDayId   String?    @unique
-    guestCard   GuestCard? @relation(fields: [guestCardId], references: [id], onDelete: SetNull)
-    guestCardId String?
-    visitGroupId String?
+  id           String     @id @default(cuid())
+  type         String // "revenue" | "material" | "wage"
+  description  String
+  amount       Float
+  date         DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  createdBy    User       @relation(fields: [createdById], references: [id])
+  createdById  String
+  workDay      WorkDay?   @relation(fields: [workDayId], references: [id], onDelete: Cascade)
+  workDayId    String?    @unique
+  guestCard    GuestCard? @relation(fields: [guestCardId], references: [id], onDelete: SetNull)
+  guestCardId  String?
+  visitGroupId String?
 
-    @@index([date])
-    @@index([type])
-    @@index([visitGroupId])
-    @@schema("spellbook")
+  @@index([date])
+  @@index([type])
+  @@index([visitGroupId])
+  @@schema("spellbook")
 }
 
 model Guest {
-    id        String      @id @default(cuid())
-    name      String
-    phone     String?
-    notes     String?
-    createdAt DateTime    @default(now())
-    cards     GuestCard[]
+  id        String      @id @default(cuid())
+  name      String
+  phone     String?
+  notes     String?
+  createdAt DateTime    @default(now())
+  cards     GuestCard[]
 
-    // GDPR — a vendéget tájékoztattuk az adatkezelésről (6. cikk (1) b) + a
-    // jegyzetbe kerülő egészségi adatokhoz (9. cikk (2) a) hozzájárult.
-    consentAt     DateTime?
-    consentSource String?   // "szóban" | "papíron" | "online"
+  // GDPR — a vendéget tájékoztattuk az adatkezelésről (6. cikk (1) b) + a
+  // jegyzetbe kerülő egészségi adatokhoz (9. cikk (2) a) hozzájárult.
+  consentAt     DateTime?
+  consentSource String? // "szóban" | "papíron" | "online"
 
-    @@index([name])
-    @@schema("spellbook")
+  appointments Appointment[]
+
+  @@index([name])
+  @@schema("spellbook")
 }
 
 // GDPR elszámoltathatóság (5. cikk (2)): ki, mikor, milyen érintetti kérést
 // teljesített. Szándékosan nem hivatkozik a Guest-re, hogy a vendég törlése
 // után is megmaradjon a bizonyíték a törlés megtörténtéről.
 model GdprLog {
-    id          String   @id @default(cuid())
-    action      String   // "export" | "delete" | "retention" | "consent"
-    subject     String   // a vendég neve a művelet pillanatában
-    subjectId   String?  // a vendég id-ja (törlés után már nem létezik)
-    detail      String?
-    actorId     String?  // melyik felhasználó végezte
-    actorEmail  String?
-    createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  action     String // "export" | "delete" | "retention" | "consent"
+  subject    String // a vendég neve a művelet pillanatában
+  subjectId  String? // a vendég id-ja (törlés után már nem létezik)
+  detail     String?
+  actorId    String? // melyik felhasználó végezte
+  actorEmail String?
+  createdAt  DateTime @default(now())
 
-    @@index([createdAt])
-    @@index([action])
-    @@schema("spellbook")
+  @@index([createdAt])
+  @@index([action])
+  @@schema("spellbook")
 }
 
 // Kiállított bizonylat (nyugta vagy számla). A bizonylatot a Számlázz.hu állítja
@@ -183,164 +186,207 @@ model GdprLog {
 // hogy a vendégkártyáról vissza lehessen keresni. A PDF-et szándékosan NEM
 // tároljuk: bármikor letölthető a bizonylatszám alapján.
 model Receipt {
-    id            String    @id @default(cuid())
-    card          GuestCard? @relation(fields: [cardId], references: [id], onDelete: SetNull)
-    cardId        String?
-    kind          String    // "nyugta" | "szamla"
-    number        String    @unique // nyugtaszám / számlaszám
+  id     String     @id @default(cuid())
+  card   GuestCard? @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  cardId String?
+  kind   String // "nyugta" | "szamla"
+  number String     @unique // nyugtaszám / számlaszám
 
-    // Melyik szolgáltató állította ki: "szamlazz" | "billingo". A szolgáltató
-    // cserélhető, de egy régi bizonylat sztornója és PDF-je csak ott érhető el,
-    // ahol készült — ezért kell megjegyezni.
-    provider      String    @default("szamlazz")
-    externalId    String?   // a szolgáltató belső azonosítója (Billingónál kell)
-    total         Float
-    paymentMethod String    // "készpénz" | "bankkártya" | "átutalás"
+  // Melyik szolgáltató állította ki: "szamlazz" | "billingo". A szolgáltató
+  // cserélhető, de egy régi bizonylat sztornója és PDF-je csak ott érhető el,
+  // ahol készült — ezért kell megjegyezni.
+  provider      String  @default("szamlazz")
+  externalId    String? // a szolgáltató belső azonosítója (Billingónál kell)
+  total         Float
+  paymentMethod String // "készpénz" | "bankkártya" | "átutalás"
 
-    // Csak számlánál — az Áfa tv. 169. §-a szerint kötelező vevőadatok
-    buyerName    String?
-    buyerZip     String?
-    buyerCity    String?
-    buyerAddress String?
-    buyerEmail   String?
+  // Csak számlánál — az Áfa tv. 169. §-a szerint kötelező vevőadatok
+  buyerName    String?
+  buyerZip     String?
+  buyerCity    String?
+  buyerAddress String?
+  buyerEmail   String?
 
-    // Sztornó: a sztornó bizonylat száma és ideje az eredeti soron marad
-    stornoNumber String?
-    stornoedAt   DateTime?
+  // Sztornó: a sztornó bizonylat száma és ideje az eredeti soron marad
+  stornoNumber String?
+  stornoedAt   DateTime?
 
-    issuedAt     DateTime @default(now())
-    issuedById   String?
-    issuedByName String?
+  issuedAt     DateTime @default(now())
+  issuedById   String?
+  issuedByName String?
 
-    @@index([cardId])
-    @@index([issuedAt])
-    @@schema("spellbook")
+  @@index([cardId])
+  @@index([issuedAt])
+  @@schema("spellbook")
+}
+
+/// Előjegyzés: egy jövőbeli vendég-időpont.
+///
+/// A Spellbook naptára eredetileg visszatekintő volt (munkanap, bevétel,
+/// vendégkártya), az időpontok pedig a Google Naptárból jöttek. Ez a modell teszi
+/// az appot foglalásra is alkalmassá — és ami itt készül, az kimegy a dolgozó
+/// Google Naptárába, hogy továbbra is egy helyen legyen minden.
+model Appointment {
+  id    String   @id @default(cuid())
+  start DateTime
+  end   DateTime
+
+  worker   User   @relation(fields: [workerId], references: [id])
+  workerId String
+
+  // A vendég lehet ismert (kartotékos) vagy csak egy név — egy telefonos
+  // érdeklődőt nem akarunk kényszerből felvenni a vendégkönyvbe.
+  guest     Guest?  @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  guestId   String?
+  guestName String
+  phone     String?
+
+  /// A tervezett szolgáltatások neve, vesszővel — csak tájékoztató.
+  /// A tényleges elszámolás a vendégkártyán történik.
+  services String?
+  notes    String?
+
+  status String @default("foglalt") // "foglalt" | "lemondott"
+
+  /// A hozzá tartozó Google-esemény, hogy módosításkor ne új jöjjön létre,
+  /// és hogy a Google-ből visszaolvasva ne jelenjen meg kétszer.
+  googleEventId String? @unique
+
+  /// Ha már megérkezett és készült róla vendégkártya.
+  cardId String?
+
+  createdAt   DateTime @default(now())
+  createdById String?
+
+  @@index([start])
+  @@index([workerId])
+  @@schema("spellbook")
 }
 
 model GuestCard {
-    id            String              @id @default(cuid())
-    date          DateTime            @db.Date
-    guest         Guest               @relation(fields: [guestId], references: [id], onDelete: Cascade)
-    guestId       String
-    worker        User                @relation(fields: [workerId], references: [id])
-    workerId      String
-    total         Float               @default(0)
-    notes         String?
-    createdAt     DateTime            @default(now())
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  guestId   String
+  worker    User     @relation(fields: [workerId], references: [id])
+  workerId  String
+  total     Float    @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
 
-    // Melyik Google-időpontból készült — hogy ugyanabból ne legyen két kártya.
-    googleEventId String?             @unique
+  // Melyik Google-időpontból készült — hogy ugyanabból ne legyen két kártya.
+  googleEventId String? @unique
 
-    services       GuestCardService[]
-    materials      GuestCardMaterial[]
-    financeEntries FinanceEntry[]
-    receipts       Receipt[]
+  services       GuestCardService[]
+  materials      GuestCardMaterial[]
+  financeEntries FinanceEntry[]
+  receipts       Receipt[]
 
-    @@index([guestId])
-    @@index([date])
-    @@schema("spellbook")
+  @@index([guestId])
+  @@index([date])
+  @@schema("spellbook")
 }
 
 model GuestCardService {
-    id           String    @id @default(cuid())
-    card         GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
-    cardId       String
-    name         String
-    price        Float
-    duration     Int       @default(0)
-    gender       String?
-    categoryName String?
+  id           String    @id @default(cuid())
+  card         GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  cardId       String
+  name         String
+  price        Float
+  duration     Int       @default(0)
+  gender       String?
+  categoryName String?
 
-    @@schema("spellbook")
+  @@schema("spellbook")
 }
 
 model GuestCardMaterial {
-    id        String    @id @default(cuid())
-    card      GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
-    cardId    String
-    name      String
-    brand     String?
-    colorCode String?
-    grams     Float
-    unitPrice Float
-    lineTotal Float
+  id        String    @id @default(cuid())
+  card      GuestCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  cardId    String
+  name      String
+  brand     String?
+  colorCode String?
+  grams     Float
+  unitPrice Float
+  lineTotal Float
 
-    @@schema("spellbook")
+  @@schema("spellbook")
 }
 
 model Material {
-    id        String   @id @default(cuid())
-    name      String
-    price     Float
-    unit      String?  // pl. "adag", "tubus", "csomag"
-    active    Boolean  @default(true)
-    order     Int      @default(0)
-    createdAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String
+  price     Float
+  unit      String? // pl. "adag", "tubus", "csomag"
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 
-    @@index([name])
-    @@schema("spellbook")
+  @@index([name])
+  @@schema("spellbook")
 }
 
 model Expense {
-    id           String   @id @default(cuid())
-    title        String
-    amount       Float
-    date         DateTime @db.Date
-    category     String   @default("egyéb")
-    notes        String?
-    paid         Boolean  @default(true)
-    createdAt    DateTime @default(now())
-    createdBy    User     @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
-    createdById  String
-    assignedTo   User?    @relation("ExpenseAssignedTo", fields: [assignedToId], references: [id])
-    assignedToId String?
+  id           String   @id @default(cuid())
+  title        String
+  amount       Float
+  date         DateTime @db.Date
+  category     String   @default("egyéb")
+  notes        String?
+  paid         Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  createdBy    User     @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  createdById  String
+  assignedTo   User?    @relation("ExpenseAssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
 
-    @@index([date])
-    @@index([assignedToId])
-    @@schema("spellbook")
+  @@index([date])
+  @@index([assignedToId])
+  @@schema("spellbook")
 }
 
 model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
+  identifier String
+  token      String   @unique
+  expires    DateTime
 
-    @@unique([identifier, token])
-    @@schema("spellbook")
+  @@unique([identifier, token])
+  @@schema("spellbook")
 }
 
 model ServiceCategory {
-    id            String    @id @default(cuid())
-    name          String
-    order         Int       @default(0)
-    priceListType String    @default("master")
-    createdAt     DateTime  @default(now())
-    user          User      @relation(fields: [userId], references: [id])
-    userId        String
-    services      Service[]
+  id            String    @id @default(cuid())
+  name          String
+  order         Int       @default(0)
+  priceListType String    @default("master")
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id])
+  userId        String
+  services      Service[]
 
-    @@index([userId])
-    @@index([priceListType])
-    @@schema("spellbook")
+  @@index([userId])
+  @@index([priceListType])
+  @@schema("spellbook")
 }
 
 model Service {
-    id           String           @id @default(cuid())
-    name         String
-    price        Float
-    duration     Int              @default(30)
-    description  String?
-    active       Boolean          @default(true)
-    perHour      Boolean          @default(false)  // true = óradíj, a listában/PDF-ben "Ft/óra"
-    order        Int              @default(0)
-    createdAt    DateTime         @default(now())
-    category     ServiceCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-    categoryId   String
-    user         User             @relation(fields: [userId], references: [id])
-    userId       String
-    workDays     WorkDayService[]
+  id          String           @id @default(cuid())
+  name        String
+  price       Float
+  duration    Int              @default(30)
+  description String?
+  active      Boolean          @default(true)
+  perHour     Boolean          @default(false) // true = óradíj, a listában/PDF-ben "Ft/óra"
+  order       Int              @default(0)
+  createdAt   DateTime         @default(now())
+  category    ServiceCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  user        User             @relation(fields: [userId], references: [id])
+  userId      String
+  workDays    WorkDayService[]
 
-    @@index([categoryId])
-    @@index([userId])
-    @@schema("spellbook")
+  @@index([categoryId])
+  @@index([userId])
+  @@schema("spellbook")
 }

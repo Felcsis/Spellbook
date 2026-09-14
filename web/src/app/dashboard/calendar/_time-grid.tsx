@@ -27,6 +27,21 @@ export type GridEvent = {
   userName: string;
 };
 
+/**
+ * A Spellbookban rögzített előjegyzés. A Google-eseménnyel egy rácson ül, de
+ * többet tudunk róla (vendég, telefon, dolgozó), és műveletei is vannak.
+ */
+export type GridBooking = {
+  id:        string;
+  guestName: string;
+  services:  string | null;
+  phone:     string | null;
+  start:     string;
+  end:       string;
+  workerName: string;
+  color:     string;
+};
+
 /** Egy munkaidő-sáv: érkezés–távozás, a dolgozó színével. */
 export type GridBand = {
   id:    string;
@@ -52,12 +67,20 @@ function minutesOfIso(iso: string): number {
  * A megjelenített órasáv. Nem fix 0–24, mert az a nap nagy részében üres helyet
  * mutatna — a tényleges adatokból számoljuk, egy óra ráhagyással.
  */
-export function hourRange(events: GridEvent[], bands: GridBand[]): [number, number] {
+export function hourRange(
+  events: GridEvent[],
+  bands: GridBand[],
+  bookings: { start: string; end: string }[] = [],
+): [number, number] {
   let min = 9 * 60, max = 18 * 60;
   for (const e of events) {
     if (e.allDay) continue;
     min = Math.min(min, minutesOfIso(e.start));
     max = Math.max(max, minutesOfIso(e.end));
+  }
+  for (const b of bookings) {
+    min = Math.min(min, minutesOfIso(b.start));
+    max = Math.max(max, minutesOfIso(b.end));
   }
   for (const b of bands) {
     if (b.start) { const m = minutesOf(b.start); if (!isNaN(m)) min = Math.min(min, m); }
@@ -66,14 +89,14 @@ export function hourRange(events: GridEvent[], bands: GridBand[]): [number, numb
   return [Math.max(0, Math.floor(min / 60) - 1), Math.min(24, Math.ceil(max / 60) + 1)];
 }
 
-/** Az egymást átfedő időpontok egymás mellé kerülnek, ne takarják ki egymást. */
-function layout(events: GridEvent[]): { ev: GridEvent; col: number; cols: number }[] {
-  const timed = events
-    .filter(e => !e.allDay)
-    .sort((a, b) => minutesOfIso(a.start) - minutesOfIso(b.start));
+type Placed<T> = { ev: T; col: number; cols: number };
 
-  const out: { ev: GridEvent; col: number; cols: number }[] = [];
-  let cluster: typeof out = [];
+/** Az egymást átfedő időpontok egymás mellé kerülnek, ne takarják ki egymást. */
+function layout<T extends { start: string; end: string }>(events: T[]): Placed<T>[] {
+  const timed = [...events].sort((a, b) => minutesOfIso(a.start) - minutesOfIso(b.start));
+
+  const out: Placed<T>[] = [];
+  let cluster: Placed<T>[] = [];
   let clusterEnd = -1;
 
   const flush = () => {
@@ -101,13 +124,14 @@ function layout(events: GridEvent[]): { ev: GridEvent; col: number; cols: number
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onMove, onCancel }: {
   days: {
     date:     Date;
     label:    string;
     sub:      string;
     isToday:  boolean;
     events:   GridEvent[];
+    bookings: GridBooking[];
     bands:    GridBand[];
     allDay:   { id: string; text: string; color: string }[];
   }[];
@@ -115,6 +139,9 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay }: {
   toHour:   number;
   onOpenCard: (ev: GridEvent, date: Date) => void;
   onOpenDay:  (ds: string) => void;
+  onNewBooking?: (date: Date) => void;
+  onMove?:       (b: GridBooking) => void;
+  onCancel?:     (b: GridBooking) => void;
 }) {
   const hours  = Array.from({ length: toHour - fromHour }, (_, i) => fromHour + i);
   const height = hours.length * PX_PER_HOUR;
@@ -142,6 +169,14 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay }: {
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)" }}>
               {d.label}
             </div>
+            {onNewBooking && (
+              <button onClick={ev => { ev.stopPropagation(); onNewBooking(d.date); }}
+                title="Új időpont erre a napra"
+                style={{
+                  position: "absolute", top: 4, right: 5, background: "none", border: "none",
+                  cursor: "pointer", color: "var(--text-dim)", fontSize: "0.85rem", lineHeight: 1, padding: 0,
+                }}>＋</button>
+            )}
             <div style={{
               fontFamily: "var(--font-playfair)", fontSize: "1.25rem", lineHeight: 1.3,
               color: d.isToday ? "var(--color-teal)" : "var(--text-primary)",
@@ -194,7 +229,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay }: {
         </div>
 
         {days.map(d => {
-          const placed = layout(d.events);
+          const placed = layout(d.events.filter(e => !e.allDay));
           return (
             <div key={`col-${d.label}${d.sub}`} style={{ ...cell, background: d.isToday ? "var(--bg-today)" : "transparent" }}>
               {/* Óravonalak */}
@@ -217,6 +252,46 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay }: {
                     background: `linear-gradient(180deg, ${b.color}22, ${b.color}0c)`,
                     borderLeft: `2px solid ${b.color}80`, borderRadius: 4,
                   }} />
+                );
+              })}
+
+              {/* Előjegyzések — a saját foglalásaink */}
+              {layout(d.bookings).map(({ ev: b, col, cols }) => {
+                const s = minutesOfIso(b.start);
+                const e = Math.max(minutesOfIso(b.end), s + 30);
+                const w = 100 / cols;
+                return (
+                  <div key={b.id} title={`${b.guestName}${b.phone ? ` · ${b.phone}` : ""} — ${b.workerName}`}
+                    style={{
+                      position: "absolute", top: top(s), height: ((e - s) / 60) * PX_PER_HOUR - 2,
+                      left: `calc(${col * w}% + 3px)`, width: `calc(${w}% - 6px)`,
+                      background: `linear-gradient(150deg, ${b.color}45, ${b.color}20)`,
+                      border: `1px solid ${b.color}`,
+                      borderRadius: 7, padding: "0.15rem 0.35rem", overflow: "hidden",
+                      boxShadow: `0 0 10px ${b.color}30`,
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.58rem", color: b.color }}>
+                        {fmtTime(b.start)}
+                      </span>
+                      {onMove && (
+                        <button onClick={() => onMove(b)} title="Áthelyezés"
+                          style={miniAction(b.color)}>⇄</button>
+                      )}
+                      {onCancel && (
+                        <button onClick={() => onCancel(b)} title="Lemondás"
+                          style={miniAction("#c47878")}>✕</button>
+                      )}
+                    </div>
+                    <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.86rem", color: "var(--text-primary)", lineHeight: 1.15 }}>
+                      {b.guestName}
+                    </div>
+                    {b.services && (
+                      <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.74rem", color: "var(--text-soft)", lineHeight: 1.1 }}>
+                        {b.services}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
 
@@ -257,6 +332,14 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay }: {
       </div>
     </div>
   );
+}
+
+/** Apró művelet-gomb egy előjegyzés-kártyán. */
+function miniAction(color: string): React.CSSProperties {
+  return {
+    background: "none", border: "none", cursor: "pointer", color,
+    fontSize: "0.62rem", lineHeight: 1, padding: 0, marginLeft: "auto",
+  };
 }
 
 function fmtTime(iso: string) {

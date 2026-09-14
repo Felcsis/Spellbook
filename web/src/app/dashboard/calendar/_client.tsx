@@ -6,7 +6,8 @@ import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
 import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { StarfieldBg } from "./_starfield-bg";
-import { TimeGrid, hourRange, type GridBand, type GridEvent } from "./_time-grid";
+import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent } from "./_time-grid";
+import { BookingModal } from "./_booking-modal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -894,7 +895,7 @@ function GooglePanel() {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function CalendarClient() {
+export default function CalendarClient({ currentUserId = "" }: { currentUserId?: string }) {
   const now = new Date();
   const isMobile = useIsMobile();
   const [view,   setView]   = useState<View>("month");
@@ -921,7 +922,20 @@ export default function CalendarClient() {
     { enabled: gcalStatus.data?.configured === true },
   );
 
+  // Előjegyzések ugyanarra az időszakra, mint a Google-események.
+  const { data: appointments = [] } = api.appointments.list.useQuery({
+    from: gFrom.toISOString(), to: gTo.toISOString(),
+  });
+
+  const [booking,    setBooking]    = useState<{ date: Date; moveId?: string } | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
+
+  const cancelBooking = api.appointments.cancel.useMutation({
+    onSuccess: () => {
+      void utils.appointments.list.invalidate();
+      void utils.gcal.events.invalidate();
+    },
+  });
   const cardFromEvent = api.gcal.cardFromEvent.useMutation({
     onSuccess: r => {
       void utils.gcal.events.invalidate();
@@ -932,6 +946,24 @@ export default function CalendarClient() {
 
   const byEventDate: Record<string, GEvent[]> = {};
   gEvents.forEach(e => { (byEventDate[e.start.slice(0, 10)] ??= []).push(e as GEvent); });
+
+  const byBookingDate: Record<string, GridBooking[]> = {};
+  appointments
+    .filter(a => a.status === "foglalt")
+    .forEach(a => {
+      const start = new Date(a.start);
+      const key   = toDateStr(start);
+      (byBookingDate[key] ??= []).push({
+        id:         a.id,
+        guestName:  a.guestName,
+        services:   a.services,
+        phone:      a.phone,
+        start:      start.toISOString(),
+        end:        new Date(a.end).toISOString(),
+        workerName: a.worker.name ?? "?",
+        color:      userColors[a.workerId] ?? "#c4926e",
+      });
+    });
 
   function openCardFromEvent(ev: GEvent) {
     cardFromEvent.mutate({
@@ -1048,6 +1080,17 @@ export default function CalendarClient() {
           ))}
         </div>
 
+        <button onClick={() => setBooking({ date: anchor })}
+          style={{
+            padding: "0.42rem 0.9rem", borderRadius: 8,
+            border: "1px solid var(--border-strong)", background: "var(--bg-active)",
+            color: "var(--color-teal)", fontFamily: "var(--font-cinzel)",
+            fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer",
+            textTransform: "uppercase", whiteSpace: "nowrap",
+          }}>
+          ✦ Új időpont
+        </button>
+
         {/* Nav */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <button onClick={() => navigate(-1)} style={navBtnStyle}>‹</button>
@@ -1092,6 +1135,12 @@ export default function CalendarClient() {
       )}
       {openCardId && <CardEditById cardId={openCardId} onClose={() => setOpenCardId(null)} />}
 
+      {booking && (
+        <BookingModal date={booking.date} moveId={booking.moveId}
+          workerId={currentUserId || activeUsers[0]?.id || ""}
+          onClose={() => setBooking(null)} />
+      )}
+
       {(view === "week" || view === "3day" || view === "day") && (() => {
         // A rács napjai: időpontok órára, minden más az "egész nap" sávba.
         const gridDays = columnDays().map(date => {
@@ -1114,6 +1163,7 @@ export default function CalendarClient() {
             label: DAYS_L[(date.getDay() + 6) % 7]!,
             sub:   String(date.getDate()),
             events: evs,
+            bookings: byBookingDate[ds] ?? [],
             bands,
             allDay: [
               // A munkanap akkor is látszik, ha nincs hozzá óra megadva.
@@ -1130,16 +1180,23 @@ export default function CalendarClient() {
           };
         });
 
-        const allEvents = gridDays.flatMap(d => d.events);
-        const allBands  = gridDays.flatMap(d => d.bands);
-        const [fromHour, toHour] = hourRange(allEvents, allBands);
+        const allEvents   = gridDays.flatMap(d => d.events);
+        const allBands    = gridDays.flatMap(d => d.bands);
+        const allBookings = gridDays.flatMap(d => d.bookings);
+        const [fromHour, toHour] = hourRange(allEvents, allBands, allBookings);
 
         return (
           <div style={{ overflowX: isMobile && view !== "day" ? "auto" : "visible" }}>
             <div style={{ minWidth: isMobile && view === "week" ? 640 : undefined }}>
               <TimeGrid days={gridDays} fromHour={fromHour} toHour={toHour}
                 onOpenDay={setModalDate}
-                onOpenCard={ev => openCardFromEvent(ev)} />
+                onOpenCard={ev => openCardFromEvent(ev)}
+                onNewBooking={date => setBooking({ date })}
+                onMove={b => setBooking({ date: new Date(b.start), moveId: b.id })}
+                onCancel={b => {
+                  if (confirm(`Biztosan lemondod ${b.guestName} időpontját?`))
+                    cancelBooking.mutate({ id: b.id });
+                }} />
             </div>
           </div>
         );

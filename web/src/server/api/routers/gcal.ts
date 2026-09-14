@@ -144,13 +144,25 @@ export const gcalRouter = createTRPCRouter({
       const flat = perUser.flat();
       if (flat.length === 0) return [];
 
+      const ids = flat.map(e => e.id);
+
+      // A Spellbookban rögzített előjegyzés kimegy a Google-be, és onnan vissza is
+      // jönne — azt a saját, gazdagabb adatunkból jelenítjük meg, ezért itt kiesik.
+      const own = await ctx.db.appointment.findMany({
+        where:  { googleEventId: { in: ids } },
+        select: { googleEventId: true },
+      });
+      const ownIds = new Set(own.map(a => a.googleEventId));
+
       // Melyik időpontból készült már vendégkártya — hogy ne lehessen kétszer.
       const cards = await ctx.db.guestCard.findMany({
-        where:  { googleEventId: { in: flat.map(e => e.id) } },
+        where:  { googleEventId: { in: ids } },
         select: { id: true, googleEventId: true },
       });
       const byEvent = new Map(cards.map(c => [c.googleEventId, c.id]));
 
-      return flat.map(e => ({ ...e, cardId: byEvent.get(e.id) ?? null }));
+      return flat
+        .filter(e => !ownIds.has(e.id))
+        .map(e => ({ ...e, cardId: byEvent.get(e.id) ?? null }));
     }),
 });

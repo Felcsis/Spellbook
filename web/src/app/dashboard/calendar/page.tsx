@@ -5,5 +5,5 @@ import CalendarClient from "./_client";
 export default async function CalendarPage() {
   const session = await auth();
   if (!session) redirect("/login");
-  return <CalendarClient />;
+  return <CalendarClient currentUserId={session.user.id} />;
 }
