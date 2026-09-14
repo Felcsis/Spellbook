@@ -34,11 +34,14 @@ const DURATIONS = [30, 45, 60, 90, 120, 180];
 /** Egy választható szolgáltatás az árlistáról. */
 type PickedService = { id: string; name: string; duration: number; category: string };
 
-export function BookingModal({ date, workerId, moveId, onClose }: {
+export function BookingModal({ date, workerId, moveId, prefillStart, prefillMinutes, onClose }: {
   date:      Date;
   workerId:  string;
   /** Ha meg van adva, egy meglévő időpontot helyezünk át. */
   moveId?:   string;
+  /** A naptáron húzással kijelölt sáv kezdete (ISO) és hossza. */
+  prefillStart?:   string;
+  prefillMinutes?: number;
   onClose:   () => void;
 }) {
   const utils = api.useUtils();
@@ -57,7 +60,7 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
     return d;
   });
   const [worker,   setWorker]   = useState(workerId);
-  const [duration, setDuration] = useState(60);
+  const [duration, setDuration] = useState(prefillMinutes ?? 60);
   const [guestId,  setGuestId]  = useState("");
   const [name,     setName]     = useState("");
   const [phone,    setPhone]    = useState("");
@@ -66,9 +69,10 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
   const [picked,      setPicked]      = useState<PickedService[]>([]);
   const [svcSearch,   setSvcSearch]   = useState("");
   const [svcOpen,     setSvcOpen]     = useState(false);
-  const [durationSet, setDurationSet] = useState(false);
+  // Ha a naptáron húzva jelölted ki, azt az időt tiszteletben tartjuk.
+  const [durationSet, setDurationSet] = useState(Boolean(prefillMinutes));
   const [notes,    setNotes]    = useState("");
-  const [slot,     setSlot]     = useState<string | null>(null);
+  const [slot,     setSlot]     = useState<string | null>(prefillStart ?? null);
   const [error,    setError]    = useState("");
   const [warning,  setWarning]  = useState("");
 
@@ -355,6 +359,19 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
 
           <div>
           <span style={lbl}>Szabad időpontok</span>
+          {prefillStart && slot === prefillStart && (
+            <div style={{
+              marginBottom: "0.5rem", padding: "0.4rem 0.7rem", borderRadius: 8,
+              border: "1px solid var(--color-teal)", background: "var(--bg-active)",
+              fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: "var(--color-teal)",
+            }}>
+              A naptáron kijelölve:{" "}
+              <strong>
+                {new Date(prefillStart).toLocaleString("hu-HU", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </strong>
+              {" "}· {duration} perc
+            </div>
+          )}
           {slotsLoading ? (
             <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", margin: 0 }}>Keresem…</p>
           ) : days.length === 0 ? (

@@ -188,6 +188,36 @@ export const calendarRouter = createTRPCRouter({
       return workDay;
     }),
 
+  /**
+   * Munkaidő megadása több napra egyszerre.
+   *
+   * Szándékosan CSAK az érkezést/távozást állítja, a bevételhez és a pénzügyi
+   * tételekhez nem nyúl: a tervezett munkaidő rögzítése nem bevétel. Ha a napon
+   * már van munkanap, annak az adatai megmaradnak.
+   */
+  setHoursBulk: protectedProcedure
+    .input(z.object({
+      dates:     z.array(z.string()).min(1).max(120),
+      userId:    z.string(),
+      startTime: z.string().nullable(),
+      endTime:   z.string().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const targetUserId = ctx.session.user.role === "admin"
+        ? input.userId
+        : ctx.session.user.id;
+
+      for (const ds of input.dates) {
+        const date = new Date(ds);
+        await ctx.db.workDay.upsert({
+          where:  { date_userId: { date, userId: targetUserId } },
+          create: { date, userId: targetUserId, earnings: 0, startTime: input.startTime, endTime: input.endTime },
+          update: { startTime: input.startTime, endTime: input.endTime },
+        });
+      }
+      return { count: input.dates.length };
+    }),
+
   incrementEarnings: protectedProcedure
     .input(z.object({
       date: z.string(),

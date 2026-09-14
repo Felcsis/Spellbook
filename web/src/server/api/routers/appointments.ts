@@ -123,7 +123,7 @@ export const appointmentsRouter = createTRPCRouter({
       const last  = new Date(first);
       last.setDate(last.getDate() + input.days);
 
-      const [workDays, appointments] = await Promise.all([
+      const [workDays, appointments, timeOff] = await Promise.all([
         ctx.db.workDay.findMany({
           where:  { userId: input.workerId, date: { gte: first, lt: last } },
           select: { date: true, startTime: true, endTime: true },
@@ -132,12 +132,27 @@ export const appointmentsRouter = createTRPCRouter({
           where:  { workerId: input.workerId, status: "foglalt", start: { gte: first, lt: last } },
           select: { start: true, end: true },
         }),
+        // Szabadság: a dolgozóé és az egész szalonra szóló (workerId null) is kizár.
+        ctx.db.timeOff.findMany({
+          where:  { date: { gte: first, lt: last }, OR: [{ workerId: input.workerId }, { workerId: null }] },
+          select: { date: true },
+        }),
       ]);
+
+      const closed = new Set(timeOff.map(t => {
+        const d = new Date(t.date);
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+      }));
 
       // A vendégkártya nem foglal időt: az már megtörtént munka.
       const busy: Busy[] = appointments;
 
       return workDays
+        .filter(w => {
+          const d  = new Date(w.date);
+          const ds = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+          return !closed.has(ds);
+        })
         .map(w => {
           // A munkanap dátuma UTC-ben tárolt naptári nap; helyi éjfélre igazítjuk.
           const day = new Date(w.date);

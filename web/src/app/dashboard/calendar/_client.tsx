@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
@@ -10,6 +10,7 @@ import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent } 
 import { BookingModal } from "./_booking-modal";
 import { MiniCalendar } from "./_mini-calendar";
 import { DayPanel, type DaySection } from "./_day-panel";
+import { SelectionBar } from "./_selection-bar";
 import { toDateStr } from "~/lib/date";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -642,112 +643,210 @@ function glow(revenue: number): number {
 }
 
 // ── Month view ────────────────────────────────────────────────────────────────
-function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, byEventDate = {}, userColors, today, onOpen, isMobile = false }: {
-  year: number; month: number; byEventDate?: Record<string, GEvent[]>;
+function MonthView({
+  year, month, byDate, byCostDate, byGuestCardDate, byEventDate = {}, byBookingDate = {},
+  closedDays = {}, userColors, today, onOpen, isMobile = false,
+  selected = [], onSelect,
+}: {
+  year: number; month: number;
   byDate: Record<string, WorkDay[]>; byCostDate: Record<string, FinanceEntry[]>;
   byGuestCardDate: Record<string, GuestCard[]>;
-  userColors: Record<string, string>; today: string; onOpen: (d: string) => void; isMobile?: boolean;
+  byEventDate?: Record<string, GEvent[]>;
+  byBookingDate?: Record<string, GridBooking[]>;
+  /** Nap → miért nem foglalható (szabadság, zárva). */
+  closedDays?: Record<string, string>;
+  userColors: Record<string, string>; today: string;
+  onOpen: (d: string) => void; isMobile?: boolean;
+  selected?: string[];
+  /** Húzással kijelölt naptartomány. */
+  onSelect?: (dates: string[]) => void;
 }) {
-  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const firstDay    = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
   const startOffset = (firstDay.getDay() + 6) % 7;
-  const cells: (number | null)[] = [...Array(startOffset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const cells: (number | null)[] = [
+    ...Array<null>(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
   while (cells.length % 7 !== 0) cells.push(null);
 
+  // Húzásos napkijelölés. A puszta kattintás továbbra is megnyitja a napot,
+  // kijelölés csak akkor indul, ha legalább két napra húzol.
+  const [anchorDay, setAnchorDay] = useState<string | null>(null);
+  const [hoverDay,  setHoverDay]  = useState<string | null>(null);
+  const dragging = useRef(false);
+
+  const selectedSet = new Set(selected);
+  const range = anchorDay && hoverDay
+    ? datesBetween(anchorDay, hoverDay)
+    : [];
+  const rangeSet = new Set(range);
+
+  function finishDrag() {
+    if (dragging.current && range.length > 1 && onSelect) onSelect(range);
+    dragging.current = false;
+    setAnchorDay(null);
+    setHoverDay(null);
+  }
+
+  const ds = (day: number) =>
+    `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
   return (
-    <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden", overflowX: isMobile ? "auto" : "hidden" }}>
+    <div
+      onMouseLeave={finishDrag}
+      onMouseUp={finishDrag}
+      style={{
+        background: "var(--bg-panel)", border: "1px solid var(--border)",
+        borderRadius: 20, overflow: "hidden", overflowX: isMobile ? "auto" : "hidden",
+        boxShadow: "var(--shadow-card)",
+      }}>
      <div style={{ minWidth: isMobile ? 660 : "auto" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--bg-highlight)" }}>
-        {DAYS_S.map(d => <div key={d} style={{ padding: "0.6rem 0", textAlign: "center", fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>{d}</div>)}
+
+      {/* Fejléc */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--border)" }}>
+        {DAYS_S.map((d, i) => (
+          <div key={d} style={{
+            padding: "0.6rem 0", textAlign: "center",
+            fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.18em",
+            color: i >= 5 ? "var(--text-dim)" : "var(--text-muted)", textTransform: "uppercase",
+          }}>{d}</div>
+        ))}
       </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
         {cells.map((day, idx) => {
-          if (!day) return <div key={`e${idx}`} style={{ minHeight: 110, borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: "rgba(74,124,126,0.03)" }} />;
-          const ds       = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-          const wEntries = byDate[ds] ?? [];
-          const cEntries = byCostDate[ds] ?? [];
-          const gCards   = byGuestCardDate[ds] ?? [];
-          const revenue  = wEntries.reduce((s, e) => s + e.earnings, 0);
-          const costs    = cEntries.reduce((s, e) => s + e.amount, 0);
-          const profit   = revenue - costs;
-          const isToday  = ds === today;
+          if (!day) return (
+            <div key={`e${idx}`} style={{
+              minHeight: 104, borderRight: "1px solid var(--bg-today)",
+              borderBottom: "1px solid var(--bg-today)", background: "var(--bg-row)", opacity: 0.35,
+            }} />
+          );
+
+          const key      = ds(day);
+          const wEntries = byDate[key] ?? [];
+          const cEntries = byCostDate[key] ?? [];
+          const gCards   = byGuestCardDate[key] ?? [];
+          const events   = byEventDate[key] ?? [];
+          const bookings = byBookingDate[key] ?? [];
+          const revenue  = wEntries.reduce((sum, e) => sum + e.earnings, 0);
+          const isToday  = key === today;
+          const isWeekend = idx % 7 >= 5;
+          const closed   = closedDays[key];
+          const isPicked = selectedSet.has(key) || rangeSet.has(key);
+
+          // Az időpontok a nap "előjegyzései" — ezeket együtt mutatjuk, mert a
+          // vendégnek mindegy, melyik rendszerből származik.
+          const upcoming = [
+            ...bookings.map(b => ({ id: b.id, time: new Date(b.start), text: b.guestName, color: b.color })),
+            ...events.map(e => ({ id: e.id, time: new Date(e.start), text: e.title, color: "#6a8fb0" })),
+          ].sort((a, b) => a.time.getTime() - b.time.getTime());
+
+          const done = [
+            ...gCards.map(c => ({ id: c.id, text: c.guest.name, amount: c.total })),
+          ];
 
           return (
-            <div key={ds}
-              style={{ minHeight: 110, padding: "0.38rem", borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)", background: isToday ? "var(--bg-today)" : "transparent", cursor: "pointer", transition: "background 0.18s", position: "relative" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-today)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isToday ? "var(--bg-today)" : "transparent"; }}>
-              {/* A napszám csillagként: minél nagyobb az aznapi bevétel, annál fényesebb.
-                  A mai nap külön pulzál — ez a csillagtérkép legfényesebb pontja. */}
+            <div key={key}
+              onMouseDown={e => {
+                if (e.button !== 0 || !onSelect) return;
+                dragging.current = true;
+                setAnchorDay(key);
+                setHoverDay(key);
+              }}
+              onMouseEnter={() => { if (dragging.current) setHoverDay(key); }}
+              onClick={() => { if (range.length <= 1) onOpen(key); }}
+              style={{
+                position: "relative", minHeight: 104, padding: "0.35rem 0.4rem",
+                borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)",
+                background: isPicked ? "var(--bg-active)"
+                          : isToday  ? "var(--bg-today)"
+                          : isWeekend ? "var(--bg-row)" : "transparent",
+                boxShadow: isPicked ? "inset 0 0 0 1px var(--border-strong)" : "none",
+                cursor: "pointer", transition: "background 0.15s",
+                opacity: closed ? 0.75 : 1,
+                userSelect: "none",
+              }}>
+
+              {/* Napszám — csillagként, a fényereje az aznapi bevételből */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.3rem" }}>
                 <div style={{
                   width: 22, height: 22, borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: "var(--font-cinzel)", fontSize: "0.72rem",
+                  fontFamily: "var(--font-cinzel)", fontSize: "0.7rem",
                   color: isToday ? "var(--color-bg)" : "var(--text-primary)",
                   background: isToday ? "var(--color-teal)" : "transparent",
-                  border: isToday ? "none" : `1px solid ${glow(revenue) > 0 ? "var(--border)" : "transparent"}`,
                   boxShadow: isToday
                     ? "0 0 14px var(--color-teal-dim)"
-                    : glow(revenue) > 0 ? `0 0 ${6 + glow(revenue) * 10}px var(--color-teal-dim)` : "none",
+                    : glow(revenue) > 0 ? `0 0 ${5 + glow(revenue) * 9}px var(--color-teal-dim)` : "none",
                   animation: isToday ? "goldPulse 3.2s ease-in-out infinite" : "none",
                 }}>{day}</div>
-                {glow(revenue) > 0 && !isToday && (
-                  <span style={{ fontSize: "0.5rem", color: "var(--color-teal)", opacity: 0.35 + glow(revenue) * 0.5 }}>✦</span>
+
+                {closed && (
+                  <span title={closed} style={{
+                    fontFamily: "var(--font-cinzel)", fontSize: "0.42rem", letterSpacing: "0.1em",
+                    textTransform: "uppercase", color: "#c47878",
+                    border: "1px solid rgba(196,120,120,0.4)", borderRadius: 4, padding: "0.05rem 0.28rem",
+                  }}>zárva</span>
+                )}
+
+                <div style={{ flex: 1 }} />
+
+                {revenue > 0 && (
+                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "#7a9e8c", fontWeight: 700 }}>
+                    {Math.round(revenue / 1000)}k
+                  </span>
                 )}
               </div>
 
-              {/* Work entries */}
-              {wEntries.map(e => {
-                const col = userColors[e.userId] ?? "#c4926e";
-                const exp = expandedEntry === e.id;
-                return (
-                  <div key={e.id} onClick={ev => { ev.stopPropagation(); setExpandedEntry(exp ? null : e.id); }}
-                    style={{ padding: exp ? "0.3rem 0.45rem" : "0.15rem 0.38rem", borderRadius: "5px", background: `${col}${exp ? "22" : "16"}`, border: `1px solid ${col}${exp ? "55" : "25"}`, marginBottom: "0.18rem", transition: "all 0.2s", cursor: "pointer" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                      <div style={{ width: 4, height: 4, borderRadius: "50%", background: col, flexShrink: 0 }} />
-                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: col, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{e.user.name}</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: col, fontWeight: 700 }}>{Math.round(e.earnings / 1000)}k</span>
-                    </div>
-                    {exp && <div style={{ marginTop: "0.2rem", paddingTop: "0.2rem", borderTop: `1px solid ${col}22` }}><div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: col, fontWeight: 700 }}>{fmt(e.earnings)}</div>{e.startTime && e.endTime && <div style={{ fontSize: "0.64rem", color: `${col}aa`, fontFamily: "var(--font-cinzel)", letterSpacing: "0.03em" }}>🕐 {e.startTime}–{e.endTime} · {fmtH(hoursOf(e.startTime, e.endTime))}</div>}{e.notes && <div style={{ fontStyle: "italic", fontSize: "0.68rem", color: `${col}88` }}>{e.notes}</div>}</div>}
-                  </div>
-                );
-              })}
+              {/* Ki dolgozik — csak pontok, hogy ne vigye el a helyet */}
+              {wEntries.length > 0 && (
+                <div style={{ display: "flex", gap: "0.2rem", marginBottom: "0.25rem" }}>
+                  {wEntries.map(w => (
+                    <span key={w.id} title={`${w.user.name}${w.startTime ? ` · ${w.startTime}–${w.endTime}` : ""}`}
+                      style={{
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: userColors[w.userId] ?? "#c4926e",
+                        boxShadow: `0 0 4px ${userColors[w.userId] ?? "#c4926e"}`,
+                      }} />
+                  ))}
+                </div>
+              )}
 
-              {/* Google-időpontok — a hónap nézetben csak jelzés, kártyát a napi nézetben lehet nyitni */}
-              {(byEventDate[ds] ?? []).map(ev => (
-                <div key={ev.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: "rgba(106,143,176,0.1)", border: "1px solid rgba(106,143,176,0.25)", marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.6rem", color: "#6a8fb0", flexShrink: 0 }}>
-                    {ev.allDay ? "◷" : new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}
+              {/* Ami még jön */}
+              {upcoming.slice(0, 3).map(u => (
+                <div key={u.id} style={{
+                  display: "flex", alignItems: "baseline", gap: "0.25rem",
+                  fontFamily: "var(--font-cormorant)", fontSize: "0.76rem",
+                  color: "var(--text-primary)", lineHeight: 1.25,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  <span style={{ color: u.color, fontFamily: "var(--font-playfair)", fontSize: "0.64rem", flexShrink: 0 }}>
+                    {u.time.toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "#6a8fb0", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</span>
-                  {ev.cardId && <span style={{ fontSize: "0.62rem", color: "#6a8fb0" }}>♦</span>}
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{u.text}</span>
                 </div>
               ))}
 
-              {/* Cost chips */}
-              {cEntries.map(e => {
-                const col = e.type === "material" ? "#c49060" : "#9278b0";
-                return <div key={e.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: `${col}12`, border: `1px solid ${col}22`, marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><div style={{ width: 4, height: 4, borderRadius: "50%", background: col, flexShrink: 0 }} /><span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: col, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.createdBy.name ? `${e.createdBy.name} · ` : ""}{e.description}</span><span style={{ fontSize: "0.7rem", color: col, fontWeight: 700 }}>−{Math.round(e.amount / 1000)}k</span></div>;
-              })}
-
-              {/* Guest card chips */}
-              {gCards.map(c => (
-                <div key={c.id} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", background: "rgba(192,152,152,0.1)", border: "1px solid rgba(192,152,152,0.2)", marginBottom: "0.15rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#c09898", flexShrink: 0 }} />
-                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.78rem", color: "#c09898", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.guest.name}</span>
-                  <span style={{ fontSize: "0.7rem", color: "#c09898", fontWeight: 700 }}>{Math.round(c.total / 1000)}k</span>
+              {/* Ami megtörtént */}
+              {done.slice(0, 2).map(c => (
+                <div key={c.id} style={{
+                  fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: "var(--text-soft)",
+                  lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  ♦ {c.text}
                 </div>
               ))}
 
-              {/* Add */}
-              <div onClick={() => onOpen(ds)} style={{ padding: "0.12rem 0.35rem", borderRadius: "4px", border: "1px dashed var(--bg-active)", color: "var(--border)", fontSize: "0.6rem", textAlign: "center", cursor: "pointer", fontFamily: "var(--font-cinzel)", transition: "all 0.18s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-teal)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--border)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--bg-active)"; }}>+</div>
-
-              {revenue > 0 && (
-                <div style={{ position: "absolute", bottom: 3, right: 4, fontFamily: "var(--font-playfair)", fontSize: "0.65rem", color: "rgba(122,158,140,0.65)", fontWeight: 700 }}>{fmt(revenue)}</div>
+              {(upcoming.length > 3 || done.length > 2 || cEntries.length > 0) && (
+                <div style={{
+                  fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.08em",
+                  color: "var(--text-dim)", marginTop: "0.15rem",
+                }}>
+                  +{upcoming.length - Math.min(3, upcoming.length)
+                    + done.length - Math.min(2, done.length)
+                    + cEntries.length} további
+                </div>
               )}
             </div>
           );
@@ -756,6 +855,19 @@ function MonthView({ year, month, byDate, byCostDate, byGuestCardDate, byEventDa
      </div>
     </div>
   );
+}
+
+/** A két dátum közti napok (bármelyik sorrendben), "YYYY-MM-DD" alakban. */
+function datesBetween(a: string, b: string): string[] {
+  const [from, to] = a <= b ? [a, b] : [b, a];
+  const out: string[] = [];
+  const d = new Date(`${from}T12:00:00`);
+  const end = new Date(`${to}T12:00:00`);
+  while (d <= end) {
+    out.push(toDateStr(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
 }
 
 // ── Year view ─────────────────────────────────────────────────────────────────
@@ -930,7 +1042,14 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
     from: gFrom.toISOString(), to: gTo.toISOString(),
   });
 
-  const [booking,    setBooking]    = useState<{ date: Date; moveId?: string } | null>(null);
+  const [booking,    setBooking]    = useState<{
+    date: Date; moveId?: string; prefillStart?: string; prefillMinutes?: number;
+  } | null>(null);
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+
+  const { data: timeOff = [] } = api.timeOff.list.useQuery({
+    from: gFrom.toISOString(), to: gTo.toISOString(),
+  });
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
   const cancelBooking = api.appointments.cancel.useMutation({
@@ -949,6 +1068,15 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
 
   const byEventDate: Record<string, GEvent[]> = {};
   gEvents.forEach(e => { (byEventDate[e.start.slice(0, 10)] ??= []).push(e as GEvent); });
+
+  // Nap → miért nem foglalható. Az egész szalonra szóló és a személyes is ide kerül.
+  const closedDays: Record<string, string> = {};
+  for (const t of timeOff) {
+    const d   = new Date(t.date);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+    const who = t.worker?.name ? `${t.worker.name}: ` : "Szalon: ";
+    closedDays[key] = `${who}${t.reason ?? "nem foglalható"}`;
+  }
 
   const byBookingDate: Record<string, GridBooking[]> = {};
   appointments
@@ -1139,12 +1267,44 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       )}
       {view === "month" && (
         <MonthView year={qYear} month={qMonth} byDate={byDate} byCostDate={byCostDate}
-          byGuestCardDate={byGuestCardDate} byEventDate={byEventDate} userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile} />
+          byGuestCardDate={byGuestCardDate} byEventDate={byEventDate}
+          byBookingDate={byBookingDate} closedDays={closedDays}
+          userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile}
+          selected={selectedDays} onSelect={setSelectedDays} />
       )}
+      {selectedDays.length > 0 && (() => {
+        // A kijelölt napok összesítője a már betöltött adatokból — nincs új lekérés.
+        const picked = new Set(selectedDays);
+        let revenue = 0, costs = 0, hours = 0, guests = 0, bookings = 0;
+        for (const [k, list] of Object.entries(byDate)) {
+          if (!picked.has(k)) continue;
+          for (const w of list) {
+            revenue += w.earnings;
+            hours   += hoursOf(w.startTime, w.endTime);
+          }
+        }
+        for (const [k, list] of Object.entries(byCostDate))
+          if (picked.has(k)) costs += list.reduce((sum, e) => sum + e.amount, 0);
+        for (const [k, list] of Object.entries(byGuestCardDate))
+          if (picked.has(k)) guests += list.length;
+        for (const [k, list] of Object.entries(byBookingDate))
+          if (picked.has(k)) bookings += list.length;
+
+        return (
+          <SelectionBar
+            dates={[...selectedDays].sort()}
+            workers={activeUsers.map(u => ({ id: u.id, name: u.name }))}
+            defaultWorkerId={currentUserId || activeUsers[0]?.id || ""}
+            summary={{ revenue, costs, hours, guests, bookings }}
+            onClear={() => setSelectedDays([])} />
+        );
+      })()}
+
       {openCardId && <CardEditById cardId={openCardId} onClose={() => setOpenCardId(null)} />}
 
       {booking && (
         <BookingModal date={booking.date} moveId={booking.moveId}
+          prefillStart={booking.prefillStart} prefillMinutes={booking.prefillMinutes}
           workerId={currentUserId || activeUsers[0]?.id || ""}
           onClose={() => setBooking(null)} />
       )}
@@ -1243,6 +1403,13 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                 onOpenDay={setModalDate}
                 onOpenCard={ev => openCardFromEvent(ev)}
                 onNewBooking={date => setBooking({ date })}
+                onSelectRange={(date, fromMin, toMin) => {
+                  const start = new Date(date);
+                  start.setHours(Math.floor(fromMin / 60), fromMin % 60, 0, 0);
+                  setBooking({
+                    date, prefillStart: start.toISOString(), prefillMinutes: toMin - fromMin,
+                  });
+                }}
                 onMove={b => setBooking({ date: new Date(b.start), moveId: b.id })}
                 onCancel={b => {
                   if (confirm(`Biztosan lemondod ${b.guestName} időpontját?`))

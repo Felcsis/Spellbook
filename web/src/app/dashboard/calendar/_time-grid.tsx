@@ -12,7 +12,7 @@
  * fölötti "egész nap" sávba kerül, ugyanúgy, ahogy a Google Naptár csinálja.
  */
 
-import type { CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 
 export type GridEvent = {
   id:     string;
@@ -124,7 +124,7 @@ function layout<T extends { start: string; end: string }>(events: T[]): Placed<T
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onMove, onCancel }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel }: {
   days: {
     date:     Date;
     label:    string;
@@ -140,9 +140,37 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   onOpenCard: (ev: GridEvent, date: Date) => void;
   onOpenDay:  (ds: string) => void;
   onNewBooking?: (date: Date) => void;
+  /** Húzással kijelölt idősáv — ebből lesz időpont. */
+  onSelectRange?: (date: Date, startMinutes: number, endMinutes: number) => void;
   onMove?:       (b: GridBooking) => void;
   onCancel?:     (b: GridBooking) => void;
 }) {
+  // Húzásos idősáv-kijelölés. A kezdést és a véget 15 percre igazítjuk, mert a
+  // szalonban úgyis negyedórákban gondolkodunk.
+  const SNAP = 15;
+  const [drag, setDrag] = useState<{ dayKey: string; from: number; to: number } | null>(null);
+  const dragging = useRef(false);
+
+  /** Az oszlopon belüli függőleges pozícióból perc. */
+  function minutesAt(e: React.MouseEvent<HTMLDivElement>, el: HTMLDivElement): number {
+    const rect = el.getBoundingClientRect();
+    const y    = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    const mins = fromHour * 60 + (y / PX_PER_HOUR) * 60;
+    return Math.round(mins / SNAP) * SNAP;
+  }
+
+  function endDrag() {
+    if (drag && onSelectRange) {
+      const day = days.find(d => keyOf(d) === drag.dayKey);
+      const from = Math.min(drag.from, drag.to);
+      const to   = Math.max(drag.from, drag.to);
+      // A puszta kattintást (nulla hosszú húzás) nem tekintjük kijelölésnek.
+      if (day && to - from >= SNAP) onSelectRange(day.date, from, to);
+    }
+    dragging.current = false;
+    setDrag(null);
+  }
+
   const hours  = Array.from({ length: toHour - fromHour }, (_, i) => fromHour + i);
   const height = hours.length * PX_PER_HOUR;
   const top    = (mins: number) => ((mins - fromHour * 60) / 60) * PX_PER_HOUR;
@@ -161,7 +189,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
       <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
         <div style={{ width: 48, flexShrink: 0 }} />
         {days.map(d => (
-          <div key={d.label + d.sub} onClick={() => onOpenDay(toDateStr(d.date))}
+          <div key={keyOf(d)} onClick={() => onOpenDay(toDateStr(d.date))}
             style={{
               ...cell, padding: "0.6rem 0.5rem", cursor: "pointer", textAlign: "center",
               background: d.isToday ? "var(--bg-today)" : "transparent",
@@ -197,7 +225,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
             <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.42rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase" }}>egész nap</span>
           </div>
           {days.map(d => (
-            <div key={`ad-${d.label}${d.sub}`} style={{ ...cell, padding: "0.3rem 0.25rem", minHeight: 26 }}>
+            <div key={`ad-${keyOf(d)}`} style={{ ...cell, padding: "0.3rem 0.25rem", minHeight: 26 }}>
               {d.allDay.map(a => (
                 <div key={a.id} title={a.text} style={{
                   padding: "0.1rem 0.4rem", marginBottom: "0.15rem", borderRadius: 5,
@@ -230,8 +258,43 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
 
         {days.map(d => {
           const placed = layout(d.events.filter(e => !e.allDay));
+          const dayKey = keyOf(d);
           return (
-            <div key={`col-${d.label}${d.sub}`} style={{ ...cell, background: d.isToday ? "var(--bg-today)" : "transparent" }}>
+            <div key={`col-${dayKey}`}
+              style={{ ...cell, background: d.isToday ? "var(--bg-today)" : "transparent", cursor: onSelectRange ? "crosshair" : "default" }}
+              onMouseDown={e => {
+                if (!onSelectRange || e.button !== 0) return;
+                // Csak az üres háttéren induljon kijelölés, ne egy kártyán.
+                if (e.target !== e.currentTarget) return;
+                const m = minutesAt(e, e.currentTarget);
+                dragging.current = true;
+                setDrag({ dayKey, from: m, to: m + SNAP });
+              }}
+              onMouseMove={e => {
+                if (!dragging.current || !drag || drag.dayKey !== dayKey) return;
+                setDrag({ ...drag, to: minutesAt(e, e.currentTarget) });
+              }}
+              onMouseUp={endDrag}
+              onMouseLeave={() => { if (dragging.current) endDrag(); }}>
+
+              {/* A húzás közbeni kijelölés */}
+              {drag?.dayKey === dayKey && (() => {
+                const a = Math.min(drag.from, drag.to);
+                const b = Math.max(drag.from, drag.to);
+                return (
+                  <div style={{
+                    position: "absolute", left: 2, right: 2, zIndex: 5,
+                    top: top(a), height: Math.max(2, ((b - a) / 60) * PX_PER_HOUR),
+                    background: "var(--bg-active)", border: "1px dashed var(--border-strong)",
+                    borderRadius: 6, pointerEvents: "none",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.08em", color: "var(--color-teal)" }}>
+                      {fmtMinutes(a)}–{fmtMinutes(b)}
+                    </span>
+                  </div>
+                );
+              })()}
               {/* Óravonalak */}
               {hours.map((h, i) => (
                 <div key={h} style={{
@@ -340,6 +403,15 @@ function miniAction(color: string): React.CSSProperties {
     background: "none", border: "none", cursor: "pointer", color,
     fontSize: "0.62rem", lineHeight: 1, padding: 0, marginLeft: "auto",
   };
+}
+
+/** Stabil kulcs egy naphoz — a dátum, nem a felirat. */
+function keyOf(d: { date: Date }): string {
+  return toDateStr(d.date);
+}
+
+function fmtMinutes(m: number): string {
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 }
 
 function fmtTime(iso: string) {

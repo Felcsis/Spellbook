@@ -84,6 +84,7 @@ model User {
   services           Service[]
   guestCards         GuestCard[]
   appointments       Appointment[]
+  timeOff            TimeOff[]
   expenses           Expense[]         @relation("ExpenseCreatedBy")
   assignedExpenses   Expense[]         @relation("ExpenseAssignedTo")
 
@@ -260,6 +261,24 @@ model Appointment {
 
   @@index([start])
   @@index([workerId])
+  @@schema("spellbook")
+}
+
+/// Nem foglalható időszak: szabadság, zárva tartás, betegség.
+///
+/// Egy nap egy sor. Ha `workerId` üres, az egész szalonra vonatkozik (pl. ünnep),
+/// egyébként csak arra a dolgozóra. A szabad idő számítása ezeket kihagyja, így
+/// ide nem lehet se kézzel, se később online időpontot foglalni.
+model TimeOff {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  worker    User?    @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  workerId  String?
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([date, workerId])
+  @@index([date])
   @@schema("spellbook")
 }
 
