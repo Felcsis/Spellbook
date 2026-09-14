@@ -21,6 +21,10 @@ export type GridEvent = {
   end:    string;
   allDay: boolean;
   cardId: string | null;
+  // Kié a naptár, ahonnan az időpont jött. A vendégkártya erre a dolgozóra
+  // készül, ezért az eseménnyel együtt kell utaznia.
+  userId:   string;
+  userName: string;
 };
 
 /** Egy munkaidő-sáv: érkezés–távozás, a dolgozó színével. */

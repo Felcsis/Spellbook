@@ -1139,10 +1139,7 @@ export default function CalendarClient() {
             <div style={{ minWidth: isMobile && view === "week" ? 640 : undefined }}>
               <TimeGrid days={gridDays} fromHour={fromHour} toHour={toHour}
                 onOpenDay={setModalDate}
-                onOpenCard={(ev, date) => openCardFromEvent({
-                  ...ev, userId: (byEventDate[toDateStr(date)] ?? []).find(x => x.id === ev.id)?.userId ?? "",
-                  userName: "", start: ev.start, end: ev.end,
-                })} />
+                onOpenCard={ev => openCardFromEvent(ev)} />
             </div>
           </div>
         );

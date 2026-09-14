@@ -66,14 +66,23 @@ export const gcalRouter = createTRPCRouter({
       eventId:  z.string(),
       title:    z.string().min(1),
       date:     z.string(),   // "YYYY-MM-DD"
-      workerId: z.string(),
+      workerId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.guestCard.findUnique({ where: { googleEventId: input.eventId } });
       if (existing) return { cardId: existing.id, created: false, matched: true, guestName: null };
 
-      // Staff csak a saját nevére nyithat kártyát.
-      const workerId = ctx.session.user.role === "admin" ? input.workerId : ctx.session.user.id;
+      // Staff csak a saját nevére nyithat kártyát. Adminnál a kapott dolgozót
+      // ellenőrizzük is: érvénytelen azonosítóval a létrehozás idegenkulcs-hibával
+      // szállna el, ami a felületen értelmezhetetlen hibaüzenet lenne.
+      let workerId = ctx.session.user.id;
+      if (ctx.session.user.role === "admin" && input.workerId) {
+        const worker = await ctx.db.user.findUnique({
+          where:  { id: input.workerId },
+          select: { id: true },
+        });
+        if (worker) workerId = worker.id;
+      }
 
       // Az esemény címe ritkán pont a vendég neve ("Kovács Anna 14:00 festés"),
       // ezért nem szó szerint keresünk. Új vendéget csak akkor hozunk létre, ha
