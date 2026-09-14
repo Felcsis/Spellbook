@@ -31,6 +31,9 @@ function toDateStr(d: Date) {
 
 const DURATIONS = [30, 45, 60, 90, 120, 180];
 
+/** Egy választható szolgáltatás az árlistáról. */
+type PickedService = { id: string; name: string; duration: number; category: string };
+
 export function BookingModal({ date, workerId, moveId, onClose }: {
   date:      Date;
   workerId:  string;
@@ -42,8 +45,9 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const { data: workers = [] } = api.calendar.users.useQuery();
-  const { data: guests = [] }  = api.guests.listGuests.useQuery();
+  const { data: workers = [] }    = api.calendar.users.useQuery();
+  const { data: guests = [] }     = api.guests.listGuests.useQuery();
+  const { data: categories = [] } = api.services.listCategories.useQuery();
 
   // A keresés kezdőnapja állítható — nem csak arra a napra foglalhatsz, amire
   // épp kattintottál.
@@ -57,11 +61,62 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
   const [guestId,  setGuestId]  = useState("");
   const [name,     setName]     = useState("");
   const [phone,    setPhone]    = useState("");
-  const [services, setServices] = useState("");
+  // Több szolgáltatás is választható (pl. tövfestés + vágás). Az időtartamuk
+  // összeadódik, de kézzel felülírható — a valóság nem mindig a lista szerint megy.
+  const [picked,      setPicked]      = useState<PickedService[]>([]);
+  const [svcSearch,   setSvcSearch]   = useState("");
+  const [svcOpen,     setSvcOpen]     = useState(false);
+  const [durationSet, setDurationSet] = useState(false);
   const [notes,    setNotes]    = useState("");
   const [slot,     setSlot]     = useState<string | null>(null);
   const [error,    setError]    = useState("");
   const [warning,  setWarning]  = useState("");
+
+  // A kiválasztott dolgozó árlistája dönti el, mely szolgáltatások közül lehet
+  // választani — ugyanaz a szabály, mint a bejegyzés rögzítésénél.
+  const selectedWorker = workers.find(w => w.id === worker);
+  const priceList      = selectedWorker?.priceListType ?? "master";
+  const allServices: PickedService[] = [];
+  for (const c of categories) {
+    if ((c as { priceListType?: string }).priceListType !== priceList) continue;
+    for (const sv of (c.services ?? []))
+      allServices.push({ id: sv.id, name: sv.name, duration: sv.duration, category: c.name });
+  }
+
+  const filteredServices = svcSearch.trim()
+    ? allServices.filter(sv =>
+        sv.name.toLowerCase().includes(svcSearch.toLowerCase()) ||
+        sv.category.toLowerCase().includes(svcSearch.toLowerCase()))
+    : allServices;
+
+  // A választott szolgáltatások össz-időtartama, 15 percre felkerekítve.
+  const suggestedDuration = picked.length
+    ? Math.max(15, Math.ceil(picked.reduce((sum, sv) => sum + (sv.duration || 0), 0) / 15) * 15)
+    : 0;
+
+  function addService(sv: PickedService) {
+    if (picked.some(p => p.id === sv.id)) return;
+    const next = [...picked, sv];
+    setPicked(next);
+    setSvcSearch("");
+    setSvcOpen(false);
+    setSlot(null);
+    // Amíg kézzel nem nyúltál az időtartamhoz, a lista szerinti idővel megyünk.
+    if (!durationSet) {
+      const total = next.reduce((sum, x) => sum + (x.duration || 0), 0);
+      if (total > 0) setDuration(Math.max(15, Math.ceil(total / 15) * 15));
+    }
+  }
+
+  function removeService(id: string) {
+    const next = picked.filter(p => p.id !== id);
+    setPicked(next);
+    setSlot(null);
+    if (!durationSet) {
+      const total = next.reduce((sum, x) => sum + (x.duration || 0), 0);
+      if (total > 0) setDuration(Math.max(15, Math.ceil(total / 15) * 15));
+    }
+  }
 
   const { data: days = [], isLoading: slotsLoading } = api.appointments.freeSlots.useQuery(
     { workerId: worker, from: toDateStr(day), days: 14, durationMinutes: duration },
@@ -123,7 +178,7 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
         phone:     phone.trim() || undefined,
         start:     slot,
         durationMinutes: duration,
-        services:  services.trim() || undefined,
+        services:  picked.map(p => p.name).join(", ") || undefined,
         notes:     notes.trim() || undefined,
       });
     }
@@ -170,17 +225,27 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
           <div>
             <span style={lbl}>Dolgozó</span>
-            <select value={worker} onChange={e => { setWorker(e.target.value); setSlot(null); }} style={input}>
+            <select value={worker}
+              onChange={e => { setWorker(e.target.value); setSlot(null); setPicked([]); }}
+              style={input}>
               {workers.filter(w => w.active !== false).map(w => (
                 <option key={w.id} value={w.id}>{w.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <span style={lbl}>Időtartam</span>
+            <span style={lbl}>
+              Időtartam
+              {suggestedDuration > 0 && duration !== suggestedDuration && (
+                <button type="button" onClick={() => { setDuration(suggestedDuration); setDurationSet(false); setSlot(null); }}
+                  style={{ marginLeft: "0.4rem", background: "none", border: "none", cursor: "pointer", color: "var(--color-teal)", fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.08em", textTransform: "none" }}>
+                  (lista szerint {suggestedDuration} p)
+                </button>
+              )}
+            </span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
               {DURATIONS.map(d => (
-                <button key={d} type="button" onClick={() => { setDuration(d); setSlot(null); }}
+                <button key={d} type="button" onClick={() => { setDuration(d); setDurationSet(true); setSlot(null); }}
                   style={{
                     padding: "0.3rem 0.55rem", borderRadius: 7, cursor: "pointer",
                     border: duration === d ? "1px solid var(--border-strong)" : "1px solid var(--border)",
@@ -198,7 +263,80 @@ export function BookingModal({ date, workerId, moveId, onClose }: {
         {!moveId && (
           <div style={{ marginBottom: "1rem" }}>
             <span style={lbl}>Mit csinálunk? (nem kötelező)</span>
-            <input value={services} onChange={e => setServices(e.target.value)} placeholder="pl. tövfestés + vágás" style={input} />
+
+            {picked.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.4rem" }}>
+                {picked.map(sv => (
+                  <span key={sv.id} style={{
+                    display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                    padding: "0.22rem 0.5rem", borderRadius: 999,
+                    border: "1px solid var(--border-strong)", background: "var(--bg-active)",
+                    color: "var(--color-teal)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem",
+                  }}>
+                    {sv.name}
+                    {sv.duration > 0 && (
+                      <span style={{ opacity: 0.6, fontSize: "0.76rem" }}>{sv.duration}p</span>
+                    )}
+                    <button type="button" onClick={() => removeService(sv.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.65, padding: 0, fontSize: "0.72rem", lineHeight: 1 }}>
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div style={{ position: "relative" }}>
+              <input value={svcSearch}
+                onChange={e => { setSvcSearch(e.target.value); setSvcOpen(true); }}
+                onFocus={() => setSvcOpen(true)}
+                onBlur={() => setTimeout(() => setSvcOpen(false), 150)}
+                placeholder={picked.length ? "Még egy szolgáltatás…" : "Keress az árlistán…"}
+                style={input} />
+
+              {svcOpen && filteredServices.length > 0 && (
+                <div style={{
+                  position: "absolute", left: 0, right: 0, zIndex: 300,
+                  background: "var(--bg-dropdown)", border: "1px solid var(--border)",
+                  borderRadius: 12, marginTop: "0.25rem", maxHeight: 220, overflowY: "auto",
+                  boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+                }}>
+                  {filteredServices.map((sv, i) => {
+                    const already = picked.some(p => p.id === sv.id);
+                    const newCat  = i === 0 || filteredServices[i - 1]?.category !== sv.category;
+                    return (
+                      <div key={sv.id}>
+                        {newCat && (
+                          <div style={{
+                            padding: "0.4rem 0.85rem 0.15rem", fontFamily: "var(--font-cinzel)",
+                            fontSize: "0.46rem", letterSpacing: "0.14em", color: "var(--text-dim)",
+                            textTransform: "uppercase",
+                          }}>{sv.category}</div>
+                        )}
+                        <div onMouseDown={() => addService(sv)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "0.5rem",
+                            padding: "0.42rem 0.85rem", cursor: already ? "default" : "pointer",
+                            opacity: already ? 0.4 : 1,
+                          }}
+                          onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                          {already && <span style={{ color: "var(--color-teal)", fontSize: "0.7rem" }}>✓</span>}
+                          <span style={{ flex: 1, fontFamily: "var(--font-cormorant)", fontSize: "0.98rem", color: "var(--text-primary)" }}>
+                            {sv.name}
+                          </span>
+                          {sv.duration > 0 && (
+                            <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "var(--text-dim)" }}>
+                              {sv.duration} p
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
