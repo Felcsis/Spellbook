@@ -12,7 +12,7 @@
  * fölötti "egész nap" sávba kerül, ugyanúgy, ahogy a Google Naptár csinálja.
  */
 
-import { useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 export type GridEvent = {
   id:     string;
@@ -147,6 +147,19 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   onMove?:       (b: GridBooking) => void;
   onCancel?:     (b: GridBooking) => void;
 }) {
+  // Az aktuális idő sávja. Csak a böngészőben állítjuk be (a szerveren nincs
+  // "most"), különben a kiszolgált és a megjelenített oldal eltérne.
+  const [nowMinutes, setNowMinutes] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setNowMinutes(d.getHours() * 60 + d.getMinutes());
+    };
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   // Húzásos idősáv-kijelölés. A kezdést és a véget 15 percre igazítjuk, mert a
   // szalonban úgyis negyedórákban gondolkodunk.
   const SNAP = 15;
@@ -247,6 +260,17 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
       <div style={{ display: "flex", position: "relative", height, overflow: "hidden" }}>
         {/* Óra-skála */}
         <div style={{ width: 48, flexShrink: 0, position: "relative" }}>
+          {days.some(d => d.isToday) && nowMinutes !== null
+            && nowMinutes >= fromHour * 60 && nowMinutes <= toHour * 60 && (
+            <div style={{
+              position: "absolute", right: "0.3rem", top: top(nowMinutes) - 6, zIndex: 9,
+              padding: "0 0.2rem", borderRadius: 3,
+              background: "var(--color-pink)", color: "var(--color-bg)",
+              fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.04em",
+            }}>
+              {fmtMinutes(nowMinutes)}
+            </div>
+          )}
           {hours.map((h, i) => (
             <div key={h} style={{
               position: "absolute", top: i * PX_PER_HOUR - 6, right: "0.45rem",
@@ -319,6 +343,26 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                   }} />
                 );
               })}
+
+              {/* Az aktuális idő — csak a mai napon, és csak ha a rácson belül van */}
+              {d.isToday && nowMinutes !== null
+                && nowMinutes >= fromHour * 60 && nowMinutes <= toHour * 60 && (
+                <div style={{
+                  position: "absolute", left: 0, right: 0, top: top(nowMinutes),
+                  height: 0, zIndex: 8, pointerEvents: "none",
+                }}>
+                  <div style={{
+                    height: 2, background: "var(--color-pink)",
+                    boxShadow: "0 0 8px var(--color-pink)",
+                  }} />
+                  <div style={{
+                    position: "absolute", left: -4, top: -3,
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: "var(--color-pink)",
+                    boxShadow: "0 0 8px var(--color-pink)",
+                  }} />
+                </div>
+              )}
 
               {/* Előjegyzések — a saját foglalásaink */}
               {layout(d.bookings).map(({ ev: b, col, cols }) => {
