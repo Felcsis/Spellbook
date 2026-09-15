@@ -1013,7 +1013,8 @@ function GooglePanel() {
 export default function CalendarClient({ currentUserId = "" }: { currentUserId?: string }) {
   const now = new Date();
   const isMobile = useIsMobile();
-  const [view,   setView]   = useState<View>("month");
+  // A heti nézet a napi munka nézete — ezzel nyílik a naptár.
+  const [view,   setView]   = useState<View>("week");
   const [anchor, setAnchor] = useState(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
   const [modalDate, setModalDate] = useState<string | null>(null);
 
