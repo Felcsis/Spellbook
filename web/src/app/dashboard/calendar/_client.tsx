@@ -1053,6 +1053,20 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   });
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
+  // Húzással áthelyezett / átméretezett időpont. Ütközésnél nem tiltunk, csak
+  // jelezzük — a valóságban előfordul, hogy két vendég átfed.
+  const [dragNote, setDragNote] = useState<string | null>(null);
+  const moveBooking = api.appointments.move.useMutation({
+    onSuccess: r => {
+      void utils.appointments.list.invalidate();
+      void utils.gcal.events.invalidate();
+      setDragNote(r.clash.length
+        ? `Áthelyezve — de átfedés ${r.clash.map(c => c.guestName).join(", ")} időpontjával.`
+        : null);
+    },
+    onError: e => setDragNote(e.message),
+  });
+
   const cancelBooking = api.appointments.cancel.useMutation({
     onSuccess: () => {
       void utils.appointments.list.invalidate();
@@ -1286,6 +1300,22 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile}
           selected={selectedDays} onSelect={setSelectedDays} />
       )}
+      {dragNote && (
+        <div style={{
+          position: "fixed", bottom: "1rem", left: "50%", transform: "translateX(-50%)",
+          zIndex: 60, padding: "0.55rem 1rem", borderRadius: 10,
+          background: "var(--bg-modal)", border: "1px solid var(--border-strong)",
+          boxShadow: "var(--shadow-modal)", display: "flex", alignItems: "center", gap: "0.6rem",
+          fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: "var(--text-primary)",
+        }}>
+          {dragNote}
+          <button onClick={() => setDragNote(null)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", fontSize: "0.8rem" }}>
+            ✕
+          </button>
+        </div>
+      )}
+
       {selectedDays.length > 0 && (() => {
         // A kijelölt napok összesítője a már betöltött adatokból — nincs új lekérés.
         const picked = new Set(selectedDays);
@@ -1477,6 +1507,19 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                 onCancel={b => {
                   if (confirm(`Biztosan lemondod ${b.guestName} időpontját?`))
                     cancelBooking.mutate({ id: b.id });
+                }}
+                onDropBooking={(b, date, startMinutes) => {
+                  const start = new Date(date);
+                  start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+                  const minutes = Math.round(
+                    (new Date(b.end).getTime() - new Date(b.start).getTime()) / 60000,
+                  );
+                  setDragNote(null);
+                  moveBooking.mutate({ id: b.id, start: start.toISOString(), durationMinutes: minutes });
+                }}
+                onResizeBooking={(b, minutes) => {
+                  setDragNote(null);
+                  moveBooking.mutate({ id: b.id, start: b.start, durationMinutes: minutes });
                 }} />
             </div>
           </div>

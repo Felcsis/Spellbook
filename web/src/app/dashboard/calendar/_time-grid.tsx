@@ -124,7 +124,7 @@ function layout<T extends { start: string; end: string }>(events: T[]): Placed<T
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, showAllDay = true }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, showAllDay = true }: {
   days: {
     date:     Date;
     label:    string;
@@ -146,6 +146,10 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   onSelectRange?: (date: Date, startMinutes: number, endMinutes: number) => void;
   onMove?:       (b: GridBooking) => void;
   onCancel?:     (b: GridBooking) => void;
+  /** Húzással áthelyezett időpont: új nap és új kezdés. */
+  onDropBooking?: (b: GridBooking, date: Date, startMinutes: number) => void;
+  /** Alsó él húzásával módosított hossz. */
+  onResizeBooking?: (b: GridBooking, minutes: number) => void;
 }) {
   // Az aktuális idő sávja. Csak a böngészőben állítjuk be (a szerveren nincs
   // "most"), különben a kiszolgált és a megjelenített oldal eltérne.
@@ -159,6 +163,29 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
   }, []);
+
+  /**
+   * Időpont megfogása és áthúzása — a Google Naptárból megszokott mozdulat.
+   * `mode: "move"` az egész időpontot tolja, `"resize"` csak a végét.
+   */
+  const [grab, setGrab] = useState<{
+    booking: GridBooking; mode: "move" | "resize";
+    dayKey:  string; startMin: number; durationMin: number;
+    offset:  number;   // hol fogtad meg a kártyát, a kezdetéhez képest
+    moved:   boolean;
+  } | null>(null);
+
+  function releaseGrab() {
+    if (grab?.moved) {
+      if (grab.mode === "move" && onDropBooking) {
+        const day = days.find(d => keyOf(d) === grab.dayKey);
+        if (day) onDropBooking(grab.booking, day.date, grab.startMin);
+      } else if (grab.mode === "resize" && onResizeBooking) {
+        onResizeBooking(grab.booking, grab.durationMin);
+      }
+    }
+    setGrab(null);
+  }
 
   // Húzásos idősáv-kijelölés. A kezdést és a véget 15 percre igazítjuk, mert a
   // szalonban úgyis negyedórákban gondolkodunk.
@@ -196,10 +223,13 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   };
 
   return (
-    <div style={{
-      background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 18,
-      overflow: "hidden", boxShadow: "var(--shadow-card)",
-    }}>
+    <div
+      onMouseUp={() => { if (grab) releaseGrab(); }}
+      onMouseLeave={() => { if (grab) releaseGrab(); }}
+      style={{
+        background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 18,
+        overflow: "hidden", boxShadow: "var(--shadow-card)",
+      }}>
       {/* Fejléc: napok */}
       <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
         <div style={{ width: 48, flexShrink: 0 }} />
@@ -297,10 +327,22 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                 setDrag({ dayKey, from: m, to: m + SNAP });
               }}
               onMouseMove={e => {
+                if (grab) {
+                  const m = minutesAt(e, e.currentTarget);
+                  if (grab.mode === "move") {
+                    const start = Math.max(fromHour * 60, Math.min((toHour * 60) - grab.durationMin, m - grab.offset));
+                    if (start !== grab.startMin || dayKey !== grab.dayKey)
+                      setGrab({ ...grab, startMin: start, dayKey, moved: true });
+                  } else {
+                    const minutes = Math.max(SNAP, m - grab.startMin);
+                    if (minutes !== grab.durationMin) setGrab({ ...grab, durationMin: minutes, moved: true });
+                  }
+                  return;
+                }
                 if (!dragging.current || !drag || drag.dayKey !== dayKey) return;
                 setDrag({ ...drag, to: minutesAt(e, e.currentTarget) });
               }}
-              onMouseUp={endDrag}
+              onMouseUp={() => { if (grab) releaseGrab(); else endDrag(); }}
               onMouseLeave={() => { if (dragging.current) endDrag(); }}>
 
               {/* A húzás közbeni kijelölés */}
@@ -369,15 +411,38 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                 const s = minutesOfIso(b.start);
                 const e = Math.max(minutesOfIso(b.end), s + 30);
                 const w = 100 / cols;
+                // Ha épp ezt húzod, az ideiglenes helyén rajzoljuk ki.
+                const held    = grab?.booking.id === b.id;
+                const showS   = held && grab.mode === "move" ? grab.startMin : s;
+                const showLen = held ? grab.durationMin : Math.max(e - s, 30);
+
                 return (
                   <div key={b.id} title={`${b.guestName}${b.phone ? ` · ${b.phone}` : ""} — ${b.workerName}`}
+                    onMouseDown={ev => {
+                      if (!onDropBooking || ev.button !== 0) return;
+                      if ((ev.target as HTMLElement).tagName === "BUTTON") return;
+                      ev.preventDefault();
+                      ev.stopPropagation();
+                      setGrab({
+                        booking: b, mode: "move", dayKey,
+                        startMin: s, durationMin: Math.max(e - s, 30),
+                        offset: minutesAt(ev, ev.currentTarget.parentElement as HTMLDivElement) - s,
+                        moved: false,
+                      });
+                    }}
                     style={{
-                      position: "absolute", top: top(s), height: ((e - s) / 60) * PX_PER_HOUR - 2,
+                      position: "absolute", top: top(showS), height: (showLen / 60) * PX_PER_HOUR - 2,
                       left: `calc(${col * w}% + 3px)`, width: `calc(${w}% - 6px)`,
                       background: `linear-gradient(150deg, ${b.color}45, ${b.color}20)`,
                       border: `1px solid ${b.color}`,
                       borderRadius: 7, padding: "0.15rem 0.35rem", overflow: "hidden",
-                      boxShadow: `0 0 10px ${b.color}30`,
+                      boxShadow: held ? `0 4px 18px ${b.color}80` : `0 0 10px ${b.color}30`,
+                      opacity: held && grab.dayKey !== dayKey ? 0.35 : 1,
+                      cursor: onDropBooking ? (held ? "grabbing" : "grab") : "default",
+                      // Húzás közben az egérmozgás az oszlopé kell legyen, ne a kártyáé.
+                      pointerEvents: grab && !held ? "none" : "auto",
+                      zIndex: held ? 12 : 6,
+                      userSelect: "none",
                     }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.58rem", color: b.color }}>
@@ -395,10 +460,32 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                     <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.86rem", color: "var(--text-primary)", lineHeight: 1.15 }}>
                       {b.guestName}
                     </div>
-                    {b.services && (
+                    {b.services && !held && (
                       <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.74rem", color: "var(--text-soft)", lineHeight: 1.1 }}>
                         {b.services}
                       </div>
+                    )}
+                    {held && (
+                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.06em", color: b.color }}>
+                        {fmtMinutes(showS)}–{fmtMinutes(showS + showLen)}
+                      </div>
+                    )}
+
+                    {/* Alsó él: a hossz módosítása */}
+                    {onResizeBooking && (
+                      <div
+                        onMouseDown={ev => {
+                          ev.preventDefault();
+                          ev.stopPropagation();
+                          setGrab({
+                            booking: b, mode: "resize", dayKey,
+                            startMin: s, durationMin: Math.max(e - s, 30), offset: 0, moved: false,
+                          });
+                        }}
+                        style={{
+                          position: "absolute", left: 0, right: 0, bottom: 0, height: 6,
+                          cursor: "ns-resize",
+                        }} />
                     )}
                   </div>
                 );
