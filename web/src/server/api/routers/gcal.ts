@@ -117,7 +117,19 @@ export const gcalRouter = createTRPCRouter({
           id: sv.id, name: sv.name, category: c.name, price: sv.price, duration: sv.duration,
         })),
       );
-      const svc = matchServices(title, catalog);
+      // A vendég szokása oldja fel a kétértelműséget: ha eddig mindig férfi
+      // hajvágást kért, nála a "rövid" is az. (A keresztnévből NEM tippelünk —
+      // a szalonban több női nevű vendég is férfi hajvágást kér.)
+      const past = await ctx.db.guestCardService.findMany({
+        where:  { card: { guestId: guest.id }, categoryName: { not: null } },
+        select: { categoryName: true },
+      });
+      const freq = new Map<string, number>();
+      for (const p of past)
+        if (p.categoryName) freq.set(p.categoryName, (freq.get(p.categoryName) ?? 0) + 1);
+      const preferred = [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+
+      const svc = matchServices(title, catalog, preferred);
 
       const card = await ctx.db.guestCard.create({
         data: {

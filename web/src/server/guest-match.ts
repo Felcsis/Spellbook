@@ -156,7 +156,19 @@ export type ServiceMatch = {
   ambiguous: CatalogService[];
 };
 
-export function matchServices(title: string, catalog: CatalogService[]): ServiceMatch {
+/**
+ * @param preferred A vendég korábbi kategóriái, gyakoriság szerint csökkenő
+ *   sorrendben. Holtversenynél ez dönt: ha valaki eddig mindig férfi hajvágást
+ *   kért, nála a "rövid" is az.
+ *
+ *   Szándékosan NEM a keresztnévből következtetünk a nemre: a szalon adataiban
+ *   több női nevű vendég is férfi hajvágást kér, ott a tipp tévedne.
+ */
+export function matchServices(
+  title: string,
+  catalog: CatalogService[],
+  preferred: string[] = [],
+): ServiceMatch {
   const words = new Set(nameTokensRaw(title));
   const empty: ServiceMatch = { matched: [], ambiguous: [] };
   if (!words.size) return empty;
@@ -189,11 +201,24 @@ export function matchServices(title: string, catalog: CatalogService[]): Service
     byName.set(key, [...(byName.get(key) ?? []), c.sv]);
   }
 
+  const rank = new Map(preferred.map((c, i) => [fold(c), i]));
+
   const matched:   CatalogService[] = [];
   const ambiguous: CatalogService[] = [];
   for (const group of byName.values()) {
-    if (group.length === 1) matched.push(group[0]!);
-    else ambiguous.push(...group);
+    if (group.length === 1) { matched.push(group[0]!); continue; }
+
+    // Holtverseny: a vendég szokása dönt, ha pontosan egy jelölt illik rá.
+    const known = group
+      .map(sv => ({ sv, r: rank.get(fold(sv.category)) }))
+      .filter((x): x is { sv: CatalogService; r: number } => x.r !== undefined)
+      .sort((a, b) => a.r - b.r);
+
+    if (known.length && (known.length === 1 || known[0]!.r < known[1]!.r)) {
+      matched.push(known[0]!.sv);
+    } else {
+      ambiguous.push(...group);
+    }
   }
   return { matched, ambiguous };
 }
