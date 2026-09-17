@@ -24,7 +24,7 @@ const CAT_COLORS: Record<string, string> = {
   "Szoftver / előfizetés":"#a78bfa",
   "Bérleti díj":          "#e8b4c8",
   "Könyvelés / admin":    "#9278b0",
-  "Marketing":            "#fbbf24",
+  "Marketing":            "var(--color-warn)",
   "Egyéb":                "#6b7280",
 };
 
@@ -210,7 +210,7 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
           </div>
 
           {saveError && (
-            <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 8, padding: "0.6rem 1rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
+            <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 8, padding: "0.6rem 1rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--color-danger)" }}>
               Hiba: {saveError}
             </div>
           )}
@@ -248,7 +248,7 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2rem" }}>
         <div style={{ flex: "1 1 160px", background: "var(--bg-card)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 14, padding: "1rem 1.25rem" }}>
           <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.16em", color: "rgba(248,113,113,0.6)", textTransform: "uppercase", marginBottom: "0.4rem" }}>Összes kiadás</div>
-          <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.4rem", color: "#f87171", fontWeight: 700 }}>{fmt(total)}</div>
+          <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.4rem", color: "var(--color-danger)", fontWeight: 700 }}>{fmt(total)}</div>
         </div>
         {totalPaid > 0 && (
           <div style={{ flex: "1 1 130px", background: "var(--bg-card)", border: "1px solid rgba(122,158,140,0.25)", borderRadius: 14, padding: "1rem 1.25rem" }}>
@@ -259,7 +259,7 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
         {totalPending > 0 && (
           <div style={{ flex: "1 1 130px", background: "var(--bg-card)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 14, padding: "1rem 1.25rem" }}>
             <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.16em", color: "rgba(251,191,36,0.6)", textTransform: "uppercase", marginBottom: "0.4rem" }}>Függőben</div>
-            <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: "#fbbf24", fontWeight: 700 }}>{fmt(totalPending)}</div>
+            <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.15rem", color: "var(--color-warn)", fontWeight: 700 }}>{fmt(totalPending)}</div>
           </div>
         )}
       </div>
@@ -312,7 +312,7 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
 
       {/* List */}
       {listError && (
-        <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 10, padding: "1rem", marginBottom: "1rem", fontFamily: "var(--font-cormorant)", color: "#f87171", fontSize: "0.95rem" }}>
+        <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 10, padding: "1rem", marginBottom: "1rem", fontFamily: "var(--font-cormorant)", color: "var(--color-danger)", fontSize: "0.95rem" }}>
           Hiba a kiadások betöltésekor: {listError.message}
         </div>
       )}
@@ -335,19 +335,19 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
                   <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.15rem" }}>
                     <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: col, padding: "0.1rem 0.4rem", border: `1px solid ${col}44`, borderRadius: 4, textTransform: "uppercase" }}>{e.category}</span>
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{new Date(e.date).toLocaleDateString("hu-HU", { timeZone: "UTC", year: "numeric", month: "long", day: "numeric" })}</span>
-                    {!e.paid && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#fbbf24", padding: "0.1rem 0.4rem", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4 }}>FÜGGŐBEN</span>}
+                    {!e.paid && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "var(--color-warn)", padding: "0.1rem 0.4rem", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4 }}>FÜGGŐBEN</span>}
                     {e.assignedTo && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#e8b4c8", padding: "0.1rem 0.4rem", border: "1px solid rgba(232,180,200,0.35)", borderRadius: 4 }}>👤 {e.assignedTo.name}</span>}
                     {e.notes && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", fontStyle: "italic" }}>{e.notes}</span>}
                   </div>
                 </div>
-                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "#f87171", fontWeight: 700, flexShrink: 0 }}>{fmt(e.amount)}</span>
+                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "1.05rem", color: "var(--color-danger)", fontWeight: 700, flexShrink: 0 }}>{fmt(e.amount)}</span>
                 <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
                   <button onClick={() => isEditing ? (setEditId(null), resetForm()) : openEdit(e)}
                     style={{ background: "none", border: "none", color: isEditing ? "var(--color-teal)" : "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s" }}
                     title="Szerkesztés">✎</button>
                   <button onClick={() => { if (confirm("Törlöd ezt a kiadást?")) del.mutate({ id: e.id }); }}
                     style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", padding: "0.2rem 0.35rem", borderRadius: 5, transition: "color 0.2s" }}
-                    onMouseEnter={ev => { (ev.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                    onMouseEnter={ev => { (ev.currentTarget as HTMLElement).style.color = "var(--color-danger)"; }}
                     onMouseLeave={ev => { (ev.currentTarget as HTMLElement).style.color = "var(--text-dim)"; }}
                     title="Törlés">✕</button>
                 </div>

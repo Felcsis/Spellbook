@@ -107,7 +107,7 @@ function StandaloneEditModal({ entryIds, initialAmount, initialDescription, init
             </div>
             {base > 0 && discountAmt > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--color-danger)" }}>
                   − {fmt(discountAmt)} → <strong>{fmt(calcResult)}</strong>
                 </span>
                 <button type="button" onClick={applyDiscount}
@@ -256,7 +256,7 @@ function VisitGroupRow({
                 </span>
               ))}
               {matNames.length > 0 && (
-                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "#c8a244", background: "rgba(200,162,68,0.08)", border: "1px solid rgba(200,162,68,0.22)", borderRadius: 4, padding: "0.05rem 0.35rem" }}>
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--color-code)", background: "rgba(200,162,68,0.08)", border: "1px solid rgba(200,162,68,0.22)", borderRadius: 4, padding: "0.05rem 0.35rem" }}>
                   ✦ festék
                 </span>
               )}
@@ -381,7 +381,7 @@ function VisitGroupRow({
                   <div key={i} className="entry-mat-row" style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0.65rem", background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.15)", borderRadius: 6 }}>
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                     {m.brand && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>{m.brand}</span>}
-                    {m.colorCode && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "#c8a244", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
+                    {m.colorCode && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "var(--color-code)", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{m.grams}g</span>
                     <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.85rem", color: "#a06830", fontWeight: 700 }}>{fmt(m.lineTotal)}</span>
                   </div>
@@ -484,7 +484,7 @@ function StaffCardRow({ card }: { card: StaffCard }) {
                 </span>
               ))}
               {card.materials.length > 0 && (
-                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "#c8a244", background: "rgba(200,162,68,0.08)", border: "1px solid rgba(200,162,68,0.22)", borderRadius: 4, padding: "0.05rem 0.35rem" }}>
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--color-code)", background: "rgba(200,162,68,0.08)", border: "1px solid rgba(200,162,68,0.22)", borderRadius: 4, padding: "0.05rem 0.35rem" }}>
                   ✦ recept
                 </span>
               )}
@@ -530,7 +530,7 @@ function StaffCardRow({ card }: { card: StaffCard }) {
                   <div key={i} className="entry-mat-row" style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0.65rem", background: "rgba(200,162,68,0.06)", border: "1px solid rgba(200,162,68,0.15)", borderRadius: 6 }}>
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
                     {m.brand && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>{m.brand}</span>}
-                    {m.colorCode && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "#c8a244", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
+                    {m.colorCode && <span className="entry-mat-meta" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "var(--color-code)", fontWeight: 600, letterSpacing: "0.05em" }}>{m.colorCode}</span>}
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{m.grams}g</span>
                   </div>
                 ))}

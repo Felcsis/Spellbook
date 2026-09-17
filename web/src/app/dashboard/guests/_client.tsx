@@ -424,7 +424,7 @@ function VisitCard({ card, onDelete, onEdit, isAdmin, guestName }: { card: Guest
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.4rem", borderTop: "1px solid var(--bg-highlight)" }}>
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button onClick={onDelete} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.35)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em", transition: "color 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--color-danger)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.35)"; }}>
                 Törlés
               </button>
@@ -528,7 +528,7 @@ function GuestRow({ guest, onDeleteCard, onNewCard, isAdmin }: {
               <input value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Megjegyzés (pl. allergia, preferenciák…)" style={inputStyle} />
               <div style={{ display: "flex", gap: "0.5rem", justifyContent: "space-between", alignItems: "center" }}>
                 <button onClick={() => { if (confirm("Biztosan törlöd ezt a vendéget és az összes kártyáját?")) deleteGuest.mutate({ id: guest.id }); }}
-                  style={{ padding: "0.35rem 0.85rem", borderRadius: 7, border: "1px solid rgba(248,113,113,0.55)", background: "rgba(248,113,113,0.12)", color: "#f87171", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>
+                  style={{ padding: "0.35rem 0.85rem", borderRadius: 7, border: "1px solid rgba(248,113,113,0.55)", background: "rgba(248,113,113,0.12)", color: "var(--color-danger)", cursor: "pointer", fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em" }}>
                   Vendég törlése
                 </button>
                 <div style={{ display: "flex", gap: "0.5rem" }}>

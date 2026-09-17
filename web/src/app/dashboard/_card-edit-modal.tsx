@@ -330,7 +330,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                     placeholder="0"
                     style={{ ...inputStyle, flex: 1, textAlign: "right" }} />
                   {discountAmt > 0 && (
-                    <span className="modal-discount-result" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171", whiteSpace: "nowrap" }}>
+                    <span className="modal-discount-result" style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--color-danger)", whiteSpace: "nowrap" }}>
                       − {fmt(discountAmt)} → {fmt(discountedSvcTotal)}
                     </span>
                   )}
@@ -342,7 +342,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
             <div className="modal-total-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 12 }}>
               <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: dim }}>
                 {svcTotal > 0 && <span>Szolgáltatás: {discountAmt > 0 ? fmt(discountedSvcTotal) : fmt(svcTotal)}</span>}
-                {discountAmt > 0 && <span style={{ color: "#f87171", marginLeft: "0.3rem" }}>− {fmt(discountAmt)}</span>}
+                {discountAmt > 0 && <span style={{ color: "var(--color-danger)", marginLeft: "0.3rem" }}>− {fmt(discountAmt)}</span>}
                 {svcTotal > 0 && matTotal > 0 && <span style={{ margin: "0 0.4rem" }}>·</span>}
                 {matTotal > 0 && <span>Anyag: {fmt(matTotal)}</span>}
               </div>
@@ -360,7 +360,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                 onClick={() => { if (confirm("Törlöd ezt a kártyát?")) deleteCard.mutate({ id: card.id }); }}
                 disabled={deleteCard.isPending}
                 style={{ padding: "0.8rem 1.1rem", borderRadius: 10, background: "transparent", border: "1px solid rgba(248,113,113,0.3)", color: "rgba(248,113,113,0.6)", fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em", cursor: "pointer", transition: "all 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#f87171"; (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--color-danger)"; (e.currentTarget as HTMLElement).style.color = "var(--color-danger)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(248,113,113,0.3)"; (e.currentTarget as HTMLElement).style.color = "rgba(248,113,113,0.6)"; }}>
                 {deleteCard.isPending ? "Törlés…" : "✕ Törlés"}
               </button>

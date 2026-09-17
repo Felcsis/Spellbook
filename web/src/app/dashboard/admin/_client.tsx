@@ -318,7 +318,7 @@ function StaffFinances({ users }: { users: UserRow[] }) {
                   {(u.name ?? "?")[0]}
                 </div>
                 <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1.15rem", color: uc, fontWeight: 600, flex: 1 }}>{u.name}</span>
-                <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", color: net >= 0 ? "var(--color-teal)" : "#f87171", fontWeight: 700 }}>{fmt(net)}</div>
+                <div style={{ fontFamily: "var(--font-playfair)", fontSize: "1.3rem", color: net >= 0 ? "var(--color-teal)" : "var(--color-danger)", fontWeight: 700 }}>{fmt(net)}</div>
               </div>
 
               {/* Summary row */}

@@ -31,35 +31,35 @@ function initials(name?: string | null) {
 }
 
 const S_DARK = {
-  gold:         "#c8a840",
-  goldBright:   "#e8c84a",
-  goldDim:      "rgba(200,168,64,0.50)",
-  goldFaint:    "rgba(200,168,64,0.16)",
-  text:         "rgba(240,228,204,0.80)",
-  textBright:   "#f0e4cc",
-  textDim:      "rgba(240,228,204,0.42)",
-  activeColor:  "#c4a0f0",
-  activeBg:     "rgba(110,60,200,0.22)",
-  activeBorder: "rgba(140,80,220,0.55)",
-  activeGlow:   "0 0 18px rgba(110,60,200,0.30), inset 0 0 14px rgba(100,50,180,0.12)",
-  hoverBg:      "rgba(200,168,64,0.08)",
-  border:       "rgba(200,168,64,0.12)",
+  gold:         "#c9965e",
+  goldBright:   "#dcae78",
+  goldDim:      "rgba(201,150,94,0.50)",
+  goldFaint:    "rgba(201,150,94,0.16)",
+  text:         "rgba(243,226,204,0.80)",
+  textBright:   "#f3e2cc",
+  textDim:      "rgba(243,226,204,0.42)",
+  activeColor:  "#e0b09c",
+  activeBg:     "rgba(150,85,65,0.24)",
+  activeBorder: "rgba(180,115,90,0.50)",
+  activeGlow:   "0 0 18px rgba(150,85,65,0.22), inset 0 0 14px rgba(130,75,55,0.10)",
+  hoverBg:      "rgba(201,150,94,0.08)",
+  border:       "rgba(201,150,94,0.12)",
 };
 
 const S_LIGHT = {
-  gold:         "#8a5a20",
-  goldBright:   "#a06a28",
-  goldDim:      "rgba(122,80,32,0.55)",
-  goldFaint:    "rgba(122,80,32,0.18)",
-  text:         "rgba(26,14,6,0.72)",
-  textBright:   "#1a0e06",
-  textDim:      "rgba(26,14,6,0.40)",
-  activeColor:  "#6a4a9a",
-  activeBg:     "rgba(106,74,154,0.14)",
-  activeBorder: "rgba(106,74,154,0.42)",
-  activeGlow:   "0 0 18px rgba(106,74,154,0.18), inset 0 0 14px rgba(90,60,140,0.08)",
-  hoverBg:      "rgba(122,80,32,0.08)",
-  border:       "rgba(122,80,32,0.12)",
+  gold:         "#74462b",
+  goldBright:   "#a06a45",
+  goldDim:      "rgba(116,70,43,0.55)",
+  goldFaint:    "rgba(116,70,43,0.18)",
+  text:         "rgba(34,16,10,0.72)",
+  textBright:   "#22100a",
+  textDim:      "rgba(34,16,10,0.40)",
+  activeColor:  "#7a4034",
+  activeBg:     "rgba(122,64,52,0.12)",
+  activeBorder: "rgba(122,64,52,0.40)",
+  activeGlow:   "0 0 18px rgba(122,64,52,0.16), inset 0 0 14px rgba(110,58,46,0.07)",
+  hoverBg:      "rgba(116,70,43,0.08)",
+  border:       "rgba(116,70,43,0.12)",
 };
 
 export default function SidebarLayout({
@@ -240,7 +240,7 @@ export default function SidebarLayout({
             borderRadius: 8,
             border: "1px solid rgba(200,80,80,0.35)",
             background: "rgba(200,80,80,0.10)",
-            color: "#e09090",
+            color: "var(--color-danger)",
             fontFamily: "var(--font-cinzel)", fontSize: "0.6rem", letterSpacing: "0.12em",
             cursor: "pointer", transition: "all 0.2s",
           }}
@@ -254,7 +254,7 @@ export default function SidebarLayout({
             const el = e.currentTarget as HTMLElement;
             el.style.background = "rgba(200,80,80,0.10)";
             el.style.borderColor = "rgba(200,80,80,0.35)";
-            el.style.color = "#e09090";
+            el.style.color = "var(--color-danger)";
           }}
         >
           ↪ Kilépés

@@ -9,66 +9,76 @@
   --font-playfair: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
-/* ── Light theme — Parchment ── */
+/* ── Light theme — Autumn parchment ── */
+/* A paletta tompítva: az eredeti túl világos volt, bántotta a szemet. A háttér
+   félúton áll az eredeti és az erősen tompított változat között — annyival
+   sötétebb, hogy ne vakítson, de annyival nem, hogy a szöveg vastagnak hasson.
+   A betűtípus és a betűvastagság változatlan. */
 :root {
-  --color-bg:        #f5ecd8;
-  --color-bg2:       #ede0c4;
-  --color-teal:      #7a5020;
-  --color-teal-light:#9a6a32;
-  --color-teal-dim:  rgba(122,80,32,0.55);
-  --color-pink:      #8a5a6a;
-  --color-purple:    #6a4a9a;
-  --color-cream:     #1a0e06;
+  --color-bg:        #eadcc6;
+  --color-bg2:       #e0ccb0;
+  --color-teal:      #70472e;
+  --color-teal-light:#9c6b4a;
+  --color-teal-dim:  rgba(112,71,46,0.55);
+  --color-pink:      #8b5c55;
+  --color-purple:    #684c53;
+  --color-cream:     #2b1a12;
+  --color-danger:    #903128;
+  --color-warn:      #684c06;
+  --color-code:      #684c16;
 
-  --bg-card:         rgba(248,238,214,0.90);
-  --bg-sidebar:      #e8d5b0;
-  --bg-input:        rgba(244,234,210,0.95);
-  --bg-modal:        rgba(248,240,220,0.98);
-  --bg-dropdown:     rgba(246,238,218,0.99);
-  --bg-panel:        rgba(244,234,210,0.85);
-  --bg-row:          rgba(242,232,208,0.80);
-  --bg-highlight:    rgba(122,80,32,0.10);
-  --bg-active:       rgba(122,80,32,0.18);
-  --bg-today:        rgba(122,80,32,0.12);
+  --bg-card:         rgba(239,226,204,0.90);
+  --bg-sidebar:      #d8bf9b;
+  --bg-input:        rgba(236,224,201,0.95);
+  --bg-modal:        rgba(240,230,210,0.98);
+  --bg-dropdown:     rgba(238,228,206,0.99);
+  --bg-panel:        rgba(234,220,198,0.85);
+  --bg-row:          rgba(232,216,192,0.80);
+  --bg-highlight:    rgba(112,71,46,0.10);
+  --bg-active:       rgba(112,71,46,0.18);
+  --bg-today:        rgba(112,71,46,0.12);
 
-  --text-primary:    #1a0e06;
-  --text-muted:      rgba(26,14,6,0.85);
-  --text-soft:       rgba(26,14,6,0.65);
-  --text-dim:        rgba(26,14,6,0.45);
-  --border:          rgba(122,80,32,0.22);
-  --border-strong:   rgba(122,80,32,0.45);
-  --shadow-card:     0 2px 20px rgba(80,40,10,0.14);
-  --shadow-modal:    0 24px 80px rgba(0,0,0,0.25);
+  --text-primary:    #2b1a12;
+  --text-muted:      rgba(43,26,18,0.85);
+  --text-soft:       rgba(43,26,18,0.65);
+  --text-dim:        rgba(43,26,18,0.45);
+  --border:          rgba(112,71,46,0.22);
+  --border-strong:   rgba(112,71,46,0.45);
+  --shadow-card:     0 2px 20px rgba(90,46,20,0.13);
+  --shadow-modal:    0 24px 80px rgba(40,18,6,0.23);
 }
 
-/* ── Dark theme — Night grimoire ── */
+/* ── Dark theme — Autumn night ── */
 [data-theme="dark"] {
-  --color-bg:        #0c0806;
-  --color-bg2:       #160e08;
-  --color-teal:      #c8a840;
-  --color-teal-light:#e0c050;
-  --color-teal-dim:  rgba(200,168,64,0.55);
-  --color-pink:      #b07890;
-  --color-purple:    #8060c0;
-  --color-cream:     #f0e4cc;
+  --color-bg:        #120a07;
+  --color-bg2:       #1c0f0a;
+  --color-teal:      #c9965e;
+  --color-teal-light:#dcae78;
+  --color-teal-dim:  rgba(201,150,94,0.55);
+  --color-pink:      #b88478;
+  --color-purple:    #9a7282;
+  --color-cream:     #f3e2cc;
+  --color-danger:    #f87171;
+  --color-warn:      #fbbf24;
+  --color-code:      #c8a244;
 
-  --bg-card:         rgba(30,18,8,0.92);
-  --bg-sidebar:      #0e0804;
-  --bg-input:        rgba(28,16,8,0.88);
-  --bg-modal:        rgba(18,10,4,0.97);
-  --bg-dropdown:     rgba(16,9,3,0.98);
-  --bg-panel:        rgba(22,12,5,0.80);
-  --bg-row:          rgba(24,14,6,0.72);
-  --bg-highlight:    rgba(200,168,64,0.09);
-  --bg-active:       rgba(200,168,64,0.16);
-  --bg-today:        rgba(200,168,64,0.10);
+  --bg-card:         rgba(38,20,12,0.92);
+  --bg-sidebar:      #160b07;
+  --bg-input:        rgba(34,18,10,0.88);
+  --bg-modal:        rgba(24,12,7,0.97);
+  --bg-dropdown:     rgba(22,11,6,0.98);
+  --bg-panel:        rgba(28,14,8,0.80);
+  --bg-row:          rgba(30,16,9,0.72);
+  --bg-highlight:    rgba(201,150,94,0.09);
+  --bg-active:       rgba(201,150,94,0.16);
+  --bg-today:        rgba(201,150,94,0.10);
 
-  --text-primary:    #f0e4cc;
-  --text-muted:      rgba(240,228,204,0.88);
-  --text-soft:       rgba(240,228,204,0.68);
-  --text-dim:        rgba(240,228,204,0.48);
-  --border:          rgba(200,168,64,0.18);
-  --border-strong:   rgba(200,168,64,0.38);
+  --text-primary:    #f3e2cc;
+  --text-muted:      rgba(243,226,204,0.88);
+  --text-soft:       rgba(243,226,204,0.68);
+  --text-dim:        rgba(243,226,204,0.48);
+  --border:          rgba(201,150,94,0.18);
+  --border-strong:   rgba(201,150,94,0.38);
   --shadow-card:     0 2px 24px rgba(0,0,0,0.70);
   --shadow-modal:    0 24px 80px rgba(0,0,0,0.88);
 }
@@ -86,17 +96,17 @@
 
 /* ── Golden shimmer button ── */
 .btn-gold {
-  background: linear-gradient(120deg, #8a5a20 0%, #b88010 25%, #d4a818 50%, #b88010 75%, #8a5a20 100%);
+  background: linear-gradient(120deg, #7a5424 0%, #9e7220 25%, #b8922e 50%, #9e7220 75%, #7a5424 100%);
   background-size: 250% auto;
   animation: shimmer 6s linear infinite;
   color: #fff !important;
   border: none !important;
-  box-shadow: 0 4px 18px rgba(184,128,16,0.42);
+  box-shadow: 0 4px 16px rgba(140,100,30,0.34);
   transition: box-shadow 0.25s, transform 0.15s !important;
   cursor: pointer;
 }
 .btn-gold:hover:not(:disabled) {
-  box-shadow: 0 6px 28px rgba(184,128,16,0.62);
+  box-shadow: 0 6px 24px rgba(140,100,30,0.50);
   transform: translateY(-2px);
 }
 .btn-gold:disabled { opacity: 0.65; cursor: not-allowed; }
@@ -297,10 +307,12 @@ html, body {
   background: var(--color-bg);
   color: var(--text-primary);
   font-family: var(--font-cormorant, Georgia, serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: rgba(200,168,64,0.28);
+  background: rgba(201,150,94,0.28);
   color: var(--text-primary);
 }
 
@@ -338,8 +350,8 @@ html, body {
   100% { background-position:  200% center; }
 }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(200,168,64,0.22), 0 0 60px rgba(200,168,64,0.08); }
-  50%       { box-shadow: 0 0 40px rgba(200,168,64,0.40), 0 0 90px rgba(200,168,64,0.16); }
+  0%, 100% { box-shadow: 0 0 20px rgba(201,150,94,0.22), 0 0 60px rgba(201,150,94,0.08); }
+  50%       { box-shadow: 0 0 40px rgba(201,150,94,0.40), 0 0 90px rgba(201,150,94,0.16); }
 }
 @keyframes orbFloat {
   0%, 100% { transform: translate(0,0) scale(1); }
@@ -358,8 +370,8 @@ html, body {
   50%     { border-color: var(--border-strong); }
 }
 @keyframes spellGlow {
-  0%,100% { text-shadow: 0 0 10px rgba(200,168,64,0.35); }
-  50%     { text-shadow: 0 0 22px rgba(200,168,64,0.80), 0 0 45px rgba(200,168,64,0.28); }
+  0%,100% { text-shadow: 0 0 10px rgba(201,150,94,0.35); }
+  50%     { text-shadow: 0 0 22px rgba(201,150,94,0.80), 0 0 45px rgba(201,150,94,0.28); }
 }
 @keyframes inkReveal {
   from { opacity: 0; letter-spacing: 0.3em; }
@@ -372,8 +384,8 @@ html, body {
   80%     { opacity: 0.9; }
 }
 @keyframes goldPulse {
-  0%,100% { box-shadow: 0 0 8px rgba(200,168,64,0.20); }
-  50%     { box-shadow: 0 0 18px rgba(200,168,64,0.45); }
+  0%,100% { box-shadow: 0 0 8px rgba(201,150,94,0.20); }
+  50%     { box-shadow: 0 0 18px rgba(201,150,94,0.45); }
 }
 @keyframes layerTwinkle {
   0%,100% { opacity: 0.25; }

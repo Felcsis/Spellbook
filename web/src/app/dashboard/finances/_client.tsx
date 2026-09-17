@@ -687,10 +687,10 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
           <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
             {!isFamilyMode && <button type="button"
               onClick={() => { if (!requiresMat) setShowMats(p => !p); }}
-              style={{ background: showMats ? "rgba(200,162,68,0.1)" : "transparent", border: `1px solid ${requiresMat && !matOk ? "#c47878" : showMats ? "rgba(200,162,68,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "#c8a244" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: requiresMat ? "default" : "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
+              style={{ background: showMats ? "rgba(200,162,68,0.1)" : "transparent", border: `1px solid ${requiresMat && !matOk ? "#c47878" : showMats ? "rgba(200,162,68,0.4)" : "var(--border)"}`, borderRadius: 8, color: showMats ? "var(--color-code)" : "var(--text-soft)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: requiresMat ? "default" : "pointer", padding: "0.38rem 0.85rem", transition: "all 0.2s" }}>
               ✦ {showMats ? "Szín recept ▾" : "Szín recept hozzáadása"}
             </button>}
-            {isFamilyMode && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.14em", color: "#c8a244", textTransform: "uppercase" }}>✦ Anyag rögzítése</span>}
+            {isFamilyMode && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.14em", color: "var(--color-code)", textTransform: "uppercase" }}>✦ Anyag rögzítése</span>}
             {requiresMat && !matOk && (
               <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", color: "#c47878", animation: "fadeInUp 0.3s ease" }}>
                 ⚠ Festéshez szín recept kötelező
@@ -723,7 +723,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
                               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(200,162,68,0.1)"; }}
                               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                               <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-primary)", flex: 1 }}>{m.name}</span>
-                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "#c8a244", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
+                              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "var(--color-code)", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
                             </div>
                           ))}
                         </div>
@@ -739,7 +739,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
                     <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-soft)", fontSize: "0.9rem" }}>g ×</span>
                     <span style={{ fontFamily: "var(--font-cormorant)", color: "rgba(200,162,68,0.7)", fontSize: "0.9rem", minWidth: 50 }}>{fmt(row.unitPrice)}</span>
                     <span style={{ color: "var(--text-soft)", fontSize: "0.85rem" }}>=</span>
-                    <span style={{ fontFamily: "var(--font-playfair)", color: "#c8a244", fontWeight: 700, fontSize: "0.92rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
+                    <span style={{ fontFamily: "var(--font-playfair)", color: "var(--color-code)", fontWeight: 700, fontSize: "0.92rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
                   </div>
                 </div>
               ))}
@@ -891,7 +891,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
               )}
 
               {billErr && (
-                <div style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
+                <div style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--color-danger)" }}>
                   ⚠ A bejegyzés elmentve, de a bizonylat nem készült el: {billErr}
                   <br />Pótolni a vendég kártyájáról lehet (Vendégek → kártya → Bizonylat).
                 </div>
@@ -900,7 +900,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
           )}
 
           {saveErr && (
-            <div style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "#f87171" }}>
+            <div style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "0.5rem 0.85rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--color-danger)" }}>
               ⚠ {saveErr}
             </div>
           )}

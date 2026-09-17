@@ -10,15 +10,15 @@ function fmt(n: number) {
 }
 
 
-const PURPLE = "rgba(110,60,200,0.22)";
-const PURPLE_BORDER = "rgba(140,80,220,0.40)";
-const GOLD = "#c8a840";
-const GOLD_DIM = "rgba(200,168,64,0.55)";
-const CREAM = "#f0e4cc";
-const CREAM_SOFT = "rgba(240,228,204,0.72)";
-const CREAM_DIM = "rgba(240,228,204,0.46)";
-const CARD_BG = "rgba(16,8,3,0.68)";
-const CARD_BORDER = "rgba(200,168,64,0.18)";
+const PURPLE = "var(--bg-active)";
+const PURPLE_BORDER = "var(--border-strong)";
+const GOLD = "var(--color-teal)";
+const GOLD_DIM = "var(--color-teal-dim)";
+const CREAM = "var(--text-primary)";
+const CREAM_SOFT = "var(--text-muted)";
+const CREAM_DIM = "var(--text-soft)";
+const CARD_BG = "var(--bg-card)";
+const CARD_BORDER = "var(--border)";
 
 export default function DashboardClient({
   name,
@@ -192,7 +192,7 @@ export default function DashboardClient({
                         <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.9rem", color: GOLD }}>{fmt(w.revenue)}</span>
                       </div>
                       <div style={{ height: 4, background: "rgba(200,168,64,0.12)", borderRadius: 2 }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(to right, rgba(110,60,200,0.7), ${GOLD})`, borderRadius: 2, transition: "width 0.8s ease" }} />
+                        <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(to right, rgba(140,90,70,0.6), ${GOLD})`, borderRadius: 2, transition: "width 0.8s ease" }} />
                       </div>
                     </div>
                   );
@@ -211,7 +211,7 @@ export default function DashboardClient({
                 { label: "Összes bevétel",    value: revenue,  color: "#7ab88a" },
                 { label: "Összes anyagköltség", value: material, color: "#c08848" },
                 { label: "Bérek",             value: wages > 0 ? wages : Math.round(revenue * 0.6), color: "rgba(140,80,220,0.9)" },
-                { label: "Kiadások",          value: expenses, color: "#f87171" },
+                { label: "Kiadások",          value: expenses, color: "var(--color-danger)" },
               ].map(row => (
                 <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: CREAM_DIM }}>{row.label}</span>
@@ -257,7 +257,7 @@ export default function DashboardClient({
             borderRadius: 10,
             border: `1px solid ${PURPLE_BORDER}`,
             background: PURPLE,
-            color: "#c4a0f0",
+            color: "var(--color-teal)",
             fontFamily: "var(--font-cinzel)",
             fontSize: "0.6rem",
             letterSpacing: "0.15em",
@@ -265,7 +265,7 @@ export default function DashboardClient({
             transition: "all 0.2s",
             boxShadow: "0 0 16px rgba(110,60,200,0.18)",
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(110,60,200,0.35)"; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = PURPLE; }}
         >
           ✦ Új bejegyzés hozzáadása ◈

@@ -287,7 +287,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = isEditing ? col : "var(--text-dim)"; }}
                     title="Szerkesztés">✎</button>
                   <button onClick={() => { if (isEditing) resetWork(); delW.mutate({ id: e.id }); }} style={delBtnStyle}
-                    onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
+                    onMouseEnter={el => { (el.target as HTMLElement).style.color = "var(--color-danger)"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}
                     title="Törlés">✕</button>
                 </div>
@@ -316,7 +316,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                           <div key={i} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem" }}>
                             <span style={{ color: "#c09898" }}>🧴 {m.name}</span>
                             {m.brand && <span style={{ color: "var(--text-muted)" }}> · {m.brand}</span>}
-                            {m.colorCode && <span style={{ color: "#c8a244", fontWeight: 600, letterSpacing: "0.03em" }}> · {m.colorCode}</span>}
+                            {m.colorCode && <span style={{ color: "var(--color-code)", fontWeight: 600, letterSpacing: "0.03em" }}> · {m.colorCode}</span>}
                             <span style={{ color: "var(--text-muted)" }}> · {m.grams}g</span>
                           </div>
                         ))}
@@ -325,7 +325,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                   </div>
                   <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem", alignSelf: "flex-start" }}>{fmt(card.total)}</div>
                   <button onClick={() => delCard.mutate({ id: card.id })} style={delBtnStyle}
-                    onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
+                    onMouseEnter={el => { (el.target as HTMLElement).style.color = "var(--color-danger)"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}
                     title="Törlés">✕</button>
                 </div>
@@ -352,7 +352,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                   </div>
                   <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(e.amount)}</div>
                   <button onClick={() => delC.mutate({ id: e.id })} style={delBtnStyle}
-                    onMouseEnter={el => { (el.target as HTMLElement).style.color = "#f87171"; }}
+                    onMouseEnter={el => { (el.target as HTMLElement).style.color = "var(--color-danger)"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}>✕</button>
                 </div>
               );
@@ -1106,6 +1106,9 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
     closedDays[key] = `${who}${t.reason ?? "nem foglalható"}`;
   }
 
+  const userColors: Record<string, string> = {};
+  users.forEach((u, i) => { userColors[u.id] = USER_COLORS[i % USER_COLORS.length]!; });
+
   const byBookingDate: Record<string, GridBooking[]> = {};
   appointments
     .filter(a => a.status === "foglalt")
@@ -1133,8 +1136,6 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
     });
   }
 
-  const userColors: Record<string, string> = {};
-  users.forEach((u, i) => { userColors[u.id] = USER_COLORS[i % USER_COLORS.length]!; });
   // Új munkához csak aktív dolgozó választható; a színek/előzmény mindenkit megtartanak.
   const activeUsers = users.filter(u => (u as { active?: boolean }).active !== false);
 

@@ -160,10 +160,10 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
             {isAdmin && canSeeProfit && !filterUserId && <StatBox label="Nyereség (tiéd)" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub="anyag nélkül + 40% − kiadás" large />}
             {fw && fw.material > 0 && <StatBox label="Anyagköltség" value={fw.material} color="#a06830" sub="kiadás" />}
             {fw && fw.wageEstimate > 0 && <StatBox label={fw.wage > 0 ? "Bér" : "60% bér"} value={fw.wage > 0 ? fw.wage : fw.wageEstimate} color={fwColor} sub={fw.wage > 0 ? "rögzített" : "számított"} />}
-            {fw && fw.expenses > 0 && <StatBox label="Kiadásaid" value={fw.expenses} color="#f87171" sub="levonva béredből" />}
+            {fw && fw.expenses > 0 && <StatBox label="Kiadásaid" value={fw.expenses} color="var(--color-danger)" sub="levonva béredből" />}
             {fw && fwCommission > 0 && <StatBox label="40% →Felicia" value={fwCommission} color="#c9906a" sub="jutalék" />}
             {!isAdmin && <StatBox label={wage > 0 ? "Béred" : "Neked jár"} value={Math.max(0, (wage > 0 ? wage : staffNet) - myExpenseTotal)} color="#a78bfa" sub="havi nettó" large />}
-            {!isAdmin && myExpenseTotal > 0 && <StatBox label="Kiadásaid" value={myExpenseTotal} color="#f87171" sub="levonva" />}
+            {!isAdmin && myExpenseTotal > 0 && <StatBox label="Kiadásaid" value={myExpenseTotal} color="var(--color-danger)" sub="levonva" />}
           </div>
         );
       })()}
@@ -200,7 +200,7 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
                     {st.isOwner && row("= Összesen (neked marad)", st.svcRev + totalCommission, "#527666")}
                     {!st.isOwner && st.material > 0 && row("✦ Anyagköltség", st.material, "#a06830")}
                     {!st.isOwner && row(`♦ ${st.name} bére (60%)`, st.wage > 0 ? st.wage : st.wageEstimate, uC)}
-                    {!st.isOwner && st.expenses > 0 && row(`− Kiadás (${st.name})`, st.expenses, "#f87171")}
+                    {!st.isOwner && st.expenses > 0 && row(`− Kiadás (${st.name})`, st.expenses, "var(--color-danger)")}
                     {!st.isOwner && st.expenses > 0 && row(`= Nettó bér`, Math.max(0, (st.wage > 0 ? st.wage : st.wageEstimate) - st.expenses), uC)}
                     {!st.isOwner && commission > 0 && row("40% →Felicia", commission, "#c9906a")}
                   </div>
