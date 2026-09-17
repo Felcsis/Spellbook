@@ -718,7 +718,7 @@ function MonthView({
         {cells.map((day, idx) => {
           if (!day) return (
             <div key={`e${idx}`} style={{
-              minHeight: 104, borderRight: "1px solid var(--bg-today)",
+              minHeight: 74, borderRight: "1px solid var(--bg-today)",
               borderBottom: "1px solid var(--bg-today)", background: "var(--bg-row)", opacity: 0.35,
             }} />
           );
@@ -735,15 +735,28 @@ function MonthView({
           const closed   = closedDays[key];
           const isPicked = selectedSet.has(key) || rangeSet.has(key);
 
-          // Az időpontok a nap "előjegyzései" — ezeket együtt mutatjuk, mert a
-          // vendégnek mindegy, melyik rendszerből származik.
-          const upcoming = [
-            ...bookings.map(b => ({ id: b.id, time: new Date(b.start), text: b.guestName, color: b.color })),
-            ...events.map(e => ({ id: e.id, time: new Date(e.start), text: e.title, color: "#6a8fb0" })),
-          ].sort((a, b) => a.time.getTime() - b.time.getTime());
-
-          const done = [
-            ...gCards.map(c => ({ id: c.id, text: c.guest.name, amount: c.total })),
+          // A havi nézet áttekintés, nem lista: a nap tartalmát színes pontok
+          // jelzik, a részletek a napi nézetben és a nap ablakában vannak.
+          const dots: { key: string; color: string; title: string }[] = [
+            ...wEntries.map(w => ({
+              key: `w-${w.id}`,
+              color: userColors[w.userId] ?? "#c4926e",
+              title: `${w.user.name ?? "?"}${w.startTime && w.endTime ? ` · ${w.startTime}–${w.endTime}` : ""}`,
+            })),
+            ...bookings.map(b => ({
+              key: `b-${b.id}`, color: "#6a8fb0",
+              title: `${new Date(b.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })} · ${b.guestName}`,
+            })),
+            ...events.map(ev => ({
+              key: `e-${ev.id}`, color: "#6a8fb0",
+              title: `${new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })} · ${ev.title}`,
+            })),
+            ...gCards.map(c => ({ key: `c-${c.id}`, color: "#c09898", title: `♦ ${c.guest.name}` })),
+            ...cEntries.map(e => ({
+              key: `x-${e.id}`,
+              color: e.type === "material" ? "#c49060" : "#9278b0",
+              title: e.description,
+            })),
           ];
 
           return (
@@ -757,7 +770,7 @@ function MonthView({
               onMouseEnter={() => { if (dragging.current) setHoverDay(key); }}
               onClick={() => { if (range.length <= 1) onOpen(key); }}
               style={{
-                position: "relative", minHeight: 104, padding: "0.35rem 0.4rem",
+                position: "relative", minHeight: 74, padding: "0.35rem 0.4rem",
                 borderRight: "1px solid var(--bg-today)", borderBottom: "1px solid var(--bg-today)",
                 background: isPicked ? "var(--bg-active)"
                           : isToday  ? "var(--bg-today)"
@@ -799,55 +812,26 @@ function MonthView({
                 )}
               </div>
 
-              {/* Ki dolgozik — csak pontok, hogy ne vigye el a helyet */}
-              {wEntries.length > 0 && (
-                <div style={{ display: "flex", gap: "0.2rem", marginBottom: "0.25rem" }}>
-                  {wEntries.map(w => (
-                    <span key={w.id} title={`${w.user.name}${w.startTime ? ` · ${w.startTime}–${w.endTime}` : ""}`}
-                      style={{
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: userColors[w.userId] ?? "#c4926e",
-                        boxShadow: `0 0 4px ${userColors[w.userId] ?? "#c4926e"}`,
-                      }} />
+              {/* A nap tartalma színes pontokkal — a részletek a napi nézetben */}
+              {dots.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.22rem", alignItems: "center" }}>
+                  {dots.slice(0, 12).map(d => (
+                    <span key={d.key} title={d.title} style={{
+                      width: 7, height: 7, borderRadius: "50%", background: d.color,
+                      boxShadow: `0 0 4px ${d.color}`,
+                    }} />
                   ))}
+                  {dots.length > 12 && (
+                    <span style={{
+                      fontFamily: "var(--font-cinzel)", fontSize: "0.46rem",
+                      color: "var(--text-dim)", marginLeft: "0.1rem",
+                    }}>
+                      +{dots.length - 12}
+                    </span>
+                  )}
                 </div>
               )}
 
-              {/* Ami még jön */}
-              {upcoming.slice(0, 3).map(u => (
-                <div key={u.id} style={{
-                  display: "flex", alignItems: "baseline", gap: "0.25rem",
-                  fontFamily: "var(--font-cormorant)", fontSize: "0.76rem",
-                  color: "var(--text-primary)", lineHeight: 1.25,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  <span style={{ color: u.color, fontFamily: "var(--font-playfair)", fontSize: "0.64rem", flexShrink: 0 }}>
-                    {u.time.toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{u.text}</span>
-                </div>
-              ))}
-
-              {/* Ami megtörtént */}
-              {done.slice(0, 2).map(c => (
-                <div key={c.id} style={{
-                  fontFamily: "var(--font-cormorant)", fontSize: "0.76rem", color: "var(--text-soft)",
-                  lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  ♦ {c.text}
-                </div>
-              ))}
-
-              {(upcoming.length > 3 || done.length > 2 || cEntries.length > 0) && (
-                <div style={{
-                  fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.08em",
-                  color: "var(--text-dim)", marginTop: "0.15rem",
-                }}>
-                  +{upcoming.length - Math.min(3, upcoming.length)
-                    + done.length - Math.min(2, done.length)
-                    + cEntries.length} további
-                </div>
-              )}
             </div>
           );
         })}
