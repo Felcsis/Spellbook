@@ -1397,7 +1397,12 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
         const allEvents   = gridDays.flatMap(d => d.events);
         const allBands    = gridDays.flatMap(d => d.bands);
         const allBookings = gridDays.flatMap(d => d.bookings);
-        const [fromHour, toHour] = hourRange(allEvents, allBands, allBookings);
+        // Heti nézetben a szalon teljes napja látszik (7–21), hogy ne ugráljon a
+        // rács magassága naponként. Ha valami kilóg, a sáv ennél csak bővül.
+        const [fromHour, toHour] = hourRange(
+          allEvents, allBands, allBookings,
+          view === "week" ? [7, 21] : [9, 18],
+        );
 
         // Napi nézetben az egyetlen nap bejegyzései külön oldalsávba kerülnek:
         // egy oszlopba zsúfolva olvashatatlanok voltak.

@@ -71,8 +71,10 @@ export function hourRange(
   events: GridEvent[],
   bands: GridBand[],
   bookings: { start: string; end: string }[] = [],
+  /** Az alapból mindig megjelenített órasáv. A rács ennél csak bővülhet. */
+  baseline: [number, number] = [9, 18],
 ): [number, number] {
-  let min = 9 * 60, max = 18 * 60;
+  let min = baseline[0] * 60, max = baseline[1] * 60;
   for (const e of events) {
     if (e.allDay) continue;
     min = Math.min(min, minutesOfIso(e.start));
