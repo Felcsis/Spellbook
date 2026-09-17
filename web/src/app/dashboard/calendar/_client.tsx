@@ -1422,13 +1422,14 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
         const cards  = single ? byGuestCardDate[ds] ?? [] : [];
         const costs  = single ? byCostDate[ds] ?? [] : [];
 
-        // A nap költségei típusonként. A vendégkártya anyagai már pénzügyi
-        // tételként is szerepelnek, ezért CSAK innen számoljuk őket — különben
-        // az anyagköltség kétszer jelenne meg.
-        const materialCost = costs.filter(e => e.type === "material").reduce((sum, e) => sum + e.amount, 0);
+        // Az "anyag" tétel NEM költség: azt a vendég fizeti ki, ugyanúgy bevétel,
+        // mint a munkadíj. A Pénzügyek oldal is így számol
+        // (totalIncome = revenue + material) — a két képernyőnek egyeznie kell.
+        const materialPaid = costs.filter(e => e.type === "material").reduce((sum, e) => sum + e.amount, 0);
         const wageCost     = costs.filter(e => e.type === "wage").reduce((sum, e) => sum + e.amount, 0);
-        const dayRevenue   = works.reduce((sum, w) => sum + w.earnings, 0);
-        const paidTotal    = cards.reduce((sum, c) => sum + c.total, 0);
+        const serviceIncome = works.reduce((sum, w) => sum + w.earnings, 0);
+        const totalIncome   = serviceIncome + materialPaid;
+        const paidTotal     = cards.reduce((sum, c) => sum + c.total, 0);
 
         const sections: DaySection[] = single ? [
           {
@@ -1466,27 +1467,26 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
             ],
           },
           {
-            title: "Költségek", icon: "✦",
+            title: "Anyag és bér", icon: "✦",
             entries: costs.map(e => ({
               id: e.id,
               text: e.description,
-              sub: [e.type === "material" ? "anyag" : "bér", e.createdBy.name].filter(Boolean).join(" · "),
+              sub: [
+                e.type === "material" ? "anyag — a vendég fizette" : "kifizetett bér",
+                e.createdBy.name,
+              ].filter(Boolean).join(" · "),
               amount: e.amount,
               color: e.type === "material" ? "#c49060" : "#9278b0",
             })),
           },
         ] : [];
 
-        // A mérleg: mi jött be, mi ment el, mi maradt.
+        // A mérleg: mennyit fizettek a vendégek, miből mennyi az anyag, és mi marad.
         const totals: Total[] = [
-          { label: "Bevétel", value: dayRevenue, color: "#7a9e8c" },
-          ...(materialCost > 0 ? [{ label: "Anyagköltség", value: -materialCost, color: "#c49060" }] : []),
-          ...(wageCost     > 0 ? [{ label: "Bér",          value: -wageCost,     color: "#9278b0" }] : []),
-          {
-            label: "Marad", value: dayRevenue - materialCost - wageCost,
-            color: dayRevenue - materialCost - wageCost >= 0 ? "var(--color-teal)" : "#c47878",
-            strong: true,
-          },
+          { label: "Munkadíj", value: serviceIncome, color: "#7a9e8c" },
+          ...(materialPaid > 0 ? [{ label: "Anyag (vendég fizette)", value: materialPaid, color: "#c49060" }] : []),
+          { label: "Befolyt összesen", value: totalIncome, color: "var(--color-teal)", strong: true },
+          ...(wageCost > 0 ? [{ label: "Kifizetett bér", value: -wageCost, color: "#9278b0" }] : []),
         ];
 
         const grid = (
