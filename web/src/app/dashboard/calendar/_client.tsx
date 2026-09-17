@@ -10,6 +10,7 @@ import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent } 
 import { BookingModal } from "./_booking-modal";
 import { MiniCalendar } from "./_mini-calendar";
 import { DayPanel, type DaySection, type Total } from "./_day-panel";
+import { WeekEntries, type WeekDayEntries } from "./_week-entries";
 import { SelectionBar } from "./_selection-bar";
 import { toDateStr } from "~/lib/date";
 
@@ -1477,7 +1478,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           <div style={{ overflowX: isMobile && view !== "day" ? "auto" : "visible" }}>
             <div style={{ minWidth: isMobile && view === "week" ? 640 : undefined }}>
               <TimeGrid days={gridDays} fromHour={fromHour} toHour={toHour}
-                showAllDay={view !== "day"}
+                showAllDay={false}
                 onOpenDay={setModalDate}
                 onOpenCard={ev => openCardFromEvent(ev)}
                 onNewBooking={date => setBooking({ date })}
@@ -1510,7 +1511,48 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           </div>
         );
 
-        if (!single) return grid;
+        // Heti / 3 napos nézet: a rács a menetrendé, a bejegyzések alatta.
+        if (!single) {
+          const weekDays: WeekDayEntries[] = gridDays.map(d => {
+            const key   = toDateStr(d.date);
+            const works = byDate[key] ?? [];
+            const cards = byGuestCardDate[key] ?? [];
+            const costs = byCostDate[key] ?? [];
+
+            return {
+              key, label: d.label, sub: d.sub, isToday: d.isToday,
+              // Amit a vendégek fizettek: munkadíj + a rájuk terhelt anyag.
+              income: works.reduce((sum, w) => sum + w.earnings, 0)
+                    + costs.filter(e => e.type === "material").reduce((sum, e) => sum + e.amount, 0),
+              rows: [
+                ...works.map(w => ({
+                  id: `w-${w.id}`,
+                  text: w.user.name ?? "?",
+                  sub: w.startTime && w.endTime ? `${w.startTime}–${w.endTime}` : undefined,
+                  amount: w.earnings,
+                  color: userColors[w.userId] ?? "#c4926e",
+                })),
+                ...cards.map(c => ({
+                  id: `c-${c.id}`, text: `♦ ${c.guest.name}`, amount: c.total, color: "#c09898",
+                })),
+                ...costs.map(e => ({
+                  id: `x-${e.id}`,
+                  text: e.description,
+                  sub: e.type === "material" ? "anyag" : "bér",
+                  amount: e.amount,
+                  color: e.type === "material" ? "#c49060" : "#9278b0",
+                })),
+              ],
+            };
+          });
+
+          return (
+            <>
+              {grid}
+              {view === "week" && <WeekEntries days={weekDays} onOpenDay={setModalDate} />}
+            </>
+          );
+        }
 
         return (
           <div style={{
