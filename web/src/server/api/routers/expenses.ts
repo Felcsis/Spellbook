@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
 
 export const EXPENSE_CATEGORIES = [
   "Rezsi",
@@ -13,7 +13,7 @@ export const EXPENSE_CATEGORIES = [
 ] as const;
 
 export const expensesRouter = createTRPCRouter({
-  list: protectedProcedure
+  list: salonProcedure
     .input(z.object({ year: z.number(), month: z.number().optional() }))
     .query(({ ctx, input }) => {
       const from = input.month
@@ -32,7 +32,7 @@ export const expensesRouter = createTRPCRouter({
       });
     }),
 
-  create: protectedProcedure
+  create: salonProcedure
     .input(z.object({
       title:        z.string().min(1),
       amount:       z.number().positive(),
@@ -57,7 +57,7 @@ export const expensesRouter = createTRPCRouter({
       })
     ),
 
-  update: protectedProcedure
+  update: salonProcedure
     .input(z.object({
       id:           z.string(),
       title:        z.string().min(1).optional(),
@@ -83,12 +83,12 @@ export const expensesRouter = createTRPCRouter({
       })
     ),
 
-  delete: protectedProcedure
+  delete: salonProcedure
     .input(z.object({ id: z.string() }))
     .mutation(({ ctx, input }) => ctx.db.expense.delete({ where: { id: input.id } })),
 
   // Staff-accessible: only expenses assigned to the current user
-  listMine: protectedProcedure
+  listMine: salonProcedure
     .input(z.object({ year: z.number(), month: z.number().optional() }))
     .query(({ ctx, input }) => {
       const from = input.month

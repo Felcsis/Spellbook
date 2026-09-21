@@ -118,6 +118,21 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
  *
  * @see https://trpc.io/docs/procedures
  */
+/**
+ * Olyan művelet, ami a szalon belügye: pénzügy, kiadás, mentés, adatvédelem.
+ *
+ * A "csak naptár" szerepkörű dolgozó ezekhez nem fér hozzá. A menü elrejtése
+ * önmagában nem védelem — a végpont közvetlenül is hívható lenne.
+ */
+export const salonProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session?.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (ctx.session.user.role === "calendar")
+      throw new TRPCError({ code: "FORBIDDEN", message: "Ehhez nincs jogosultságod." });
+    return next({ ctx: { session: { ...ctx.session, user: ctx.session.user } } });
+  });
+
 export const protectedProcedure = t.procedure
   .use(timingMiddleware)
   .use(({ ctx, next }) => {

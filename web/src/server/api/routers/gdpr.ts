@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
 import type { PrismaClient } from "../../../../generated/prisma";
 
 /**
@@ -39,7 +39,7 @@ export const gdprRouter = createTRPCRouter({
    * 15. és 20. cikk — hozzáférés és adathordozhatóság.
    * Egyetlen vendég összes tárolt adata géppel olvasható (JSON) formában.
    */
-  exportGuest: protectedProcedure
+  exportGuest: salonProcedure
     .input(z.object({ guestId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const guest = await ctx.db.guest.findUnique({
@@ -95,7 +95,7 @@ export const gdprRouter = createTRPCRouter({
     }),
 
   /** 7. cikk — a hozzájárulás megadásának/visszavonásának rögzítése. */
-  setConsent: protectedProcedure
+  setConsent: salonProcedure
     .input(z.object({
       guestId: z.string(),
       granted: z.boolean(),
@@ -124,7 +124,7 @@ export const gdprRouter = createTRPCRouter({
    * 5. cikk (1) e) — megőrzési idő.
    * Kilistázza, kit érintene a takarítás. Semmit nem módosít.
    */
-  retentionPreview: protectedProcedure.query(async ({ ctx }) => {
+  retentionPreview: salonProcedure.query(async ({ ctx }) => {
     requireAdmin(ctx.session.user.role);
     const cutoff = retentionCutoff();
 
@@ -159,7 +159,7 @@ export const gdprRouter = createTRPCRouter({
    * A megőrzési idő letelte utáni tényleges törlés.
    * Ugyanaz a hatás, mint az érintetti törlésnél: a bevétel név nélkül marad meg.
    */
-  runRetention: protectedProcedure
+  runRetention: salonProcedure
     .input(z.object({ confirm: z.literal(true) }))
     .mutation(async ({ ctx }) => {
       requireAdmin(ctx.session.user.role);
@@ -194,7 +194,7 @@ export const gdprRouter = createTRPCRouter({
     }),
 
   /** Az elszámoltathatósági napló — ellenőrzésnél ezt kell tudni megmutatni. */
-  logs: protectedProcedure
+  logs: salonProcedure
     .input(z.object({ limit: z.number().min(1).max(500).default(100) }).default({ limit: 100 }))
     .query(({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);

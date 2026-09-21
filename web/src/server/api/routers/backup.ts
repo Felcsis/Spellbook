@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 
 function requireAdmin(role: string) {
@@ -9,7 +9,7 @@ function requireAdmin(role: string) {
 // ── Export ─────────────────────────────────────────────────────────────────────
 
 export const backupRouter = createTRPCRouter({
-  export: protectedProcedure.query(async ({ ctx }) => {
+  export: salonProcedure.query(async ({ ctx }) => {
     requireAdmin(ctx.session.user.role);
 
     const [
@@ -66,7 +66,7 @@ export const backupRouter = createTRPCRouter({
 
   // ── Import ─────────────────────────────────────────────────────────────────
 
-  import: protectedProcedure
+  import: salonProcedure
     .input(z.object({
       data: z.string(), // JSON string of the exported backup
     }))

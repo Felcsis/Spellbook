@@ -1,5 +1,6 @@
 import { auth } from "~/server/auth";
 import ExpensesClient from "./_client";
+import { isCalendarOnly } from "~/server/auth/access";
 
 export default async function ExpensesPage() {
   const session = await auth();

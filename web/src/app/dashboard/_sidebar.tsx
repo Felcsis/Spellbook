@@ -26,6 +26,12 @@ const NAV_STAFF = [
   { key: "services",     icon: "✄", label: "Árlista",        href: "/dashboard/services" },
 ];
 
+/** Csak naptár — olyan dolgozónak, akinek a szalon többi adatához nincs köze. */
+const NAV_CALENDAR = [
+  { key: "calendar", icon: "🌙", label: "Munkanaptár", href: "/dashboard/calendar" },
+];
+
+
 function initials(name?: string | null) {
   return (name ?? "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
@@ -74,7 +80,9 @@ export default function SidebarLayout({
   const router = useRouter();
   const { theme } = useTheme();
   const S = theme === "dark" ? S_DARK : S_LIGHT;
-  const NAV = user.role === "admin" ? NAV_ADMIN : NAV_STAFF;
+  const NAV = user.role === "admin" ? NAV_ADMIN
+            : user.role === "calendar" ? NAV_CALENDAR
+            : NAV_STAFF;
   const [open, setOpen] = useState(false);
 
   // Mobil: navigálás közben zárjuk a drawert

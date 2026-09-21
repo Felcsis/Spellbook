@@ -30,7 +30,7 @@ export const adminRouter = createTRPCRouter({
       name:     z.string().min(1),
       email:    z.string().email(),
       password: z.string().min(4),
-      role:     z.enum(["admin", "staff"]),
+      role:     z.enum(["admin", "staff", "calendar"]),
     }))
     .mutation(async ({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);
@@ -48,7 +48,7 @@ export const adminRouter = createTRPCRouter({
       id:            z.string(),
       name:          z.string().min(1).optional(),
       email:         z.string().email().optional(),
-      role:          z.enum(["admin", "staff"]).optional(),
+      role:          z.enum(["admin", "staff", "calendar"]).optional(),
       priceListType: z.enum(["master", "beginner"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {

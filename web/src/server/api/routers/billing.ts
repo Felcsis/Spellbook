@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
 import type { PrismaClient } from "../../../../generated/prisma";
 import { activeProvider, isConfigured, providerFor } from "~/server/billing-provider";
 import { BillingError, type Line, type PaymentMethod } from "~/server/billing-types";
@@ -46,13 +46,13 @@ function wrap(e: unknown): never {
 
 export const billingRouter = createTRPCRouter({
   /** A UI ebből tudja, hogy a bizonylat-gombokat egyáltalán meg kell-e jeleníteni. */
-  status: protectedProcedure.query(() => ({
+  status: salonProcedure.query(() => ({
     configured: isConfigured(),
     provider:   activeProvider().label,
   })),
 
   /** Egy vendégkártya bizonylatai (nyugta, számla, sztornózott is). */
-  forCard: protectedProcedure
+  forCard: salonProcedure
     .input(z.object({ cardId: z.string() }))
     .query(({ ctx, input }) =>
       ctx.db.receipt.findMany({
@@ -62,7 +62,7 @@ export const billingRouter = createTRPCRouter({
     ),
 
   /** A legutóbbi bizonylatok — az adminban, ellenőrzéshez. */
-  list: protectedProcedure
+  list: salonProcedure
     .input(z.object({ limit: z.number().min(1).max(500).default(100) }).default({ limit: 100 }))
     .query(({ ctx, input }) =>
       ctx.db.receipt.findMany({ orderBy: { issuedAt: "desc" }, take: input.limit })
@@ -72,7 +72,7 @@ export const billingRouter = createTRPCRouter({
    * Nyugta kiállítása egy vendégkártyáról. Ez az alapeset: a vendég nyugtát kap,
    * és a NAV-adatszolgáltatás ezzel megtörtént.
    */
-  issueReceipt: protectedProcedure
+  issueReceipt: salonProcedure
     .input(SourceInput.extend({ payment: z.enum(PAYMENTS) }))
     .mutation(async ({ ctx, input }) => {
       const src      = await resolve(ctx.db, input);
@@ -100,7 +100,7 @@ export const billingRouter = createTRPCRouter({
    * Számla kiállítása — ha a vendég kéri. Ilyenkor a nevét és a címét is
    * rögzíteni kell, ezek nélkül a számla nem állítható ki.
    */
-  issueInvoice: protectedProcedure
+  issueInvoice: salonProcedure
     .input(SourceInput.extend({ payment: z.enum(PAYMENTS), buyer: BuyerInput }))
     .mutation(async ({ ctx, input }) => {
       const src      = await resolve(ctx.db, input);
@@ -129,7 +129,7 @@ export const billingRouter = createTRPCRouter({
     }),
 
   /** Bizonylat sztornózása — a rossz bizonylatot nem törölni, hanem sztornózni kell. */
-  storno: protectedProcedure
+  storno: salonProcedure
     .input(z.object({ id: z.string(), reason: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const receipt = await ctx.db.receipt.findUnique({ where: { id: input.id } });
@@ -151,7 +151,7 @@ export const billingRouter = createTRPCRouter({
     }),
 
   /** Egy nyugta PDF-je base64-ben — a bizonylatot nem tároljuk, onnan kérjük le. */
-  pdf: protectedProcedure
+  pdf: salonProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const receipt = await ctx.db.receipt.findUnique({ where: { id: input.id } });

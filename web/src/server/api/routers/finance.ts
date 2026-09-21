@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
 import { entryWageAmount } from "~/lib/wage";
 
 export const financeRouter = createTRPCRouter({
-  list: protectedProcedure
+  list: salonProcedure
     .input(z.object({ year: z.number(), month: z.number(), filterUserId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const from    = new Date(input.year, input.month - 1, 1);
@@ -44,7 +44,7 @@ export const financeRouter = createTRPCRouter({
       });
     }),
 
-  create: protectedProcedure
+  create: salonProcedure
     .input(z.object({
       type:         z.enum(["revenue", "material", "wage"]),
       description:  z.string().min(1),
@@ -70,7 +70,7 @@ export const financeRouter = createTRPCRouter({
       });
     }),
 
-  updateEntry: protectedProcedure
+  updateEntry: salonProcedure
     .input(z.object({
       id:          z.string(),
       amount:      z.number().positive().optional(),
@@ -88,7 +88,7 @@ export const financeRouter = createTRPCRouter({
       })
     ),
 
-  updateDate: protectedProcedure
+  updateDate: salonProcedure
     .input(z.object({
       entryIds:   z.array(z.string()),
       date:       z.string(),
@@ -100,7 +100,7 @@ export const financeRouter = createTRPCRouter({
       if (input.guestCardId) await ctx.db.guestCard.update({ where: { id: input.guestCardId }, data: { date: d } });
     }),
 
-  yearSummary: protectedProcedure
+  yearSummary: salonProcedure
     .input(z.object({ year: z.number(), filterUserId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const from    = new Date(input.year, 0, 1);
@@ -134,7 +134,7 @@ export const financeRouter = createTRPCRouter({
       return months;
     }),
 
-  perUserYear: protectedProcedure
+  perUserYear: salonProcedure
     .input(z.object({ year: z.number() }))
     .query(async ({ ctx, input }) => {
       if (ctx.session.user.role !== "admin") return [];
@@ -168,7 +168,7 @@ export const financeRouter = createTRPCRouter({
       return Object.values(byUser).sort((a, b) => b.revenue - a.revenue);
     }),
 
-  stats: protectedProcedure
+  stats: salonProcedure
     .input(z.object({ year: z.number() }))
     .query(async ({ ctx, input }) => {
       const isAdmin = ctx.session.user.role === "admin";
@@ -238,7 +238,7 @@ export const financeRouter = createTRPCRouter({
   // Rugalmas időszakos kimutatás: nap / hét / hónap / negyedév / félév / év.
   // Naptárhoz igazított időszak az `anchor` dátum körül, személyenkénti + összesített
   // bontással és idősoros bucketekkel (személyenként) egy stacked charthoz.
-  periodStats: protectedProcedure
+  periodStats: salonProcedure
     .input(z.object({
       granularity: z.enum(["day", "week", "month", "quarter", "half", "year"]),
       anchor: z.string(),
@@ -358,7 +358,7 @@ export const financeRouter = createTRPCRouter({
       };
     }),
 
-  delete: protectedProcedure
+  delete: salonProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const isAdmin = ctx.session.user.role === "admin";

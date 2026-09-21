@@ -101,7 +101,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const [name, setName]       = useState("");
   const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole]       = useState<"admin" | "staff">("staff");
+  const [role, setRole]       = useState<"admin" | "staff" | "calendar">("staff");
   const [err, setErr]         = useState("");
 
   const create = api.admin.createUser.useMutation({
@@ -115,8 +115,9 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
       <Field label="Email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="zsofi@salon-spellbook.local" /></Field>
       <Field label="Jelszó"><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="min. 4 karakter" /></Field>
       <Field label="Szerepkör">
-        <Select value={role} onChange={e => setRole(e.target.value as "admin" | "staff")}>
+        <Select value={role} onChange={e => setRole(e.target.value as "admin" | "staff" | "calendar")}>
           <option value="staff">Staff</option>
+          <option value="calendar">Csak naptár</option>
           <option value="admin">Admin</option>
         </Select>
       </Field>
@@ -139,7 +140,7 @@ function EditUserModal({ user, onClose, onSaved }: {
 }) {
   const [name, setName]   = useState(user.name ?? "");
   const [email, setEmail] = useState(user.email ?? "");
-  const [role, setRole]   = useState<"admin" | "staff">(user.role as "admin" | "staff");
+  const [role, setRole]   = useState<"admin" | "staff" | "calendar">(user.role as "admin" | "staff" | "calendar");
   const [priceList, setPriceList] = useState<"master" | "beginner">((user.priceListType as "master" | "beginner") ?? "beginner");
   const [pw, setPw]       = useState("");
   const [err, setErr]     = useState("");
@@ -152,8 +153,9 @@ function EditUserModal({ user, onClose, onSaved }: {
       <Field label="Név"><Input value={name} onChange={e => setName(e.target.value)} /></Field>
       <Field label="Email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field>
       <Field label="Szerepkör">
-        <Select value={role} onChange={e => setRole(e.target.value as "admin" | "staff")}>
+        <Select value={role} onChange={e => setRole(e.target.value as "admin" | "staff" | "calendar")}>
           <option value="staff">Staff</option>
+          <option value="calendar">Csak naptár</option>
           <option value="admin">Admin</option>
         </Select>
       </Field>
