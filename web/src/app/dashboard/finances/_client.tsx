@@ -121,6 +121,10 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
   // "Kire gondolsz?" — ha nincs vendég kiválasztva, a beírt recept és az
   // esedékesség alapján javaslunk. Csak javaslat: a választás mindig a tiéd.
   const [suggestOff, setSuggestOff] = useState(false);
+  // Korábbi naptári időpontok bejegyzés nélkül. Azért kell, mert a dátum alapból
+  // a mai napra áll: aki másnap reggel pótolja a tegnapi vendégeket, könnyen
+  // a mai napra könyveli őket.
+  const [pendingOff, setPendingOff] = useState(false);
   const [guestId,       setGuestId]       = useState("");
   const [guestOpen,     setGuestOpen]     = useState(false);
   const [showNewGuest,  setShowNewGuest]  = useState(false);
@@ -199,6 +203,12 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     setGuestSearch(name);
     setGuestOpen(false);
   }
+
+  const todayStr = toDateStr(new Date());
+  const { data: unbilled = [] } = api.gcal.unbilled.useQuery(
+    { days: 7 },
+    { enabled: !pendingOff && date === todayStr },
+  );
 
   const filtGuests = guestSearch.trim()
     ? allGuests.filter(g => g.name.toLowerCase().includes(guestSearch.toLowerCase()))
@@ -572,6 +582,45 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
             )}
           </div>
         </div>}
+
+        {unbilled.length > 0 && (
+          <div style={{
+            padding: "0.55rem 0.85rem", borderRadius: 10,
+            background: "rgba(200,168,64,0.10)", border: "1px solid rgba(200,168,64,0.4)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+              <span style={{
+                fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.14em",
+                textTransform: "uppercase", color: "var(--color-teal)",
+              }}>
+                Korábbi időpont bejegyzés nélkül
+              </span>
+              <div style={{ flex: 1 }} />
+              <button type="button" onClick={() => setPendingOff(true)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                elrejt
+              </button>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+              {unbilled.slice(0, 6).map(u => (
+                <button key={`${u.date}-${u.title}`} type="button"
+                  onClick={() => { setDate(u.date); setGuestSearch(u.title); }}
+                  title={`${u.userName} · ${u.date} — kattints, és erre a napra állítjuk a bejegyzést`}
+                  style={{
+                    padding: "0.25rem 0.6rem", borderRadius: 999,
+                    border: "1px solid rgba(200,168,64,0.45)", background: "rgba(200,168,64,0.08)",
+                    color: "var(--color-teal)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem",
+                    cursor: "pointer",
+                  }}>
+                  {new Date(`${u.date}T12:00:00`).toLocaleDateString("hu-HU", { month: "short", day: "numeric" })} · {u.title}
+                </button>
+              ))}
+            </div>
+            <div style={{ marginTop: "0.3rem", fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-dim)", fontStyle: "italic" }}>
+              A dátum most a mai napra áll. Ha ezek egyikét pótolod, kattints rá — átállítjuk a helyes napra.
+            </div>
+          </div>
+        )}
 
         {/* ── Guest ── */}
         <div>

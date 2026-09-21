@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { isConfigured, listCalendars, listEvents, type CalendarEvent } from "~/server/google";
-import { AUTO_MATCH, cleanGuestName, matchServices, nameScore } from "~/server/guest-match";
+import { AUTO_MATCH, SUGGEST_MIN, cleanGuestName, matchServices, nameScore } from "~/server/guest-match";
 
 /**
  * Google Naptár — dolgozónkénti összekötés.
@@ -186,6 +186,59 @@ export const gcalRouter = createTRPCRouter({
         addedServices: svc.matched.map(m => m.name),
         chooseFrom:    svc.ambiguous.map(m => ({ name: m.name, category: m.category, price: m.price })),
       };
+    }),
+
+  /**
+   * Korábbi naptári időpontok, amikhez még nem készült bejegyzés.
+   *
+   * A párosítás NÉV szerint megy, nem a Google-esemény azonosítója alapján: a
+   * kártya csak akkor hordozza az azonosítót, ha a naptárból indították, a
+   * Pénzügyeknél rögzített bejegyzés nem. Azonosító alapján minden kézzel
+   * felvitt vendég hiányzónak látszana.
+   */
+  unbilled: protectedProcedure
+    .input(z.object({ days: z.number().min(1).max(30).default(7) }).default({ days: 7 }))
+    .query(async ({ ctx, input }) => {
+      if (!isConfigured()) return [];
+
+      const isAdmin = ctx.session.user.role === "admin";
+      const users = await ctx.db.user.findMany({
+        where: {
+          active: true, googleRefreshToken: { not: null },
+          ...(isAdmin ? {} : { id: ctx.session.user.id }),
+        },
+        select: { id: true, name: true, googleRefreshToken: true, googleCalendarId: true },
+      });
+      if (!users.length) return [];
+
+      // Csak a lezárt napok érdekesek: a mai nap még alakul.
+      const to = new Date(); to.setHours(0, 0, 0, 0);
+      const from = new Date(to); from.setDate(from.getDate() - input.days);
+
+      const cards = await ctx.db.guestCard.findMany({
+        where:   { date: { gte: from, lt: to } },
+        include: { guest: { select: { name: true } } },
+      });
+
+      const out: { date: string; title: string; userId: string; userName: string }[] = [];
+
+      for (const u of users) {
+        let events;
+        try { events = await listEvents(u, from, to); } catch { continue; }
+
+        for (const e of events) {
+          const day = e.start.slice(0, 10);
+          const sameDay = cards.filter(c => {
+            const d = new Date(c.date);
+            const ds = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+            return ds === day && c.workerId === u.id;
+          });
+          const covered = sameDay.some(c => nameScore(e.title, c.guest.name) >= SUGGEST_MIN);
+          if (!covered) out.push({ date: day, title: e.title, userId: u.id, userName: u.name ?? "?" });
+        }
+      }
+
+      return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12);
     }),
 
   /** Egy időszak időpontjai a naptárból. */
