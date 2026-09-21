@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { isConfigured, listCalendars, listEvents, type CalendarEvent } from "~/server/google";
-import { AUTO_MATCH, SUGGEST_MIN, cleanGuestName, matchServices, nameScore } from "~/server/guest-match";
+import { AUTO_MATCH, SUGGEST_MIN, cleanGuestName, fold, matchServices, nameScore } from "~/server/guest-match";
 
 /**
  * Google Naptár — dolgozónkénti összekötés.
@@ -188,6 +188,39 @@ export const gcalRouter = createTRPCRouter({
       };
     }),
 
+  /** Amit "nem vendég"-ként jelöltek meg. */
+  ignoredTitles: protectedProcedure.query(({ ctx }) =>
+    ctx.db.ignoredEventTitle.findMany({
+      orderBy: { pattern: "asc" },
+      include: { worker: { select: { name: true } } },
+    })
+  ),
+
+  /**
+   * Egy naptárcím megjelölése: ez nem vendég.
+   *
+   * A teljes cím sosem egyezne pontosan ("Bora" vs "Bora 9-17"), ezért az első
+   * két szót vesszük mintának, és részletre illesztünk.
+   */
+  ignoreTitle: protectedProcedure
+    .input(z.object({ title: z.string().min(1), workerId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const pattern  = input.title.trim().split(/\s+/).slice(0, 2).join(" ");
+      const workerId = ctx.session.user.role === "admin"
+        ? (input.workerId ?? null)
+        : ctx.session.user.id;
+
+      const existing = await ctx.db.ignoredEventTitle.findFirst({ where: { pattern, workerId } });
+      return existing ?? ctx.db.ignoredEventTitle.create({ data: { pattern, workerId } });
+    }),
+
+  unignoreTitle: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.ignoredEventTitle.delete({ where: { id: input.id } });
+      return { ok: true };
+    }),
+
   /**
    * Korábbi naptári időpontok, amikhez még nem készült bejegyzés.
    *
@@ -220,6 +253,17 @@ export const gcalRouter = createTRPCRouter({
         include: { guest: { select: { name: true } } },
       });
 
+      // Ami nem vendég: másik munkahely, saját elfoglaltság. Enélkül a másik
+      // munkahely minden napja hiányzó bejegyzésnek látszana.
+      const ignored = await ctx.db.ignoredEventTitle.findMany({
+        select: { pattern: true, workerId: true },
+      });
+      const isIgnored = (title: string, workerId: string) => {
+        const t = fold(title);
+        return ignored.some(i =>
+          (i.workerId === null || i.workerId === workerId) && t.includes(fold(i.pattern)));
+      };
+
       const out: { date: string; title: string; userId: string; userName: string }[] = [];
 
       for (const u of users) {
@@ -233,6 +277,7 @@ export const gcalRouter = createTRPCRouter({
             const ds = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
             return ds === day && c.workerId === u.id;
           });
+          if (isIgnored(e.title, u.id)) continue;
           const covered = sameDay.some(c => nameScore(e.title, c.guest.name) >= SUGGEST_MIN);
           if (!covered) out.push({ date: day, title: e.title, userId: u.id, userName: u.name ?? "?" });
         }

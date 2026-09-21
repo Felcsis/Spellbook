@@ -86,8 +86,9 @@ model User {
   appointments       Appointment[]
   timeOff            TimeOff[]
   bookableWindows    BookableWindow[]
-  expenses           Expense[]         @relation("ExpenseCreatedBy")
-  assignedExpenses   Expense[]         @relation("ExpenseAssignedTo")
+  ignoredEventTitles IgnoredEventTitle[]
+  expenses           Expense[]           @relation("ExpenseCreatedBy")
+  assignedExpenses   Expense[]           @relation("ExpenseAssignedTo")
 
   @@schema("spellbook")
 }
@@ -301,6 +302,22 @@ model BookableWindow {
 
   @@index([date])
   @@index([workerId, date])
+  @@schema("spellbook")
+}
+
+/// Naptárcím, ami nem vendég: másik munkahely, saját elfoglaltság, szünet.
+///
+/// A "korábbi időpont bejegyzés nélkül" figyelmeztetés ezeket kihagyja —
+/// különben a másik munkahely minden napja hiányzó bejegyzésnek látszana.
+/// A `workerId` üresen az egész szalonra vonatkozik.
+model IgnoredEventTitle {
+  id        String   @id @default(cuid())
+  pattern   String // a cím egy részlete, kis/nagybetűre és ékezetre érzéketlenül
+  worker    User?    @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  workerId  String?
+  createdAt DateTime @default(now())
+
+  @@index([workerId])
   @@schema("spellbook")
 }
 

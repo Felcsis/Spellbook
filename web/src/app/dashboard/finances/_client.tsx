@@ -209,6 +209,9 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
     { days: 7 },
     { enabled: !pendingOff && date === todayStr },
   );
+  const ignoreTitle = api.gcal.ignoreTitle.useMutation({
+    onSuccess: () => void utils.gcal.unbilled.invalidate(),
+  });
 
   const filtGuests = guestSearch.trim()
     ? allGuests.filter(g => g.name.toLowerCase().includes(guestSearch.toLowerCase()))
@@ -603,21 +606,35 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
               {unbilled.slice(0, 6).map(u => (
-                <button key={`${u.date}-${u.title}`} type="button"
-                  onClick={() => { setDate(u.date); setGuestSearch(u.title); }}
-                  title={`${u.userName} · ${u.date} — kattints, és erre a napra állítjuk a bejegyzést`}
-                  style={{
-                    padding: "0.25rem 0.6rem", borderRadius: 999,
-                    border: "1px solid rgba(200,168,64,0.45)", background: "rgba(200,168,64,0.08)",
-                    color: "var(--color-teal)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem",
-                    cursor: "pointer",
-                  }}>
-                  {new Date(`${u.date}T12:00:00`).toLocaleDateString("hu-HU", { month: "short", day: "numeric" })} · {u.title}
-                </button>
+                <span key={`${u.date}-${u.title}`} style={{
+                  display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                  padding: "0.25rem 0.5rem 0.25rem 0.6rem", borderRadius: 999,
+                  border: "1px solid rgba(200,168,64,0.45)", background: "rgba(200,168,64,0.08)",
+                }}>
+                  <button type="button"
+                    onClick={() => { setDate(u.date); setGuestSearch(u.title); }}
+                    title={`${u.userName} · ${u.date} — kattints, és erre a napra állítjuk a bejegyzést`}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer", padding: 0,
+                      color: "var(--color-teal)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem",
+                    }}>
+                    {new Date(`${u.date}T12:00:00`).toLocaleDateString("hu-HU", { month: "short", day: "numeric" })} · {u.title}
+                  </button>
+                  <button type="button"
+                    onClick={() => ignoreTitle.mutate({ title: u.title, workerId: u.userId })}
+                    title="Ez nem vendég — többé ne ajánljuk fel"
+                    style={{
+                      background: "none", border: "none", cursor: "pointer", padding: 0,
+                      color: "var(--text-dim)", fontSize: "0.72rem", lineHeight: 1,
+                    }}>
+                    ✕
+                  </button>
+                </span>
               ))}
             </div>
             <div style={{ marginTop: "0.3rem", fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-dim)", fontStyle: "italic" }}>
               A dátum most a mai napra áll. Ha ezek egyikét pótolod, kattints rá — átállítjuk a helyes napra.
+              Ami nem vendég (másik munkahely, saját elfoglaltság), azt a ✕-szel jelöld, és többé nem kérdezzük.
             </div>
           </div>
         )}
