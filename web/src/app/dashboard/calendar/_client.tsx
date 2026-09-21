@@ -1159,6 +1159,16 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
     },
   });
 
+  // A dolgozók színei. Előbb kell előállniuk, mint a rájuk épülő csoportosítások
+  // (Google-időpontok, foglalható sávok) — különben inicializálás előtt hivatkoznánk rájuk.
+  const userColors: Record<string, string> = {};
+  const userDeep:   Record<string, string> = {};
+  users.forEach((u, i) => {
+    const own = WORKER_COLORS[colorKey(u.name)];
+    userColors[u.id] = own?.color ?? USER_COLORS[i % USER_COLORS.length]!;
+    userDeep[u.id]   = own?.deep  ?? USER_DEEP[i % USER_DEEP.length]!;
+  });
+
   const gEvents      = gcalData?.events ?? [];
   // Akinek a naptára nem elérhető (lejárt vagy visszavont hozzáférés) — ezt ki
   // kell írni, különben hetekig észrevétlenül hiányoznának az időpontjai.
@@ -1179,14 +1189,6 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
     const who = t.worker?.name ? `${t.worker.name}: ` : "Szalon: ";
     closedDays[key] = `${who}${t.reason ?? "nem foglalható"}`;
   }
-
-  const userColors: Record<string, string> = {};
-  const userDeep:   Record<string, string> = {};
-  users.forEach((u, i) => {
-    const own = WORKER_COLORS[colorKey(u.name)];
-    userColors[u.id] = own?.color ?? USER_COLORS[i % USER_COLORS.length]!;
-    userDeep[u.id]   = own?.deep  ?? USER_DEEP[i % USER_DEEP.length]!;
-  });
 
   const byWindowDate: Record<string, GridWindow[]> = {};
   for (const w of windows) {
