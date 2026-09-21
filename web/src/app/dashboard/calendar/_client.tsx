@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
 import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { StarfieldBg } from "./_starfield-bg";
-import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent, type GridWindow } from "./_time-grid";
+import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent, type GridRequest, type GridWindow } from "./_time-grid";
 import { BookingModal } from "./_booking-modal";
 import { BookableModal } from "./_bookable-modal";
 import { MiniCalendar } from "./_mini-calendar";
@@ -667,7 +667,7 @@ function glow(revenue: number): number {
 // ── Month view ────────────────────────────────────────────────────────────────
 function MonthView({
   year, month, byDate, byCostDate, byGuestCardDate, byEventDate = {}, byBookingDate = {},
-  closedDays = {}, userColors, today, onOpen, isMobile = false,
+  byRequestDate = {}, closedDays = {}, userColors, today, onOpen, isMobile = false,
   selected = [], onSelect,
 }: {
   year: number; month: number;
@@ -675,6 +675,7 @@ function MonthView({
   byGuestCardDate: Record<string, GuestCard[]>;
   byEventDate?: Record<string, GEvent[]>;
   byBookingDate?: Record<string, GridBooking[]>;
+  byRequestDate?: Record<string, GridRequest[]>;
   /** Nap → miért nem foglalható (szabadság, zárva). */
   closedDays?: Record<string, string>;
   userColors: Record<string, string>; today: string;
@@ -772,6 +773,10 @@ function MonthView({
             ...events.map(ev => ({
               key: `e-${ev.id}`, color: ev.color,
               title: `${ev.userName} · ${new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })} · ${ev.title}`,
+            })),
+            ...(byRequestDate[key] ?? []).map(r => ({
+              key: `q-${r.id}`, color: "#c8a840",
+              title: `Kérés · ${new Date(r.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })} · ${r.guestName}`,
             })),
             ...gCards.map(c => ({ key: `c-${c.id}`, color: "#c09898", title: `♦ ${c.guest.name}` })),
             ...cEntries.map(e => ({
@@ -1110,6 +1115,26 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   const { data: windows = [] } = api.bookable.list.useQuery({
     from: gFrom.toISOString(), to: gTo.toISOString(),
   });
+
+  // A nyilvános foglalóból érkezett, elbírálásra váró kérések. Ott jelennek meg,
+  // ahova szólnak, hogy lásd mellettük, mi van aznap.
+  const { data: requests = [] } = api.bookings.pending.useQuery({
+    from: gFrom.toISOString(), to: gTo.toISOString(),
+  });
+  const [reqNote, setReqNote] = useState<string | null>(null);
+  const refreshRequests = () => {
+    void utils.bookings.pending.invalidate();
+    void utils.appointments.list.invalidate();
+    void utils.gcal.events.invalidate();
+  };
+  const acceptRequest = api.bookings.accept.useMutation({
+    onSuccess: () => { setReqNote("Elfogadva — az időpont bekerült a naptárba, a vendég értesítést kapott."); refreshRequests(); },
+    onError:   e => setReqNote(e.message),
+  });
+  const declineRequest = api.bookings.decline.useMutation({
+    onSuccess: () => { setReqNote("Elutasítva — a vendég értesítést kapott, a sáv felszabadult."); refreshRequests(); },
+    onError:   e => setReqNote(e.message),
+  });
   const [markMode,    setMarkMode]    = useState(false);
   const [bookableForm, setBookableForm] = useState(false);
 
@@ -1198,6 +1223,16 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       id: w.id, start: w.startTime, end: w.endTime,
       workerName: w.worker.name ?? "?",
       color: userDeep[w.workerId] ?? "#527666",
+    });
+  }
+
+  const byRequestDate: Record<string, GridRequest[]> = {};
+  for (const r of requests) {
+    const start = new Date(r.startsAt);
+    (byRequestDate[toDateStr(start)] ??= []).push({
+      id: r.id, guestName: r.name, service: r.service, phone: r.phone,
+      start: start.toISOString(), end: new Date(r.endsAt).toISOString(),
+      workerName: r.worker.name ?? "?",
     });
   }
 
@@ -1337,6 +1372,17 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           ))}
         </div>
 
+        {requests.length > 0 && (
+          <span title="Elbírálásra váró foglalási kérés" style={{
+            padding: "0.42rem 0.9rem", borderRadius: 8,
+            border: "1px solid rgba(200,168,64,0.6)", background: "rgba(200,168,64,0.14)",
+            color: "#8a6a20", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem",
+            letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap",
+          }}>
+            ✦ {requests.length} kérés vár
+          </span>
+        )}
+
         <button onClick={() => setMarkMode(m => !m)}
           title="Húzással jelöld ki, mennyit adsz ki online foglalásra"
           style={{
@@ -1402,7 +1448,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       {view === "month" && (
         <MonthView year={qYear} month={qMonth} byDate={byDate} byCostDate={byCostDate}
           byGuestCardDate={byGuestCardDate} byEventDate={byEventDate}
-          byBookingDate={byBookingDate} closedDays={closedDays}
+          byBookingDate={byBookingDate} byRequestDate={byRequestDate} closedDays={closedDays}
           userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile}
           selected={selectedDays} onSelect={setSelectedDays} />
       )}
@@ -1445,6 +1491,19 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           workers={activeUsers.map(u => ({ id: u.id, name: u.name }))}
           defaultWorkerId={currentUserId || activeUsers[0]?.id || ""}
           onClose={() => setBookableForm(false)} />
+      )}
+
+      {reqNote && (
+        <div style={{
+          marginBottom: "0.75rem", padding: "0.6rem 0.9rem", borderRadius: 10,
+          background: "rgba(200,168,64,0.12)", border: "1px solid rgba(200,168,64,0.45)",
+          fontFamily: "var(--font-cormorant)", fontSize: "0.94rem", color: "var(--color-teal)",
+          display: "flex", alignItems: "center", gap: "0.6rem",
+        }}>
+          {reqNote}
+          <button onClick={() => setReqNote(null)}
+            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", fontSize: "0.8rem" }}>✕</button>
+        </div>
       )}
 
       {dragNote && (
@@ -1539,6 +1598,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
             sub:   String(date.getDate()),
             events: evs,
             bookings: byBookingDate[ds] ?? [],
+            requests: byRequestDate[ds] ?? [],
             windows:  byWindowDate[ds] ?? [],
             bands,
             allDay: [
@@ -1558,7 +1618,10 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
 
         const allEvents   = gridDays.flatMap(d => d.events);
         const allBands    = gridDays.flatMap(d => d.bands);
-        const allBookings = gridDays.flatMap(d => d.bookings);
+        const allBookings = [
+          ...gridDays.flatMap(d => d.bookings),
+          ...gridDays.flatMap(d => d.requests),
+        ];
         // Heti nézetben a szalon teljes napja látszik (7–21), hogy ne ugráljon a
         // rács magassága naponként. Ha valami kilóg, a sáv ennél csak bővül.
         const [fromHour, toHour] = hourRange(
@@ -1650,6 +1713,13 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                 onOpenCard={ev => openCardFromEvent(ev)}
                 onNewBooking={date => setBooking({ date })}
                 markMode={markMode}
+                onAcceptRequest={r => { setReqNote(null); acceptRequest.mutate({ id: r.id }); }}
+                onDeclineRequest={r => {
+                  if (confirm(`Elutasítod ${r.guestName} kérését?`)) {
+                    setReqNote(null);
+                    declineRequest.mutate({ id: r.id });
+                  }
+                }}
                 onRemoveWindow={w => removeWindow.mutate({ id: w.id })}
                 onSelectRange={(date, fromMin, toMin) => {
                   const hhmm = (m: number) =>

@@ -63,7 +63,7 @@ function eventOf(a: { guestName: string; services: string | null; notes: string 
 }
 
 /** Kiküldés a Google Naptárba. Hiba esetén az előjegyzés akkor is megmarad. */
-async function pushToGoogle(db: PrismaClient, id: string): Promise<void> {
+export async function pushToGoogle(db: PrismaClient, id: string): Promise<void> {
   if (!gcalConfigured()) return;
   try {
     const a = await db.appointment.findUnique({

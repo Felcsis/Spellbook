@@ -44,6 +44,20 @@ export type GridBooking = {
   color:     string;
 };
 
+/**
+ * Elbírálásra váró foglalási kérés a nyilvános foglalóból.
+ * Ott jelenik meg, ahova szólna — így látszik mellette, mi van aznap.
+ */
+export type GridRequest = {
+  id:        string;
+  guestName: string;
+  service:   string;
+  phone:     string;
+  start:     string;
+  end:       string;
+  workerName: string;
+};
+
 /** Online foglalásra kiadott idősáv. */
 export type GridWindow = {
   id:    string;
@@ -138,7 +152,7 @@ function layout<T extends { start: string; end: string }>(events: T[]): Placed<T
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, markMode = false, onRemoveWindow, showAllDay = true }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, markMode = false, onRemoveWindow, onAcceptRequest, onDeclineRequest, showAllDay = true }: {
   days: {
     date:     Date;
     label:    string;
@@ -146,6 +160,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
     isToday:  boolean;
     events:   GridEvent[];
     bookings: GridBooking[];
+    requests: GridRequest[];
     windows:  GridWindow[];
     bands:    GridBand[];
     allDay:   { id: string; text: string; color: string }[];
@@ -168,6 +183,8 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   /** "Kiadás" mód: a húzás foglalható sávot jelöl, nem időpontot nyit. */
   markMode?: boolean;
   onRemoveWindow?: (w: GridWindow) => void;
+  onAcceptRequest?:  (r: GridRequest) => void;
+  onDeclineRequest?: (r: GridRequest) => void;
 }) {
   // Az aktuális idő sávja. Csak a böngészőben állítjuk be (a szerveren nincs
   // "most"), különben a kiszolgált és a megjelenített oldal eltérne.
@@ -536,6 +553,47 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                 );
               })}
 
+              {/* Elbírálásra váró kérések */}
+              {layout(d.requests).map(({ ev: r, col, cols }) => {
+                const s0 = minutesOfIso(r.start);
+                const e0 = Math.max(minutesOfIso(r.end), s0 + 30);
+                const w0 = 100 / cols;
+                return (
+                  <div key={r.id} title={`${r.guestName} · ${r.phone} — ${r.service} (${r.workerName})`}
+                    style={{
+                      position: "absolute", top: top(s0), height: ((e0 - s0) / 60) * PX_PER_HOUR - 2,
+                      left: `calc(${col * w0}% + 3px)`, width: `calc(${w0}% - 6px)`,
+                      background: "repeating-linear-gradient(135deg, rgba(200,168,64,0.28) 0 7px, rgba(200,168,64,0.12) 7px 14px)",
+                      border: "2px dashed #c8a840", borderRadius: 7,
+                      padding: "0.15rem 0.35rem", overflow: "hidden", zIndex: 11,
+                      boxShadow: "0 0 12px rgba(200,168,64,0.35)",
+                    }}>
+                    <div style={{
+                      fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em",
+                      textTransform: "uppercase", color: "#8a6a20",
+                    }}>
+                      Kérés · {fmtTime(r.start)}
+                    </div>
+                    <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.86rem", color: "var(--text-primary)", lineHeight: 1.15 }}>
+                      {r.guestName}
+                    </div>
+                    <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.72rem", color: "var(--text-soft)", lineHeight: 1.1 }}>
+                      {r.service}
+                    </div>
+                    <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.15rem" }}>
+                      {onAcceptRequest && (
+                        <button onClick={ev => { ev.stopPropagation(); onAcceptRequest(r); }}
+                          title="Elfogadom" style={reqBtn("#527666")}>✓ Elfogad</button>
+                      )}
+                      {onDeclineRequest && (
+                        <button onClick={ev => { ev.stopPropagation(); onDeclineRequest(r); }}
+                          title="Elutasítom" style={reqBtn("#c47878")}>✕</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
               {/* Időpontok */}
               {placed.map(({ ev, col, cols }) => {
                 const s = minutesOfIso(ev.start);
@@ -573,6 +631,16 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
       </div>
     </div>
   );
+}
+
+/** Gomb a kérés-kártyán. */
+function reqBtn(color: string): React.CSSProperties {
+  return {
+    background: "none", border: `1px solid ${color}`, borderRadius: 5,
+    cursor: "pointer", color, padding: "0.05rem 0.3rem",
+    fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.06em",
+    textTransform: "uppercase", lineHeight: 1.4,
+  };
 }
 
 /** Apró művelet-gomb egy előjegyzés-kártyán. */

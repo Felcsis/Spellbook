@@ -14,6 +14,7 @@ import { appointmentsRouter } from "~/server/api/routers/appointments";
 import { timeOffRouter } from "~/server/api/routers/timeoff";
 import { bookableRouter } from "~/server/api/routers/bookable";
 import { emailRouter } from "~/server/api/routers/email";
+import { bookingsRouter } from "~/server/api/routers/bookings";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -33,6 +34,7 @@ export const appRouter = createTRPCRouter({
   timeOff: timeOffRouter,
   bookable: bookableRouter,
   email: emailRouter,
+  bookings: bookingsRouter,
 });
 
 export type AppRouter = typeof appRouter;
