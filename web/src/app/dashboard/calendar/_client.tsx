@@ -945,6 +945,13 @@ function GooglePanel() {
     onSuccess: () => { void utils.gcal.status.invalidate(); void utils.gcal.events.invalidate(); },
   });
 
+  // Melyik naptárat szinkronizáljuk. Aki nem az alapértelmezettbe veszi fel az
+  // időpontjait, annál e nélkül üresnek tűnik a szinkron.
+  const cals = api.gcal.calendars.useQuery(undefined, { enabled: status.data?.connected === true });
+  const setCalendar = api.gcal.setCalendar.useMutation({
+    onSuccess: () => { void utils.gcal.calendars.invalidate(); void utils.gcal.events.invalidate(); },
+  });
+
   // A visszatérés állapotát az URL hozza — elolvassuk, majd kitakarítjuk a címsort.
   useEffect(() => {
     const p = new URLSearchParams(window.location.search).get("google");
@@ -985,6 +992,46 @@ function GooglePanel() {
           </a>
         </>
       )}
+      {connected && (cals.data?.calendars.length ?? 0) > 0 && (
+        <div style={{ flexBasis: "100%", display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.15rem" }}>
+          <span style={{
+            fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", letterSpacing: "0.12em",
+            textTransform: "uppercase", color: "var(--text-dim)",
+          }}>
+            Melyik naptár
+          </span>
+          <select
+            value={cals.data?.selected ?? ""}
+            onChange={e => setCalendar.mutate({ calendarId: e.target.value || null })}
+            style={{
+              padding: "0.25rem 0.5rem", borderRadius: 7,
+              background: "var(--bg-input)", border: "1px solid var(--border)",
+              color: "var(--text-primary)", fontFamily: "var(--font-cormorant)", fontSize: "0.88rem",
+              outline: "none", maxWidth: 260,
+            }}>
+            <option value="">Alapértelmezett</option>
+            {cals.data?.calendars.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.name}{c.primary ? " (alapértelmezett)" : ""}{c.writable ? "" : " — csak olvasható"}
+              </option>
+            ))}
+          </select>
+          {setCalendar.isPending && (
+            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-dim)" }}>mentés…</span>
+          )}
+        </div>
+      )}
+
+      {connected && cals.data?.error && (
+        <span style={{
+          flexBasis: "100%", fontFamily: "var(--font-cormorant)", fontSize: "0.86rem",
+          color: "var(--text-dim)", fontStyle: "italic",
+        }}>
+          A naptárlista nem kérhető le a mostani hozzáféréssel. Kösd össze újra
+          (Kapcsolat bontása, majd Összekötés), és utána választhatsz naptárat.
+        </span>
+      )}
+
       {msg && (
         <span style={{ flexBasis: "100%", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: msg.startsWith("✓") ? "#527666" : "#c47878" }}>
           {msg}

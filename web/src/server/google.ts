@@ -19,6 +19,9 @@ import { env } from "~/env";
  */
 const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
+  // Enélkül nem tudjuk kilistázni, milyen naptárai vannak — márpedig aki nem az
+  // alapértelmezettbe veszi fel az időpontjait, annál üresnek tűnne a szinkron.
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
 ];
 
@@ -167,6 +170,33 @@ export async function upsertEvent(user: GoogleUser, ev: {
   }
   const res = await api.events.insert({ calendarId, requestBody: body });
   return res.data.id ?? null;
+}
+
+export type CalendarChoice = {
+  id:      string;
+  name:    string;
+  primary: boolean;
+  /** Írhatunk-e bele — a csak olvasható naptárba nem tudjuk kiküldeni a munkaidőt. */
+  writable: boolean;
+};
+
+/** A dolgozó naptárai, hogy ki tudja választani, melyiket szinkronizáljuk. */
+export async function listCalendars(user: GoogleUser): Promise<CalendarChoice[]> {
+  if (!user.googleRefreshToken)
+    throw new GoogleError("Ez a dolgozó nincs összekötve a Google Naptárral.");
+  const client = oauth();
+  client.setCredentials({ refresh_token: user.googleRefreshToken });
+
+  const res = await google.calendar({ version: "v3", auth: client }).calendarList.list({ maxResults: 100 });
+  return (res.data.items ?? [])
+    .filter(c => c.id)
+    .map(c => ({
+      id:       c.id!,
+      name:     c.summary ?? c.id!,
+      primary:  Boolean(c.primary),
+      writable: c.accessRole === "owner" || c.accessRole === "writer",
+    }))
+    .sort((a, b) => Number(b.primary) - Number(a.primary) || a.name.localeCompare(b.name, "hu"));
 }
 
 /** Esemény törlése — a már törölt eseményt nem tekintjük hibának. */

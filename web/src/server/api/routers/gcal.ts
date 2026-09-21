@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { isConfigured, listEvents, type CalendarEvent } from "~/server/google";
+import { isConfigured, listCalendars, listEvents, type CalendarEvent } from "~/server/google";
 import { AUTO_MATCH, cleanGuestName, matchServices, nameScore } from "~/server/guest-match";
 
 /**
@@ -32,6 +32,38 @@ export const gcalRouter = createTRPCRouter({
       connectedAt: me?.googleConnectedAt ?? null,
     };
   }),
+
+  /**
+   * A bejelentkezett dolgozó naptárai. Aki nem az alapértelmezettbe veszi fel az
+   * időpontjait, itt tudja kiválasztani a sajátját.
+   */
+  calendars: protectedProcedure.query(async ({ ctx }) => {
+    const me = await ctx.db.user.findUnique({
+      where:  { id: ctx.session.user.id },
+      select: { id: true, googleRefreshToken: true, googleCalendarId: true },
+    });
+    if (!me?.googleRefreshToken) return { calendars: [], selected: null, error: null };
+    try {
+      return { calendars: await listCalendars(me), selected: me.googleCalendarId, error: null };
+    } catch (e) {
+      // Régi összekötésnél még nincs meg a listázási jog — ezt meg kell mondani.
+      return {
+        calendars: [], selected: me.googleCalendarId,
+        error: e instanceof Error ? e.message : "Nem sikerült lekérni a naptárakat.",
+      };
+    }
+  }),
+
+  /** Melyik naptárat szinkronizáljuk. Üres = az alapértelmezett. */
+  setCalendar: protectedProcedure
+    .input(z.object({ calendarId: z.string().nullable() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data:  { googleCalendarId: input.calendarId },
+      });
+      return { ok: true };
+    }),
 
   /** Ki van összekötve a szalonban — az adminnak, hogy lássa a lefedettséget. */
   connections: protectedProcedure.query(async ({ ctx }) => {
