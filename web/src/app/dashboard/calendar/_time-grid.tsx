@@ -25,6 +25,8 @@ export type GridEvent = {
   // készül, ezért az eseménnyel együtt kell utaznia.
   userId:   string;
   userName: string;
+  /** A dolgozó színe — így egy pillantásból látszik, kinek az időpontja. */
+  color:    string;
 };
 
 /**
@@ -539,24 +541,24 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                 const w = 100 / cols;
                 return (
                   <div key={ev.id} onClick={() => !ev.cardId && onOpenCard(ev, d.date)}
-                    title={`${ev.title} — ${fmtTime(ev.start)}`}
+                    title={`${ev.userName} · ${ev.title} — ${fmtTime(ev.start)}`}
                     style={{
                       position: "absolute", top: top(s), height: ((e - s) / 60) * PX_PER_HOUR - 2,
                       left: `calc(${col * w}% + 3px)`, width: `calc(${w}% - 6px)`,
-                      background: "linear-gradient(150deg, rgba(106,143,176,0.30), rgba(106,143,176,0.14))",
-                      border: "1px solid rgba(106,143,176,0.55)",
+                      background: `linear-gradient(150deg, ${ev.color}4d, ${ev.color}22)`,
+                      border: `1px solid ${ev.color}8c`,
                       borderRadius: 7, padding: "0.15rem 0.35rem", overflow: "hidden",
                       cursor: ev.cardId ? "default" : "pointer",
-                      boxShadow: "0 0 10px rgba(106,143,176,0.18)",
+                      boxShadow: `0 0 10px ${ev.color}2e`,
                     }}>
-                    <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.58rem", color: "#6a8fb0", opacity: 0.9 }}>
+                    <div style={{ fontFamily: "var(--font-playfair)", fontSize: "0.58rem", color: ev.color, opacity: 0.95 }}>
                       {fmtTime(ev.start)}
                     </div>
                     <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-primary)", lineHeight: 1.15 }}>
                       {ev.cardId ? "♦ " : ""}{ev.title}
                     </div>
                     {!ev.cardId && (
-                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#6a8fb0", marginTop: "0.1rem" }}>
+                      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: ev.color, marginTop: "0.1rem" }}>
                         + KÁRTYA
                       </div>
                     )}

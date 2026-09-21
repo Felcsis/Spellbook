@@ -30,6 +30,8 @@ type View = "month" | "week" | "3day" | "day" | "year";
 type GEvent = {
   id: string; title: string; start: string; end: string; allDay: boolean;
   userId: string; userName: string; cardId: string | null;
+  /** A dolgozó színe — a Google-időpontok is az ő színükben jelennek meg. */
+  color: string;
 };
 type CostType = keyof typeof COST_CONFIG;
 
@@ -749,8 +751,8 @@ function MonthView({
               title: `${new Date(b.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })} · ${b.guestName}`,
             })),
             ...events.map(ev => ({
-              key: `e-${ev.id}`, color: "#6a8fb0",
-              title: `${new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })} · ${ev.title}`,
+              key: `e-${ev.id}`, color: ev.color,
+              title: `${ev.userName} · ${new Date(ev.start).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })} · ${ev.title}`,
             })),
             ...gCards.map(c => ({ key: `c-${c.id}`, color: "#c09898", title: `♦ ${c.guest.name}` })),
             ...cEntries.map(e => ({
@@ -1143,7 +1145,11 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   const gcalFailed    = gcalData?.failed ?? [];
 
   const byEventDate: Record<string, GEvent[]> = {};
-  gEvents.forEach(e => { (byEventDate[e.start.slice(0, 10)] ??= []).push(e as GEvent); });
+  gEvents.forEach(e => {
+    (byEventDate[e.start.slice(0, 10)] ??= []).push({
+      ...e, color: userColors[e.userId] ?? "#6a8fb0",
+    });
+  });
 
   // Nap → miért nem foglalható. Az egész szalonra szóló és a személyes is ide kerül.
   const closedDays: Record<string, string> = {};
