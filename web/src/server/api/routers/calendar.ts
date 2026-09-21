@@ -8,7 +8,15 @@ export const calendarRouter = createTRPCRouter({
     if (ctx.session.user.role === "admin") {
       // Csak aktív dolgozók: az archiváltak (pl. kilépett) sehol nem jelennek meg
       // a pickerekben / összesítőkben / szűrőkben. A múltbeli adataik data-alapon maradnak.
-      return ctx.db.user.findMany({ where: { active: true }, select: { id: true, name: true, active: true, priceListType: true }, orderBy: { name: "asc" } });
+      //
+      // A "csak naptár" szerepkörű sem: ő a saját időpontjait vezeti, a szalon
+      // könyvelésének nem része. Enélkül megjelent a pénzügyi dolgozóválasztóban
+      // és az összesítőkben is, végig nulla forinttal.
+      return ctx.db.user.findMany({
+        where:   { active: true, role: { not: "calendar" } },
+        select:  { id: true, name: true, active: true, priceListType: true },
+        orderBy: { name: "asc" },
+      });
     }
     return ctx.db.user.findMany({
       where:   { id: ctx.session.user.id },
