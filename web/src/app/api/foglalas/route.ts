@@ -10,7 +10,7 @@
  */
 import { randomBytes } from "crypto";
 import { db } from "~/server/db";
-import { bookingOpen, closedResponse, corsHeaders, freeDays, json, appUrl, parts, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
+import { bookingOpen, closedResponse, corsHeaders, freeDays, fromSalonLocal, json, appUrl, parts, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
 import { isConfigured, send } from "~/server/email";
 import { verifyEmail } from "~/server/email-templates";
 
@@ -62,7 +62,9 @@ export async function POST(req: Request) {
   if (!body.dolgozo || !body.szolgaltatas || !body.kezdes)
     return json({ error: "Hiányzik a dolgozó, a szolgáltatás vagy az időpont." }, origin, 400);
 
-  const start = new Date(body.kezdes);
+  // Zóna nélküli "YYYY-MM-DDTHH:MM" = szalonidő. Teljes ISO-t (Z vagy +02:00)
+  // is elfogadunk, azt a küldő már egyértelművé tette.
+  const start = fromSalonLocal(body.kezdes) ?? new Date(body.kezdes);
   if (isNaN(start.getTime())) return json({ error: "Hibás időpont." }, origin, 400);
 
   const earliest = new Date(Date.now() + LEAD_HOURS * 3600_000);

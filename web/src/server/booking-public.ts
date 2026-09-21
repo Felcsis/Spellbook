@@ -49,6 +49,36 @@ export function closedResponse(origin: string | null): Response {
   );
 }
 
+/**
+ * "2026-09-30T10:30" → az a pillanat, amikor Szegeden 10:30 van.
+ *
+ * A böngészőből kapott időpontot NEM bízhatjuk a `new Date()`-re: zóna nélküli
+ * szövegnél az a szerver zónáját veszi, az pedig UTC — így a 10:30-ból 12:30
+ * lenne. A vendég böngészője sem jó alap: külföldről nézve más zónában jár.
+ * A szalon ideje a mérvadó, mert a vendég ide jön be.
+ */
+export function fromSalonLocal(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const [, y, mo, d, h, mi] = m.map(Number) as unknown as number[];
+
+  const offsetAt = (t: number) => {
+    const name = new Intl.DateTimeFormat("en-US", { timeZone: TZ, timeZoneName: "longOffset" })
+      .formatToParts(new Date(t)).find(p => p.type === "timeZoneName")?.value ?? "GMT+00:00";
+    const om = /GMT([+-])(\d{2}):(\d{2})/.exec(name);
+    if (!om) return 0;
+    const sign = om[1] === "-" ? -1 : 1;
+    return sign * (Number(om[2]) * 60 + Number(om[3])) * 60_000;
+  };
+
+  const naive = Date.UTC(y!, mo! - 1, d!, h!, mi!);
+  // Kétszer: az óraátállítás napján az első becslés még a régi eltolást kapná.
+  let t = naive - offsetAt(naive);
+  t = naive - offsetAt(t);
+  const out = new Date(t);
+  return isNaN(out.getTime()) ? null : out;
+}
+
 export function json(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
