@@ -419,14 +419,18 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                       background: `repeating-linear-gradient(135deg, ${w.color}33 0 6px, transparent 6px 12px)`,
                       borderTop: `1px solid ${w.color}99`,
                       borderBottom: `1px solid ${w.color}99`,
-                      pointerEvents: markMode ? "auto" : "none",
+                      // A sáv háttérdísz: sosem nyelheti el a kattintást, különben
+                      // a fölötte lévő kérés- és időpontkártyák gombjai elérhetetlenek.
+                      pointerEvents: "none",
+                      zIndex: 1,
                     }}>
                     {markMode && onRemoveWindow && (
                       <button onClick={ev => { ev.stopPropagation(); onRemoveWindow(w); }}
                         title="Sáv levétele"
                         style={{
                           position: "absolute", top: 1, right: 2, background: "none", border: "none",
-                          cursor: "pointer", color: w.color, fontSize: "0.62rem", lineHeight: 1, padding: 0,
+                          cursor: "pointer", color: w.color, fontSize: "0.7rem", lineHeight: 1, padding: "0 .15rem",
+                          pointerEvents: "auto",
                         }}>✕</button>
                     )}
                   </div>
@@ -444,6 +448,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                     top: top(s), height: ((e - s) / 60) * PX_PER_HOUR,
                     background: `linear-gradient(180deg, ${b.color}22, ${b.color}0c)`,
                     borderLeft: `2px solid ${b.color}80`, borderRadius: 4,
+                    pointerEvents: "none", zIndex: 1,
                   }} />
                 );
               })}
@@ -565,8 +570,9 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                       left: `calc(${col * w0}% + 3px)`, width: `calc(${w0}% - 6px)`,
                       background: "repeating-linear-gradient(135deg, rgba(200,168,64,0.28) 0 7px, rgba(200,168,64,0.12) 7px 14px)",
                       border: "2px dashed #c8a840", borderRadius: 7,
-                      padding: "0.15rem 0.35rem", overflow: "hidden", zIndex: 11,
+                      padding: "0.15rem 0.35rem", overflow: "hidden", zIndex: 14,
                       boxShadow: "0 0 12px rgba(200,168,64,0.35)",
+                      pointerEvents: "auto", cursor: "default",
                     }}>
                     <div style={{
                       fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em",
@@ -636,8 +642,9 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
 /** Gomb a kérés-kártyán. */
 function reqBtn(color: string): React.CSSProperties {
   return {
-    background: "none", border: `1px solid ${color}`, borderRadius: 5,
-    cursor: "pointer", color, padding: "0.05rem 0.3rem",
+    background: "var(--bg-card)", border: `1px solid ${color}`, borderRadius: 5,
+    cursor: "pointer", color, padding: "0.12rem 0.4rem",
+    pointerEvents: "auto",
     fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.06em",
     textTransform: "uppercase", lineHeight: 1.4,
   };
