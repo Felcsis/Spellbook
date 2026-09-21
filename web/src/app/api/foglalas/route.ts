@@ -10,7 +10,7 @@
  */
 import { randomBytes } from "crypto";
 import { db } from "~/server/db";
-import { corsHeaders, freeDays, json, appUrl, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
+import { corsHeaders, freeDays, json, appUrl, parts, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
 import { isConfigured, send } from "~/server/email";
 import { verifyEmail } from "~/server/email-templates";
 
@@ -88,8 +88,10 @@ export async function POST(req: Request) {
 
   // A szabad időpontot a szerver dönti el, nem a böngészőből kapott adat: a
   // listázás óta eltelt percekben más is elfoglalhatta a sávot.
-  const dayKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
-  const hhmm   = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+  // A nap és az óra a SZALON idejében — a szerver UTC-ben fut, ott a 11:30-as
+  // kérés 09:30-nak látszana, és sosem találnánk meg a szabad sávok között.
+  const { date: dayKey, minutes: startMin } = parts(start);
+  const hhmm = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")}`;
   const days   = await freeDays({ workerId: worker.id, minutes: service.duration, from: start, days: 1 });
   const free   = days.find(d => d.date === dayKey)?.slots ?? [];
   if (!free.includes(hhmm))

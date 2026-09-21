@@ -66,7 +66,7 @@ const TZ = "Europe/Budapest";
  * ("09:00"). Ha a Google-események óráját `getHours()`-szal olvasnánk, egy
  * 14:30-as vendég 12:30-nak látszana, és a délutánt tévesen foglaltnak vennénk.
  */
-const parts = (d: Date) => {
+export const parts = (d: Date) => {
   const p = new Intl.DateTimeFormat("en-CA", {
     timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", hour12: false,
@@ -104,9 +104,10 @@ export async function freeDays(opts: {
   // A `date` oszlop naptári nap (DATE), ezért a határokat is UTC-éjfélre tesszük.
   // Helyi idejű határral az adatbázis a naphoz kerekít, és a tartomány utolsó
   // napja csendben kiesik — pont az, amelyikre a vendég foglalni akar.
-  const first = new Date(Date.UTC(
-    opts.from.getFullYear(), opts.from.getMonth(), opts.from.getDate(),
-  ));
+  // A keresés kezdőnapja a szalon ideje szerint — UTC-ben futó szerveren a
+  // késő esti időpont különben az előző napra esne.
+  const [y, m, d] = parts(opts.from).date.split("-").map(Number);
+  const first = new Date(Date.UTC(y!, m! - 1, d!));
   const last = new Date(first);
   last.setUTCDate(last.getUTCDate() + opts.days);
 
