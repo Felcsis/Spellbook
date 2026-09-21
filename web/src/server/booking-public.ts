@@ -57,11 +57,33 @@ export const HORIZON_DAYS = 60;
 /** Ráhagyás két vendég között. */
 export const BUFFER_MIN   = 10;
 
+const TZ = "Europe/Budapest";
+
+/**
+ * Dátum és óra a szalon időzónájában.
+ *
+ * A szerver UTC-ben fut, a kiadott sávok viszont helyi időben vannak megadva
+ * ("09:00"). Ha a Google-események óráját `getHours()`-szal olvasnánk, egy
+ * 14:30-as vendég 12:30-nak látszana, és a délutánt tévesen foglaltnak vennénk.
+ */
+const parts = (d: Date) => {
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => p.find(x => x.type === t)?.value ?? "00";
+  return {
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    minutes: Number(get("hour")) * 60 + Number(get("minute")),
+  };
+};
+
+/** A @db.Date mezők UTC éjfélt tárolnak — ott az UTC olvasat a helyes. */
 const dayKey = (d: Date) =>
   `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 
-const localKey = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** Időbélyegből a szalon szerinti nap. */
+const localKey = (d: Date) => parts(d).date;
 
 export type FreeDay = { date: string; slots: string[] };
 
@@ -154,10 +176,13 @@ export async function freeDays(opts: {
     ];
     return all
       .filter(b => localKey(b.start) === key)
-      .map(b => ({
-        startMin: b.start.getHours() * 60 + b.start.getMinutes(),
-        endMin:   b.end.getHours() * 60 + b.end.getMinutes(),
-      }));
+      .map(b => {
+        const from = parts(b.start).minutes;
+        // Ha átnyúlik éjfélen, a nap végéig foglaljuk.
+        const raw  = parts(b.end);
+        const to   = raw.date === key ? raw.minutes : 24 * 60;
+        return { startMin: from, endMin: Math.max(to, from + 1) };
+      });
   };
 
   const earliest = new Date(Date.now() + LEAD_HOURS * 3600_000);
@@ -168,11 +193,9 @@ export async function freeDays(opts: {
       minutes: opts.minutes, step: 15, buffer: BUFFER_MIN,
     });
 
-    const usable = slots.filter(min => {
-      const at = new Date(`${key}T00:00:00`);
-      at.setMinutes(min);
-      return at >= earliest;
-    });
+    // A legkorábbi foglalható időpont: a szalon ideje szerint számolva.
+    const usable = slots.filter(min => parts(earliest).date < key
+      || (parts(earliest).date === key && min >= parts(earliest).minutes));
 
     if (usable.length) {
       out.push({
