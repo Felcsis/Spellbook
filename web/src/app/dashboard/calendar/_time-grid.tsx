@@ -50,6 +50,8 @@ export type GridWindow = {
   start: string;   // "HH:MM"
   end:   string;
   workerName: string;
+  /** A dolgozó sötétebb színe — így látszik, kinek a kiadott ideje. */
+  color: string;
 };
 
 /** Egy munkaidő-sáv: érkezés–távozás, a dolgozó színével. */
@@ -397,9 +399,9 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                     style={{
                       position: "absolute", left: 0, right: 0,
                       top: top(a0), height: ((b0 - a0) / 60) * PX_PER_HOUR,
-                      background: "repeating-linear-gradient(135deg, rgba(82,118,102,0.16) 0 6px, transparent 6px 12px)",
-                      borderTop: "1px solid rgba(82,118,102,0.45)",
-                      borderBottom: "1px solid rgba(82,118,102,0.45)",
+                      background: `repeating-linear-gradient(135deg, ${w.color}33 0 6px, transparent 6px 12px)`,
+                      borderTop: `1px solid ${w.color}99`,
+                      borderBottom: `1px solid ${w.color}99`,
                       pointerEvents: markMode ? "auto" : "none",
                     }}>
                     {markMode && onRemoveWindow && (
@@ -407,7 +409,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                         title="Sáv levétele"
                         style={{
                           position: "absolute", top: 1, right: 2, background: "none", border: "none",
-                          cursor: "pointer", color: "#527666", fontSize: "0.62rem", lineHeight: 1, padding: 0,
+                          cursor: "pointer", color: w.color, fontSize: "0.62rem", lineHeight: 1, padding: 0,
                         }}>✕</button>
                     )}
                   </div>

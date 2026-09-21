@@ -18,7 +18,25 @@ import { toDateStr } from "~/lib/date";
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 const DAYS_S  = ["H","K","Sz","Cs","P","Szo","V"];
 const DAYS_L  = ["Hétfő","Kedd","Szerda","Csütörtök","Péntek","Szombat","Vasárnap"];
-const USER_COLORS = ["#c49060","#9278b0","#c09898","#7a9e8c","#b07858"];
+/**
+ * A dolgozók színei. A szalon kérésére Felicia zöld, Gitta lila — ez a két szín
+ * fut végig a naptáron (időpont, munkaidő, pont a havi nézetben).
+ *
+ * A `deep` a sötétebb változat: az online foglalásra kiadott sávok ezt kapják,
+ * így egy pillantásból látszik, kinek a kiadott ideje.
+ */
+const WORKER_COLORS: Record<string, { color: string; deep: string }> = {
+  felicia: { color: "#5a8a72", deep: "#2f5a48" },   // zöld
+  gitta:   { color: "#9278b0", deep: "#5e4a80" },   // lila
+};
+
+/** Akinek nincs saját színe (pl. új dolgozó), ebből a sorból kap egyet. */
+const USER_COLORS = ["#c49060","#c09898","#b07858","#6a8fb0","#a08050"];
+const USER_DEEP   = ["#8a6132","#8a6060","#7a4a2e","#3f5e77","#6a5222"];
+
+/** Ékezet- és kisbetű-tűrő kulcs a névhez. */
+const colorKey = (name: string | null) =>
+  (name ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const COST_CONFIG = {
   material: { label: "Anyagköltség", color: "#c49060", icon: "✦" },
   wage:     { label: "Bér",          color: "#9278b0", icon: "♦" },
@@ -1161,14 +1179,21 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   }
 
   const userColors: Record<string, string> = {};
-  users.forEach((u, i) => { userColors[u.id] = USER_COLORS[i % USER_COLORS.length]!; });
+  const userDeep:   Record<string, string> = {};
+  users.forEach((u, i) => {
+    const own = WORKER_COLORS[colorKey(u.name)];
+    userColors[u.id] = own?.color ?? USER_COLORS[i % USER_COLORS.length]!;
+    userDeep[u.id]   = own?.deep  ?? USER_DEEP[i % USER_DEEP.length]!;
+  });
 
   const byWindowDate: Record<string, GridWindow[]> = {};
   for (const w of windows) {
     const d   = new Date(w.date);
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
     (byWindowDate[key] ??= []).push({
-      id: w.id, start: w.startTime, end: w.endTime, workerName: w.worker.name ?? "?",
+      id: w.id, start: w.startTime, end: w.endTime,
+      workerName: w.worker.name ?? "?",
+      color: userDeep[w.workerId] ?? "#527666",
     });
   }
 
