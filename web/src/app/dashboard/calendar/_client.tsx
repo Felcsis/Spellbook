@@ -1018,7 +1018,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   const gcalStatus = api.gcal.status.useQuery();
   const gFrom = new Date(qYear, qMonth - 1, 1);  gFrom.setDate(gFrom.getDate() - 14);
   const gTo   = new Date(qYear, qMonth, 0);      gTo.setDate(gTo.getDate() + 14);
-  const { data: gEvents = [] } = api.gcal.events.useQuery(
+  const { data: gcalData } = api.gcal.events.useQuery(
     { from: gFrom.toISOString(), to: gTo.toISOString() },
     { enabled: gcalStatus.data?.configured === true },
   );
@@ -1089,6 +1089,11 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       setOpenCardId(r.cardId);
     },
   });
+
+  const gEvents      = gcalData?.events ?? [];
+  // Akinek a naptára nem elérhető (lejárt vagy visszavont hozzáférés) — ezt ki
+  // kell írni, különben hetekig észrevétlenül hiányoznának az időpontjai.
+  const gcalFailed    = gcalData?.failed ?? [];
 
   const byEventDate: Record<string, GEvent[]> = {};
   gEvents.forEach(e => { (byEventDate[e.start.slice(0, 10)] ??= []).push(e as GEvent); });
@@ -1319,6 +1324,18 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile}
           selected={selectedDays} onSelect={setSelectedDays} />
       )}
+      {gcalFailed.length > 0 && (
+        <div style={{
+          marginBottom: "0.75rem", padding: "0.6rem 0.9rem", borderRadius: 10,
+          background: "rgba(196,120,120,0.12)", border: "1px solid rgba(196,120,120,0.45)",
+          fontFamily: "var(--font-cormorant)", fontSize: "0.94rem", color: "#c47878",
+        }}>
+          ⚠ <strong>{gcalFailed.join(", ")}</strong> Google-naptára most nem érhető el —
+          a hozzáférés lejárt vagy vissza lett vonva, ezért az ő időpontjai hiányoznak a naptárból.
+          A Naptár tetején a <em>Összekötés</em> gombbal újra be lehet kapcsolni.
+        </div>
+      )}
+
       {markMode && (
         <div style={{
           marginBottom: "0.75rem", padding: "0.5rem 0.85rem", borderRadius: 10,

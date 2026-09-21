@@ -159,8 +159,8 @@ export const gcalRouter = createTRPCRouter({
   /** Egy időszak időpontjai a naptárból. */
   events: protectedProcedure
     .input(z.object({ from: z.string(), to: z.string() }))
-    .query(async ({ ctx, input }): Promise<EventWithOwner[]> => {
-      if (!isConfigured()) return [];
+    .query(async ({ ctx, input }): Promise<{ events: EventWithOwner[]; failed: string[] }> => {
+      if (!isConfigured()) return { events: [], failed: [] };
 
       const isAdmin = ctx.session.user.role === "admin";
       const users = await ctx.db.user.findMany({
@@ -171,23 +171,26 @@ export const gcalRouter = createTRPCRouter({
         },
         select: { id: true, name: true, googleRefreshToken: true, googleCalendarId: true },
       });
-      if (users.length === 0) return [];
+      if (users.length === 0) return { events: [], failed: [] };
 
       const from = new Date(input.from);
       const to   = new Date(input.to);
 
+      // Egy dolgozó hibája ne vigye el a többi naptárát — de ne is tűnjön el
+      // némán: a lejárt hozzáférés így hetekig észrevétlen maradna.
+      const failed: string[] = [];
       const perUser = await Promise.all(users.map(async u => {
         try {
           const events = await listEvents(u, from, to);
           return events.map(e => ({ ...e, userId: u.id, userName: u.name ?? "?" }));
         } catch {
-          // Lejárt vagy visszavont hozzáférés — a többi dolgozó naptára menjen tovább.
+          failed.push(u.name ?? "?");
           return [];
         }
       }));
 
       const flat = perUser.flat();
-      if (flat.length === 0) return [];
+      if (flat.length === 0) return { events: [], failed };
 
       const ids = flat.map(e => e.id);
 
@@ -206,8 +209,11 @@ export const gcalRouter = createTRPCRouter({
       });
       const byEvent = new Map(cards.map(c => [c.googleEventId, c.id]));
 
-      return flat
-        .filter(e => !ownIds.has(e.id))
-        .map(e => ({ ...e, cardId: byEvent.get(e.id) ?? null }));
+      return {
+        events: flat
+          .filter(e => !ownIds.has(e.id))
+          .map(e => ({ ...e, cardId: byEvent.get(e.id) ?? null })),
+        failed,
+      };
     }),
 });
