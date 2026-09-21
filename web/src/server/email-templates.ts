@@ -147,6 +147,29 @@ export function declined(m: BookingMail, reason?: string) {
   };
 }
 
+/**
+ * A szalon kénytelen lemondani egy már visszaigazolt időpontot.
+ *
+ * Ez a legkellemetlenebb levél, amit küldünk: a vendég már beírta a naptárába.
+ * Ezért kap magyarázatot, elnézést, és konkrét másik lehetőséget — nem csak
+ * annyit, hogy „nem jó".
+ */
+export function rescheduleNeeded(m: BookingMail, message: string) {
+  return {
+    subject: `Közbejött valami — új időpontot keresünk (${SALON})`,
+    html: wrap("Sajnos át kell tennünk", `
+      <p>Kedves ${m.guestName}!</p>
+      <p>Az alábbi időpontodat sajnos nem tudjuk tartani. Elnézést kérünk —
+         tudjuk, hogy beosztottad rá a napod.</p>
+      ${details(m)}
+      <p style="padding:.8rem 1rem;background:#f5efe2;border-radius:8px;margin:1rem 0">
+        ${message}
+      </p>
+      <p>Írj vagy hívj minket, és egyeztetünk egy neked jó időpontot.</p>
+    `),
+  };
+}
+
 /** 5. Emlékeztető az időpont előtt. */
 export function reminder(m: BookingMail) {
   return {

@@ -4,6 +4,8 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { deleteEvent, isConfigured as gcalConfigured, upsertEvent } from "~/server/google";
 import type { PrismaClient } from "../../../../generated/prisma";
 import { freeSlots, type Busy } from "~/server/free-slots";
+import { isConfigured as mailConfigured, send } from "~/server/email";
+import { rescheduleNeeded } from "~/server/email-templates";
 
 /**
  * Előjegyzések: foglalás, áthelyezés, lemondás, és a szabad idő kiszámítása.
@@ -240,6 +242,55 @@ export const appointmentsRouter = createTRPCRouter({
       await ctx.db.appointment.update({ where: { id: input.id }, data: { status: "lemondott" } });
       await pushToGoogle(ctx.db, input.id);
       return { ok: true };
+    }),
+
+  /**
+   * Lemondás a szalon oldaláról, magyarázattal.
+   *
+   * Ha a kolléga lebetegszik vagy közbejön valami, a vendég ne csak azt lássa,
+   * hogy eltűnt az időpontja. Kap levelet az okkal és egy felajánlott másik
+   * lehetőséggel — feltéve, hogy tudjuk az e-mail címét (az online foglalásból
+   * igen, a kézzel felvett időpontnál nem).
+   */
+  cancelWithNotice: protectedProcedure
+    .input(z.object({ id: z.string(), message: z.string().min(3).max(600) }))
+    .mutation(async ({ ctx, input }) => {
+      const a = await ctx.db.appointment.findUnique({
+        where:   { id: input.id },
+        include: { worker: { select: { id: true, name: true, googleRefreshToken: true, googleCalendarId: true } } },
+      });
+      if (!a) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs ilyen időpont." });
+      if (ctx.session.user.role !== "admin" && a.workerId !== ctx.session.user.id)
+        throw new TRPCError({ code: "FORBIDDEN", message: "Csak a saját időpontodat mondhatod le." });
+
+      // Az e-mail cím az online foglalásból jön: azonos dolgozó és kezdés alapján.
+      const booking = await ctx.db.booking.findFirst({
+        where:  { workerId: a.workerId, startsAt: a.start, status: "elfogadva" },
+        select: { id: true, email: true, name: true, service: true },
+      });
+
+      await ctx.db.appointment.update({ where: { id: a.id }, data: { status: "lemondott" } });
+      if (a.googleEventId && a.worker.googleRefreshToken) {
+        try { await deleteEvent(a.worker, a.googleEventId); } catch { /* már nincs meg */ }
+        await ctx.db.appointment.update({ where: { id: a.id }, data: { googleEventId: null } });
+      }
+      if (booking) await ctx.db.booking.update({ where: { id: booking.id }, data: { status: "lemondva" } });
+
+      let emailed = false;
+      if (booking?.email && mailConfigured()) {
+        const mail = rescheduleNeeded({
+          guestName:  a.guestName,
+          service:    a.services ?? booking.service,
+          workerName: a.worker.name ?? "",
+          start:      a.start,
+        }, input.message);
+        try {
+          await send({ to: { email: booking.email, name: a.guestName }, subject: mail.subject, html: mail.html });
+          emailed = true;
+        } catch { /* a lemondás akkor is megtörtént */ }
+      }
+
+      return { ok: true, emailed, hasEmail: Boolean(booking?.email) };
     }),
 
   /** Végleges törlés — adminnak, ha téves foglalás született. */

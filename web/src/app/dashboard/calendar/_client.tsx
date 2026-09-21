@@ -10,6 +10,7 @@ import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent, t
 import { BookingModal } from "./_booking-modal";
 import { BookableModal } from "./_bookable-modal";
 import { RequestModal, type RequestDetails } from "./_request-modal";
+import { AppointmentModal, type AppointmentDetails } from "./_appointment-modal";
 import { MiniCalendar } from "./_mini-calendar";
 import { DayPanel, type DaySection, type Total } from "./_day-panel";
 import { WeekEntries, type WeekDayEntries } from "./_week-entries";
@@ -1124,6 +1125,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   });
   const [reqNote, setReqNote] = useState<string | null>(null);
   const [openRequest, setOpenRequest] = useState<RequestDetails | null>(null);
+  const [openAppt,    setOpenAppt]    = useState<AppointmentDetails | null>(null);
   const refreshRequests = () => {
     void utils.bookings.pending.invalidate();
     void utils.appointments.list.invalidate();
@@ -1488,6 +1490,22 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           onClose={() => setBookableForm(false)} />
       )}
 
+      {openAppt && (
+        <AppointmentModal appointment={openAppt}
+          onClose={() => setOpenAppt(null)}
+          onMove={() => {
+            const appt = openAppt;
+            setOpenAppt(null);
+            setBooking({ date: new Date(appt.start), moveId: appt.id });
+          }}
+          onDone={msg => {
+            setOpenAppt(null);
+            setReqNote(msg);
+            void utils.appointments.list.invalidate();
+            void utils.gcal.events.invalidate();
+          }} />
+      )}
+
       {openRequest && (
         <RequestModal request={openRequest}
           onClose={() => setOpenRequest(null)}
@@ -1744,10 +1762,14 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                     date, prefillStart: start.toISOString(), prefillMinutes: toMin - fromMin,
                   });
                 }}
-                onMove={b => setBooking({ date: new Date(b.start), moveId: b.id })}
-                onCancel={b => {
-                  if (confirm(`Biztosan lemondod ${b.guestName} időpontját?`))
-                    cancelBooking.mutate({ id: b.id });
+                onOpenBooking={b => {
+                  const full = appointments.find(a => a.id === b.id);
+                  setReqNote(null);
+                  setOpenAppt({
+                    id: b.id, guestName: b.guestName, services: b.services,
+                    phone: b.phone, notes: full?.notes ?? null,
+                    start: b.start, end: b.end, workerName: b.workerName,
+                  });
                 }}
                 onDropBooking={(b, date, startMinutes) => {
                   const start = new Date(date);

@@ -152,7 +152,7 @@ function layout<T extends { start: string; end: string }>(events: T[]): Placed<T
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, markMode = false, onRemoveWindow, onOpenRequest, showAllDay = true }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, markMode = false, onRemoveWindow, onOpenRequest, onOpenBooking, showAllDay = true }: {
   days: {
     date:     Date;
     label:    string;
@@ -185,6 +185,8 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   onRemoveWindow?: (w: GridWindow) => void;
   /** A kérés-kártyára kattintva nyílik az elbíráló ablak. */
   onOpenRequest?: (r: GridRequest) => void;
+  /** Az időpont-kártyára kattintva nyílnak a részletek. */
+  onOpenBooking?: (b: GridBooking) => void;
 }) {
   // Az aktuális idő sávja. Csak a böngészőben állítjuk be (a szerveren nincs
   // "most"), különben a kiszolgált és a megjelenített oldal eltérne.
@@ -485,6 +487,12 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
 
                 return (
                   <div key={b.id} title={`${b.guestName}${b.phone ? ` · ${b.phone}` : ""} — ${b.workerName}`}
+                    onClick={ev => {
+                      // Húzás után ne nyisson ablakot — csak a tiszta kattintás.
+                      if (grab?.moved) return;
+                      ev.stopPropagation();
+                      onOpenBooking?.(b);
+                    }}
                     onMouseDown={ev => {
                       if (!onDropBooking || ev.button !== 0) return;
                       if ((ev.target as HTMLElement).tagName === "BUTTON") return;
@@ -515,14 +523,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.58rem", color: b.color }}>
                         {fmtTime(b.start)}
                       </span>
-                      {onMove && (
-                        <button onClick={() => onMove(b)} title="Áthelyezés"
-                          style={miniAction(b.color)}>⇄</button>
-                      )}
-                      {onCancel && (
-                        <button onClick={() => onCancel(b)} title="Lemondás"
-                          style={miniAction("#c47878")}>✕</button>
-                      )}
+
                     </div>
                     <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.86rem", color: "var(--text-primary)", lineHeight: 1.15 }}>
                       {b.guestName}
