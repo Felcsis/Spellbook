@@ -10,7 +10,7 @@
  */
 import { randomBytes } from "crypto";
 import { db } from "~/server/db";
-import { corsHeaders, freeDays, json, appUrl, parts, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
+import { bookingOpen, closedResponse, corsHeaders, freeDays, json, appUrl, parts, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
 import { isConfigured, send } from "~/server/email";
 import { verifyEmail } from "~/server/email-templates";
 
@@ -35,6 +35,7 @@ const digits = (s: string) => s.replace(/\D/g, "");
 
 export async function POST(req: Request) {
   const origin = req.headers.get("origin");
+  if (!bookingOpen()) return closedResponse(origin);
 
   let body: Body;
   try { body = (await req.json()) as Body; }

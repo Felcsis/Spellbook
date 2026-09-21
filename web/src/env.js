@@ -59,6 +59,12 @@ export const env = createEnv({
     // A Spellbook saját címe. A foglalási levelek linkjei ide mutatnak, ezért
     // abszolút cím kell: egy levélben a relatív útvonal semmit nem ér.
     APP_URL:        z.string().optional(),
+
+    // Az online foglalás főkapcsolója. Alapból ZÁRVA: a nyilvános végpontokat
+    // a CORS nem védi (egy sima curl bármikor beküldhet), ezért amíg a
+    // foglalóoldal nincs kész, a szervernek kell nemet mondania.
+    // Nyitáshoz: BOOKING_OPEN=true
+    BOOKING_OPEN:   z.string().optional(),
   },
 
   /**
@@ -108,6 +114,7 @@ export const env = createEnv({
     MAIL_SALON:     process.env.MAIL_SALON,
     SALON_ADDRESS:  process.env.SALON_ADDRESS,
     APP_URL:        process.env.APP_URL,
+    BOOKING_OPEN:   process.env.BOOKING_OPEN,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

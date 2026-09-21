@@ -6,7 +6,7 @@
  * lenne, ki mikor jár a szalonba.
  */
 import { db } from "~/server/db";
-import { corsHeaders, freeDays, json, HORIZON_DAYS } from "~/server/booking-public";
+import { bookingOpen, closedResponse, corsHeaders, freeDays, json, HORIZON_DAYS } from "~/server/booking-public";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,7 @@ export function OPTIONS(req: Request) {
 
 export async function GET(req: Request) {
   const origin = req.headers.get("origin");
+  if (!bookingOpen()) return closedResponse(origin);
   const url    = new URL(req.url);
 
   const workerId  = url.searchParams.get("dolgozo");

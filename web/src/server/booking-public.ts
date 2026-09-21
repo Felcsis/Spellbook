@@ -30,6 +30,25 @@ export function corsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
+/**
+ * Nyitva van-e az online foglalás.
+ *
+ * Amíg a foglalóoldal nincs kész, senki ne tudjon időpontot kérni — a
+ * végpontok akkor is elérhetők kívülről, ha a weboldal nem hivatkozik rájuk.
+ */
+export function bookingOpen(): boolean {
+  return (env.BOOKING_OPEN ?? "").trim().toLowerCase() === "true";
+}
+
+/** Zárt állapotban ezt kapja minden nyilvános foglalási hívás. */
+export function closedResponse(origin: string | null): Response {
+  return json(
+    { error: "Az online időpontfoglalás még nem indult el. Kérünk, hívj minket telefonon." },
+    origin,
+    503,
+  );
+}
+
 export function json(data: unknown, origin: string | null, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,

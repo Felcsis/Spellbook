@@ -6,7 +6,7 @@
  * árlistája adja — az időtartam onnan jön, és az dönti el a sáv hosszát.
  */
 import { db } from "~/server/db";
-import { corsHeaders, json } from "~/server/booking-public";
+import { bookingOpen, closedResponse, corsHeaders, json } from "~/server/booking-public";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,7 @@ export function OPTIONS(req: Request) {
 
 export async function GET(req: Request) {
   const origin = req.headers.get("origin");
+  if (!bookingOpen()) return closedResponse(origin);
 
   const workers = await db.user.findMany({
     where:   { active: true, onlineBookable: true },
