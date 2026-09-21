@@ -1,3 +1,4 @@
+import { formatWhen } from "~/lib/date";
 import Link from "next/link";
 import { confirmBooking } from "~/server/booking-public";
 
@@ -50,10 +51,7 @@ export default async function Page({ params }: { params: Promise<{ token: string
     );
   }
 
-  const when = result.booking.startsAt.toLocaleString("hu-HU", {
-    year: "numeric", month: "long", day: "numeric",
-    weekday: "long", hour: "2-digit", minute: "2-digit",
-  });
+  const when = formatWhen(result.booking.startsAt);
 
   return (
     <div style={shell}>

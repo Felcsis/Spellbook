@@ -17,3 +17,21 @@ export function toDateStr(d: Date): string {
 export function todayStr(): string {
   return toDateStr(new Date());
 }
+
+/** A szalon időzónája. A szerver UTC-ben fut, a vendég viszont itt jön be. */
+export const SALON_TZ = "Europe/Budapest";
+
+/**
+ * Időpont a vendégnek: "2026. szeptember 30., szerda 10:30".
+ *
+ * A zónát KÖTELEZŐ megadni. Enélkül a Railway-n (UTC) futó szerver két órával
+ * korábbi időt írt a megerősítő oldalra és a levelekbe — a vendég 08:30-at
+ * olvasott a 10:30-as időpontja helyett.
+ */
+export function formatWhen(d: Date): string {
+  return d.toLocaleString("hu-HU", {
+    timeZone: SALON_TZ,
+    year: "numeric", month: "long", day: "numeric",
+    weekday: "long", hour: "2-digit", minute: "2-digit",
+  });
+}

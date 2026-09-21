@@ -1,3 +1,4 @@
+import { formatWhen } from "~/lib/date";
 import { bookingByToken } from "~/server/booking-public";
 import { CancelBox } from "./_cancel";
 
@@ -50,10 +51,7 @@ export default async function Page({ params }: { params: Promise<{ token: string
     );
   }
 
-  const when = b.startsAt.toLocaleString("hu-HU", {
-    year: "numeric", month: "long", day: "numeric",
-    weekday: "long", hour: "2-digit", minute: "2-digit",
-  });
+  const when = formatWhen(b.startsAt);
   const cancellable = b.startsAt > new Date()
     && b.status !== "lemondva" && b.status !== "elutasitva";
 

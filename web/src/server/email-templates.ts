@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "~/env";
+import { formatWhen } from "~/lib/date";
 
 /**
  * A foglaláshoz tartozó levelek.
@@ -35,11 +36,7 @@ function phone(): string {
   return env.GDPR_CONTROLLER_PHONE?.trim() || "";
 }
 
-const fmt = (d: Date) =>
-  d.toLocaleString("hu-HU", {
-    year: "numeric", month: "long", day: "numeric",
-    weekday: "long", hour: "2-digit", minute: "2-digit",
-  });
+const fmt = formatWhen;
 
 /** Közös keret, hogy minden levél egyformán nézzen ki. */
 function wrap(title: string, body: string): string {
