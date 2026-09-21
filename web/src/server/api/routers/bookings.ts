@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { appUrl } from "~/server/booking-public";
 import { isConfigured, send } from "~/server/email";
 import { confirmed, declined } from "~/server/email-templates";
@@ -12,14 +12,24 @@ import { pushToGoogle } from "~/server/api/routers/appointments";
  * Szándékosan a naptárban történik, nem külön adminfelületen: a kérés ott
  * jelenik meg, ahova szólna, így látod mellette, mi van aznap — enélkül egy
  * listából kellene fejben összeraknod, belefér-e.
+ *
+ * Mindenki a SAJÁT kéréseit bírálja el, az admin mindenkiét. Ezért nem a
+ * `salonProcedure`-t használjuk: a "csak naptár" szerepkörű dolgozónak (pl. a
+ * kozmetikusnak) is kezelnie kell a saját időpontjait, a szalon pénzügyei nélkül.
  */
+
+/** Az admin bárkiét, más csak a sajátját. */
+function assertOwn(role: string, userId: string, workerId: string) {
+  if (role !== "admin" && workerId !== userId)
+    throw new TRPCError({ code: "FORBIDDEN", message: "Ez nem a te időpontod." });
+}
 
 /** Csak a megerősített kérések várnak döntésre. */
 const PENDING = "kert";
 
 export const bookingsRouter = createTRPCRouter({
   /** Egy időszak elbírálásra váró kérései. */
-  pending: salonProcedure
+  pending: protectedProcedure
     .input(z.object({ from: z.string(), to: z.string() }))
     .query(({ ctx, input }) =>
       ctx.db.booking.findMany({
@@ -37,7 +47,7 @@ export const bookingsRouter = createTRPCRouter({
    * Elfogadás. Ekkor keletkezik a vendég és az előjegyzés — addig a kérés
    * nem szennyezi a receptkönyvet.
    */
-  accept: salonProcedure
+  accept: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const b = await ctx.db.booking.findUnique({
@@ -45,6 +55,7 @@ export const bookingsRouter = createTRPCRouter({
         include: { worker: { select: { id: true, name: true } } },
       });
       if (!b) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs ilyen kérés." });
+      assertOwn(ctx.session.user.role, ctx.session.user.id, b.workerId);
       if (b.status !== PENDING)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Ezt a kérést már elbírálták." });
 
@@ -93,7 +104,7 @@ export const bookingsRouter = createTRPCRouter({
     }),
 
   /** Elutasítás: a sáv felszabadul, a vendég udvarias levelet kap. */
-  decline: salonProcedure
+  decline: protectedProcedure
     .input(z.object({ id: z.string(), reason: z.string().max(300).optional() }))
     .mutation(async ({ ctx, input }) => {
       const b = await ctx.db.booking.findUnique({
@@ -101,6 +112,7 @@ export const bookingsRouter = createTRPCRouter({
         include: { worker: { select: { name: true } } },
       });
       if (!b) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs ilyen kérés." });
+      assertOwn(ctx.session.user.role, ctx.session.user.id, b.workerId);
       if (b.status !== PENDING)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Ezt a kérést már elbírálták." });
 
