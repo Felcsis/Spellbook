@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
+import { appUrl } from "~/server/booking-public";
 import { isConfigured, send } from "~/server/email";
 import { confirmed, declined } from "~/server/email-templates";
 import { pushToGoogle } from "~/server/api/routers/appointments";
@@ -79,6 +80,9 @@ export const bookingsRouter = createTRPCRouter({
         const mail = confirmed({
           guestName: name, service: b.service,
           workerName: b.worker.name ?? "", start: b.startsAt,
+          // Saját link a vendégnek: itt nézheti meg és mondhatja le. Enélkül
+          // csak telefonon tudna szólni, ami mindkettőtöknek macerásabb.
+          link: `${appUrl()}/foglalas/${b.token}`,
         });
         // A levél elakadása ne vonja vissza az elfogadást — az időpont már áll.
         try { await send({ to: { email: b.email, name }, subject: mail.subject, html: mail.html }); }

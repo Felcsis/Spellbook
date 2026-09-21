@@ -191,6 +191,55 @@ export async function freeDays(opts: {
  * megnyitott link is "rendben" választ ad, mert a vendég szemében ugyanaz
  * történt — a levelek viszont csak egyszer mennek ki.
  */
+/** A vendég saját foglalása a tokenje alapján. */
+export async function bookingByToken(token: string) {
+  return db.booking.findUnique({
+    where:  { token },
+    select: {
+      id: true, name: true, service: true, startsAt: true, status: true,
+      worker: { select: { name: true } },
+    },
+  });
+}
+
+/**
+ * A vendég lemondja az időpontját.
+ *
+ * Csak a saját, kitalálhatatlan tokenjével — jelszó nélkül, mert egy lemondást
+ * senkinek nem éri meg meghamisítani, és a regisztráció-kényszer csak elriasztaná.
+ * A már megkezdett vagy elmúlt időpontot nem lehet visszamondani.
+ */
+export async function cancelBooking(token: string): Promise<
+  | { ok: true; booking: { name: string; service: string; startsAt: Date; workerName: string } }
+  | { ok: false; reason: "nincs" | "lejart" | "mar-lemondva" }
+> {
+  const b = await db.booking.findUnique({
+    where:  { token },
+    include: { worker: { select: { name: true } } },
+  });
+  if (!b) return { ok: false, reason: "nincs" };
+  if (b.status === "lemondva" || b.status === "elutasitva")
+    return { ok: false, reason: "mar-lemondva" };
+  if (b.startsAt < new Date()) return { ok: false, reason: "lejart" };
+
+  await db.booking.update({ where: { id: b.id }, data: { status: "lemondva" } });
+
+  // Ha már elfogadtuk, az előjegyzés is essen ki a naptárból — különben a
+  // szalon egy olyan vendégre várna, aki szólt, hogy nem jön.
+  if (b.status === "elfogadva") {
+    const appt = await db.appointment.findFirst({
+      where: { workerId: b.workerId, start: b.startsAt, status: "foglalt" },
+      select: { id: true },
+    });
+    if (appt) await db.appointment.update({ where: { id: appt.id }, data: { status: "lemondott" } });
+  }
+
+  return {
+    ok: true,
+    booking: { name: b.name, service: b.service, startsAt: b.startsAt, workerName: b.worker.name ?? "" },
+  };
+}
+
 export async function confirmBooking(token: string): Promise<
   | { ok: true; alreadyDone: boolean; booking: { name: string; service: string; startsAt: Date; workerName: string } }
   | { ok: false; reason: "nincs" | "lejart" | "lemondva" }
