@@ -77,6 +77,64 @@ export const bookableRouter = createTRPCRouter({
       return { ok: true };
     }),
 
+  /**
+   * Foglalható idő megadása napokra, szünetekkel.
+   *
+   * A szünet nem külön fogalom: egyszerűen kivágjuk a sávból, így a 9–18-as nap
+   * egy 12:00–12:30-as ebédszünettel két sávvá válik (9–12 és 12:30–18). A
+   * foglaló ezért sosem ajánl fel szünetbe eső időpontot.
+   */
+  setDays: protectedProcedure
+    .input(z.object({
+      dates:     z.array(z.string()).min(1).max(120),
+      workerId:  z.string().optional(),
+      startTime: HHMM,
+      endTime:   HHMM,
+      breaks:    z.array(z.object({ start: HHMM, end: HHMM })).max(6).default([]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const workerId = targetWorker(ctx, input.workerId);
+      const mins = (t: string) => {
+        const [h, m] = t.split(":").map(Number);
+        return (h ?? 0) * 60 + (m ?? 0);
+      };
+      const fmt = (m: number) =>
+        `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+      const from = mins(input.startTime);
+      const to   = mins(input.endTime);
+      if (to <= from)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A nap vége nem lehet a kezdete előtt." });
+
+      // A szüneteket kivágjuk a sávból; ami marad, az a foglalható idő.
+      const cuts = input.breaks
+        .map(b => ({ from: mins(b.start), to: mins(b.end) }))
+        .filter(b => b.to > b.from)
+        .sort((a, b) => a.from - b.from);
+
+      const segments: { from: number; to: number }[] = [];
+      let cursor = from;
+      for (const cut of cuts) {
+        if (cut.from > cursor) segments.push({ from: cursor, to: Math.min(cut.from, to) });
+        cursor = Math.max(cursor, cut.to);
+      }
+      if (cursor < to) segments.push({ from: cursor, to });
+
+      const usable = segments.filter(sg => sg.to - sg.from >= 15);
+      if (!usable.length)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A szünetek után nem marad foglalható idő." });
+
+      for (const ds of input.dates) {
+        const date = new Date(ds);
+        await ctx.db.bookableWindow.deleteMany({ where: { workerId, date } });
+        for (const sg of usable)
+          await ctx.db.bookableWindow.create({
+            data: { date, workerId, startTime: fmt(sg.from), endTime: fmt(sg.to) },
+          });
+      }
+      return { days: input.dates.length, perDay: usable.length };
+    }),
+
   /** Ugyanaz a sáv több napra — a havi nyitáshoz. */
   addBulk: protectedProcedure
     .input(z.object({

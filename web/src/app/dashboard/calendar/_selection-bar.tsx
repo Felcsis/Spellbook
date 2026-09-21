@@ -44,8 +44,8 @@ export function SelectionBar({ dates, workers, defaultWorkerId, summary, onClear
     onError:   e => setMsg(e.message),
   });
 
-  const setBookable = api.bookable.addBulk.useMutation({
-    onSuccess: r => { setMsg(`${r.count} napra kiadva online: ${start}–${end}`); setMode(null); refresh(); },
+  const setBookable = api.bookable.setDays.useMutation({
+    onSuccess: r => { setMsg(`${r.days} napra kiadva online: ${start}–${end}`); setMode(null); refresh(); },
     onError:   e => setMsg(e.message),
   });
   const clearBookable = api.bookable.clearDays.useMutation({
@@ -137,7 +137,7 @@ export function SelectionBar({ dates, workers, defaultWorkerId, summary, onClear
           <span style={{ color: "var(--text-soft)" }}>–</span>
           <input type="time" value={end} onChange={e => setEnd(e.target.value)} style={field} aria-label="Sáv vége" />
           <button disabled={busy}
-            onClick={() => setBookable.mutate({ dates, workerId: worker, startTime: start, endTime: end })}
+            onClick={() => setBookable.mutate({ dates, workerId: worker, startTime: start, endTime: end, breaks: [] })}
             style={primary}>
             {busy ? "Mentés…" : `Kiadás ${dates.length} napra`}
           </button>

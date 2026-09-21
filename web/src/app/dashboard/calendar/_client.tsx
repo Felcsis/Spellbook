@@ -8,6 +8,7 @@ import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { StarfieldBg } from "./_starfield-bg";
 import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent, type GridWindow } from "./_time-grid";
 import { BookingModal } from "./_booking-modal";
+import { BookableModal } from "./_bookable-modal";
 import { MiniCalendar } from "./_mini-calendar";
 import { DayPanel, type DaySection, type Total } from "./_day-panel";
 import { WeekEntries, type WeekDayEntries } from "./_week-entries";
@@ -1109,7 +1110,8 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   const { data: windows = [] } = api.bookable.list.useQuery({
     from: gFrom.toISOString(), to: gTo.toISOString(),
   });
-  const [markMode, setMarkMode] = useState(false);
+  const [markMode,    setMarkMode]    = useState(false);
+  const [bookableForm, setBookableForm] = useState(false);
 
   const refreshWindows = () => void utils.bookable.list.invalidate();
   const addWindow    = api.bookable.add.useMutation({ onSuccess: refreshWindows });
@@ -1423,7 +1425,24 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           <strong>Kiadás mód.</strong> Húzd végig az idősávot a naptáron, és az online
           foglalható lesz — a többi idő marad beugró vendégnek. A csíkos sávok a már
           kiadott idők; a sarkukban lévő ✕ leveszi őket.
+          <button onClick={() => setBookableForm(true)}
+            style={{
+              marginLeft: "0.6rem", background: "none", border: "1px solid rgba(82,118,102,0.5)",
+              borderRadius: 7, padding: "0.2rem 0.6rem", cursor: "pointer", color: "#527666",
+              fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}>
+            Kézi megadás, szünettel
+          </button>
         </div>
+      )}
+
+      {bookableForm && (
+        <BookableModal
+          defaultDate={anchor}
+          workers={activeUsers.map(u => ({ id: u.id, name: u.name }))}
+          defaultWorkerId={currentUserId || activeUsers[0]?.id || ""}
+          onClose={() => setBookableForm(false)} />
       )}
 
       {dragNote && (
