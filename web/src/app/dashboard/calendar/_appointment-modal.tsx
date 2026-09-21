@@ -169,8 +169,7 @@ export function AppointmentModal({ appointment, onClose, onMove, onDone }: {
         <button onClick={onClose} style={{
           marginTop: "1rem", width: "100%", background: "none", border: "none",
           color: "var(--text-dim)", cursor: "pointer",
-          fontFamily: "var(--font-cinzel)", fontSize: "0.52rem", letterSpacing: "0.1em",
-          textTransform: "uppercase",
+          fontFamily: "var(--font-cormorant)", fontSize: "0.95rem",
         }}>
           Bezárás
         </button>
@@ -192,6 +191,6 @@ function Row({ label, value }: { label: string; value: string }) {
 const ghost: React.CSSProperties = {
   padding: "0.7rem 1.2rem", borderRadius: 10, cursor: "pointer",
   border: "1px solid var(--border)", background: "transparent", color: "var(--text-soft)",
-  fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em",
-  textTransform: "uppercase",
+  fontFamily: "var(--font-cormorant)", fontSize: "1.02rem", letterSpacing: "0.01em",
+  lineHeight: 1.25,
 };
