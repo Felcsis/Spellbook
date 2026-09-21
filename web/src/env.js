@@ -43,6 +43,13 @@ export const env = createEnv({
     BILLINGO_API_KEY:       z.string().optional(),
     BILLINGO_BLOCK_RECEIPT: z.string().optional(),  // csak ha nem az elsőt akarjuk
     BILLINGO_BLOCK_INVOICE: z.string().optional(),
+
+    // Levélküldés (Brevo). A colormecrazy.hu domain hitelesítve van.
+    BREVO_API_KEY:  z.string().optional(),
+    MAIL_FROM:      z.string().optional(),   // idopont@colormecrazy.hu
+    MAIL_FROM_NAME: z.string().optional(),   // "Color Me Crazy"
+    MAIL_REPLY_TO:  z.string().optional(),   // a domainen nincs postafiók
+    MAIL_SALON:     z.string().optional(),   // ide megy az értesítés a szalonnak
   },
 
   /**
@@ -84,6 +91,12 @@ export const env = createEnv({
     BILLINGO_API_KEY:       process.env.BILLINGO_API_KEY,
     BILLINGO_BLOCK_RECEIPT: process.env.BILLINGO_BLOCK_RECEIPT,
     BILLINGO_BLOCK_INVOICE: process.env.BILLINGO_BLOCK_INVOICE,
+
+    BREVO_API_KEY:  process.env.BREVO_API_KEY,
+    MAIL_FROM:      process.env.MAIL_FROM,
+    MAIL_FROM_NAME: process.env.MAIL_FROM_NAME,
+    MAIL_REPLY_TO:  process.env.MAIL_REPLY_TO,
+    MAIL_SALON:     process.env.MAIL_SALON,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

@@ -511,8 +511,74 @@ export default function AdminClient() {
       {settleUser    && <SettlementModal user={settleUser}  onClose={() => setSettleUser(null)} />}
 
       <BackupSection />
+      <EmailSection />
       <BillingSection />
       <GdprSection />
+    </div>
+  );
+}
+
+// ── Levélküldés szekció ────────────────────────────────────────────────────────
+
+/**
+ * A kézbesítés az, ami mindig több munka, mint elsőre látszik. Ezért van egy
+ * gomb, amivel bármikor ellenőrizhető, hogy megy-e levél — és hova.
+ */
+function EmailSection() {
+  const status = api.email.status.useQuery();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const test = api.email.sendTest.useMutation({
+    onSuccess: r => setMsg({ ok: true, text: `Elküldve ide: ${r.to}. Nézd meg a beérkezőt (és a spam mappát is).` }),
+    onError:   e => setMsg({ ok: false, text: e.message }),
+  });
+
+  return (
+    <div style={{ marginTop: "2.5rem", borderTop: "1px solid var(--border)", paddingTop: "2rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(82,118,102,0.5)", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+        ✉ Levélküldés
+      </div>
+      <h2 style={{ fontFamily: "var(--font-playfair)", fontSize: "1.4rem", color: "var(--color-teal)", margin: "0 0 0.4rem" }}>
+        Értesítő e-mailek
+      </h2>
+
+      {!status.data?.configured ? (
+        <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: 0 }}>
+          A levélküldés nincs bekapcsolva. Ehhez a Brevo API kulcs kell
+          (<code>BREVO_API_KEY</code>).
+        </p>
+      ) : (
+        <>
+          <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--text-soft)", fontStyle: "italic", margin: "0 0 1.25rem" }}>
+            A levelek a <strong>idopont@colormecrazy.hu</strong> címről mennek, hitelesített
+            domainről. A szalon értesítései ide futnak be:{" "}
+            <strong>{status.data.salon ?? "nincs megadva"}</strong>.
+          </p>
+
+          <button
+            onClick={() => { setMsg(null); test.mutate({}); }}
+            disabled={test.isPending}
+            style={{
+              padding: "0.6rem 1.2rem", borderRadius: 9, border: "1px solid var(--border)",
+              background: "var(--bg-card)", color: "var(--color-teal)", cursor: "pointer",
+              fontFamily: "var(--font-cinzel)", fontSize: "0.56rem", letterSpacing: "0.1em",
+            }}>
+            {test.isPending ? "Küldés…" : "✉ Próbalevél küldése"}
+          </button>
+
+          {msg && (
+            <div style={{
+              marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: 10,
+              border: `1px solid ${msg.ok ? "rgba(82,118,102,0.35)" : "rgba(196,120,120,0.45)"}`,
+              background: msg.ok ? "rgba(82,118,102,0.08)" : "rgba(196,120,120,0.1)",
+              fontFamily: "var(--font-cormorant)", fontSize: "0.95rem",
+              color: msg.ok ? "var(--color-teal)" : "#c47878",
+            }}>
+              {msg.text}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
