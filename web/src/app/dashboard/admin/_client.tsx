@@ -134,7 +134,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
 function EditUserModal({ user, onClose, onSaved }: {
-  user: { id: string; name: string | null; email: string | null; role: string; priceListType?: string | null };
+  user: { id: string; name: string | null; email: string | null; role: string; priceListType?: string | null; notifyEmail?: string | null };
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -142,6 +142,7 @@ function EditUserModal({ user, onClose, onSaved }: {
   const [email, setEmail] = useState(user.email ?? "");
   const [role, setRole]   = useState<"admin" | "staff" | "calendar">(user.role as "admin" | "staff" | "calendar");
   const [priceList, setPriceList] = useState<"master" | "beginner">((user.priceListType as "master" | "beginner") ?? "beginner");
+  const [notify, setNotify] = useState(user.notifyEmail ?? "");
   const [pw, setPw]       = useState("");
   const [err, setErr]     = useState("");
 
@@ -159,6 +160,14 @@ function EditUserModal({ user, onClose, onSaved }: {
           <option value="admin">Admin</option>
         </Select>
       </Field>
+      <Field label="Értesítési cím (foglalási kérésekhez)">
+        <Input type="email" value={notify} onChange={e => setNotify(e.target.value)}
+          placeholder="pl. valaki@gmail.com — üresen hagyva nem kap levelet" />
+      </Field>
+      <p style={{ color: "var(--text-dim)", fontSize: "0.82rem", margin: "-0.5rem 0 1rem", fontStyle: "italic" }}>
+        A fenti Email a belépéshez kell, ide viszont valódi, működő cím jöjjön:
+        a hozzá érkező foglalási kérésről erre megy az értesítés.
+      </p>
       <Field label="Árlista">
         <Select value={priceList} onChange={e => setPriceList(e.target.value as "master" | "beginner")}>
           <option value="master">Master (teljes árlista)</option>
@@ -178,7 +187,7 @@ function EditUserModal({ user, onClose, onSaved }: {
       {err && <p style={{ color: "#e05555", fontSize: "0.85rem", marginBottom: "1rem" }}>{err}</p>}
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
         <Btn variant="ghost" onClick={onClose}>Mégse</Btn>
-        <Btn onClick={() => update.mutate({ id: user.id, name, email, role, priceListType: priceList })} disabled={update.isPending}>
+        <Btn onClick={() => update.mutate({ id: user.id, name, email, role, priceListType: priceList, notifyEmail: notify.trim() })} disabled={update.isPending}>
           {update.isPending ? "Mentés…" : "Mentés"}
         </Btn>
       </div>
@@ -269,7 +278,7 @@ function SettlementModal({ user, onClose }: { user: { id: string; name: string |
   );
 }
 
-type UserRow = { id: string; name: string | null; email: string | null; role: string; active?: boolean; archivedAt?: string | Date | null; priceListType?: string | null };
+type UserRow = { id: string; name: string | null; email: string | null; role: string; active?: boolean; archivedAt?: string | Date | null; priceListType?: string | null; notifyEmail?: string | null };
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 const fmt = (n: number) => new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);

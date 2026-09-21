@@ -12,7 +12,7 @@ export const adminRouter = createTRPCRouter({
   listUsers: protectedProcedure.query(async ({ ctx }) => {
     requireAdmin(ctx.session.user.role);
     return ctx.db.user.findMany({
-      select: { id: true, name: true, email: true, role: true, active: true, archivedAt: true, priceListType: true },
+      select: { id: true, name: true, email: true, role: true, active: true, archivedAt: true, priceListType: true, notifyEmail: true },
       orderBy: [{ active: "desc" }, { name: "asc" }],
     });
   }),
@@ -50,14 +50,16 @@ export const adminRouter = createTRPCRouter({
       email:         z.string().email().optional(),
       role:          z.enum(["admin", "staff", "calendar"]).optional(),
       priceListType: z.enum(["master", "beginner"]).optional(),
+      // Üres string = töröljük. A belépési címtől külön: oda nem megy levél.
+      notifyEmail:   z.union([z.string().email(), z.literal("")]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);
-      const { id, ...data } = input;
+      const { id, notifyEmail, ...rest } = input;
       return ctx.db.user.update({
         where: { id },
-        data,
-        select: { id: true, name: true, email: true, role: true, priceListType: true },
+        data: { ...rest, ...(notifyEmail === undefined ? {} : { notifyEmail: notifyEmail || null }) },
+        select: { id: true, name: true, email: true, role: true, priceListType: true, notifyEmail: true },
       });
     }),
 

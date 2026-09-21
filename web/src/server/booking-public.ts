@@ -291,7 +291,7 @@ export async function confirmBooking(token: string): Promise<
     where:  { token },
     select: {
       id: true, name: true, email: true, service: true, minutes: true,
-      startsAt: true, status: true, worker: { select: { name: true } },
+      startsAt: true, status: true, worker: { select: { name: true, notifyEmail: true } },
     },
   });
   if (!booking) return { ok: false, reason: "nincs" };
@@ -320,10 +320,17 @@ export async function confirmBooking(token: string): Promise<
     const guestMail = requestReceived(mail);
     const salon     = salonAddress();
     const salonMail = salonNotice(mail, `${appUrl()}/dashboard/calendar`);
+
+    // Mindenki a sajátját bírálja el, ezért a dolgozó is kap értesítést a saját
+    // címére. A belépési címére nem lehet küldeni: az kitalált (@salon-spellbook.local).
+    // A szalon címe kettőzésre kerülne, ha a dolgozóé ugyanaz — ezért halmaz.
+    const worker = booking.worker.notifyEmail?.trim() || null;
+    const to = Array.from(new Set([salon, worker].filter((x): x is string => !!x)));
+
     // A levél elakadása ne vegye el a megerősítést: a kérés már bent van.
     await Promise.allSettled([
       send({ to: { email: booking.email, name: booking.name }, subject: guestMail.subject, html: guestMail.html }),
-      salon ? send({ to: { email: salon }, subject: salonMail.subject, html: salonMail.html }) : Promise.resolve(null),
+      ...to.map(email => send({ to: { email }, subject: salonMail.subject, html: salonMail.html })),
     ]);
   }
 

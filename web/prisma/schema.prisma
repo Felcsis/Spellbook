@@ -78,7 +78,12 @@ model User {
 
   /// Lehet-e hozzá online időpontot kérni. Alapból NEM: így egy emberrel
   /// lehet élesben kipróbálni, mielőtt mindenki bekerül.
-  onlineBookable     Boolean             @default(false)
+  onlineBookable Boolean @default(false)
+
+  /// Ide megy értesítés a hozzá érkező foglalási kérésről. NEM a belépési cím:
+  /// az egy kitalált @salon-spellbook.local, oda nem érkezik levél. Üresen
+  /// hagyva a dolgozó csak a Spellbookban látja a kérést.
+  notifyEmail        String?
   accounts           Account[]
   sessions           Session[]
   posts              Post[]
