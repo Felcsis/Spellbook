@@ -152,7 +152,7 @@ function layout<T extends { start: string; end: string }>(events: T[]): Placed<T
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, markMode = false, onRemoveWindow, onAcceptRequest, onDeclineRequest, showAllDay = true }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, markMode = false, onRemoveWindow, onOpenRequest, showAllDay = true }: {
   days: {
     date:     Date;
     label:    string;
@@ -183,8 +183,8 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   /** "Kiadás" mód: a húzás foglalható sávot jelöl, nem időpontot nyit. */
   markMode?: boolean;
   onRemoveWindow?: (w: GridWindow) => void;
-  onAcceptRequest?:  (r: GridRequest) => void;
-  onDeclineRequest?: (r: GridRequest) => void;
+  /** A kérés-kártyára kattintva nyílik az elbíráló ablak. */
+  onOpenRequest?: (r: GridRequest) => void;
 }) {
   // Az aktuális idő sávja. Csak a böngészőben állítjuk be (a szerveren nincs
   // "most"), különben a kiszolgált és a megjelenített oldal eltérne.
@@ -558,13 +558,16 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                 );
               })}
 
-              {/* Elbírálásra váró kérések */}
+              {/* Elbírálásra váró kérések — a kártya egésze kattintható */}
               {layout(d.requests).map(({ ev: r, col, cols }) => {
                 const s0 = minutesOfIso(r.start);
                 const e0 = Math.max(minutesOfIso(r.end), s0 + 30);
                 const w0 = 100 / cols;
                 return (
-                  <div key={r.id} title={`${r.guestName} · ${r.phone} — ${r.service} (${r.workerName})`}
+                  <div key={r.id}
+                    onMouseDown={ev => ev.stopPropagation()}
+                    onClick={ev => { ev.stopPropagation(); onOpenRequest?.(r); }}
+                    title={`${r.guestName} — kattints az elbíráláshoz`}
                     style={{
                       position: "absolute", top: top(s0), height: ((e0 - s0) / 60) * PX_PER_HOUR - 2,
                       left: `calc(${col * w0}% + 3px)`, width: `calc(${w0}% - 6px)`,
@@ -572,7 +575,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                       border: "2px dashed #c8a840", borderRadius: 7,
                       padding: "0.15rem 0.35rem", overflow: "hidden", zIndex: 14,
                       boxShadow: "0 0 12px rgba(200,168,64,0.35)",
-                      pointerEvents: "auto", cursor: "default",
+                      pointerEvents: "auto", cursor: "pointer",
                     }}>
                     <div style={{
                       fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em",
@@ -586,15 +589,11 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                     <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.72rem", color: "var(--text-soft)", lineHeight: 1.1 }}>
                       {r.service}
                     </div>
-                    <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.15rem" }}>
-                      {onAcceptRequest && (
-                        <button onClick={ev => { ev.stopPropagation(); onAcceptRequest(r); }}
-                          title="Elfogadom" style={reqBtn("#527666")}>✓ Elfogad</button>
-                      )}
-                      {onDeclineRequest && (
-                        <button onClick={ev => { ev.stopPropagation(); onDeclineRequest(r); }}
-                          title="Elutasítom" style={reqBtn("#c47878")}>✕</button>
-                      )}
+                    <div style={{
+                      fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em",
+                      color: "#8a6a20", marginTop: "0.15rem", textDecoration: "underline",
+                    }}>
+                      Elbírálás →
                     </div>
                   </div>
                 );
@@ -637,17 +636,6 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
       </div>
     </div>
   );
-}
-
-/** Gomb a kérés-kártyán. */
-function reqBtn(color: string): React.CSSProperties {
-  return {
-    background: "var(--bg-card)", border: `1px solid ${color}`, borderRadius: 5,
-    cursor: "pointer", color, padding: "0.12rem 0.4rem",
-    pointerEvents: "auto",
-    fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.06em",
-    textTransform: "uppercase", lineHeight: 1.4,
-  };
 }
 
 /** Apró művelet-gomb egy előjegyzés-kártyán. */

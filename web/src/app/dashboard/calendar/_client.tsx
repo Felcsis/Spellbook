@@ -9,6 +9,7 @@ import { StarfieldBg } from "./_starfield-bg";
 import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent, type GridRequest, type GridWindow } from "./_time-grid";
 import { BookingModal } from "./_booking-modal";
 import { BookableModal } from "./_bookable-modal";
+import { RequestModal, type RequestDetails } from "./_request-modal";
 import { MiniCalendar } from "./_mini-calendar";
 import { DayPanel, type DaySection, type Total } from "./_day-panel";
 import { WeekEntries, type WeekDayEntries } from "./_week-entries";
@@ -1122,19 +1123,13 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
     from: gFrom.toISOString(), to: gTo.toISOString(),
   });
   const [reqNote, setReqNote] = useState<string | null>(null);
+  const [openRequest, setOpenRequest] = useState<RequestDetails | null>(null);
   const refreshRequests = () => {
     void utils.bookings.pending.invalidate();
     void utils.appointments.list.invalidate();
     void utils.gcal.events.invalidate();
   };
-  const acceptRequest = api.bookings.accept.useMutation({
-    onSuccess: () => { setReqNote("Elfogadva — az időpont bekerült a naptárba, a vendég értesítést kapott."); refreshRequests(); },
-    onError:   e => setReqNote(e.message),
-  });
-  const declineRequest = api.bookings.decline.useMutation({
-    onSuccess: () => { setReqNote("Elutasítva — a vendég értesítést kapott, a sáv felszabadult."); refreshRequests(); },
-    onError:   e => setReqNote(e.message),
-  });
+
   const [markMode,    setMarkMode]    = useState(false);
   const [bookableForm, setBookableForm] = useState(false);
 
@@ -1493,6 +1488,12 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           onClose={() => setBookableForm(false)} />
       )}
 
+      {openRequest && (
+        <RequestModal request={openRequest}
+          onClose={() => setOpenRequest(null)}
+          onDone={msg => { setOpenRequest(null); setReqNote(msg); refreshRequests(); }} />
+      )}
+
       {reqNote && (
         <div style={{
           marginBottom: "0.75rem", padding: "0.6rem 0.9rem", borderRadius: 10,
@@ -1713,12 +1714,17 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                 onOpenCard={ev => openCardFromEvent(ev)}
                 onNewBooking={date => setBooking({ date })}
                 markMode={markMode}
-                onAcceptRequest={r => { setReqNote(null); acceptRequest.mutate({ id: r.id }); }}
-                onDeclineRequest={r => {
-                  if (confirm(`Elutasítod ${r.guestName} kérését?`)) {
-                    setReqNote(null);
-                    declineRequest.mutate({ id: r.id });
-                  }
+                onOpenRequest={r => {
+                  const full = requests.find(x => x.id === r.id);
+                  if (!full) return;
+                  setReqNote(null);
+                  setOpenRequest({
+                    id: full.id, guestName: full.name, service: full.service,
+                    phone: full.phone, email: full.email, note: full.note,
+                    start: new Date(full.startsAt).toISOString(),
+                    end:   new Date(full.endsAt).toISOString(),
+                    workerName: full.worker.name ?? "",
+                  });
                 }}
                 onRemoveWindow={w => removeWindow.mutate({ id: w.id })}
                 onSelectRange={(date, fromMin, toMin) => {
