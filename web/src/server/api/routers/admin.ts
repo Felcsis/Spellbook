@@ -38,7 +38,8 @@ export const adminRouter = createTRPCRouter({
       if (existing) throw new TRPCError({ code: "CONFLICT", message: "Ez az email már foglalt." });
       const hashed = await hash(input.password, 12);
       return ctx.db.user.create({
-        data: { name: input.name, email: input.email, password: hashed, role: input.role, priceListType: input.role === "admin" ? "master" : "beginner" },
+        data: { name: input.name, email: input.email, password: hashed, role: input.role, // Egy árlista van (Fodrász árlista), a belső kulcsa "master".
+          priceListType: "master" },
         select: { id: true, name: true, email: true, role: true, priceListType: true },
       });
     }),
