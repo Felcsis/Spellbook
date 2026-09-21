@@ -1,0 +1,492 @@
+<title>Spellbook Foglaló</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  /* A Salon Spellbook saját palettája — ugyanazok a tokenek, mint az appban,
+     hogy a terv a termék világában olvasson. */
+  :root {
+    --bg:          #eadcc6;
+    --bg-deep:     #e0ccb0;
+    --surface:     rgba(239,226,204,0.92);
+    --surface-alt: rgba(234,220,198,0.75);
+    --ink:         #2b1a12;
+    --ink-muted:   rgba(43,26,18,0.85);
+    --ink-soft:    rgba(43,26,18,0.62);
+    --ink-dim:     rgba(43,26,18,0.44);
+    --accent:      #70472e;
+    --accent-lift: #9c6b4a;
+    --rule:        rgba(112,71,46,0.24);
+    --rule-firm:   rgba(112,71,46,0.46);
+    --wash:        rgba(112,71,46,0.08);
+    --good:        #4a6b46;
+    --warn:        #8a6a1e;
+    --stop:        #903128;
+    --shadow:      0 2px 20px rgba(90,46,20,0.13);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:          #120a07;
+      --bg-deep:     #1c0f0a;
+      --surface:     rgba(38,20,12,0.92);
+      --surface-alt: rgba(28,14,8,0.80);
+      --ink:         #f3e2cc;
+      --ink-muted:   rgba(243,226,204,0.88);
+      --ink-soft:    rgba(243,226,204,0.66);
+      --ink-dim:     rgba(243,226,204,0.46);
+      --accent:      #c9965e;
+      --accent-lift: #dcae78;
+      --rule:        rgba(201,150,94,0.20);
+      --rule-firm:   rgba(201,150,94,0.40);
+      --wash:        rgba(201,150,94,0.09);
+      --good:        #8fb083;
+      --warn:        #d6ab52;
+      --stop:        #d98a80;
+      --shadow:      0 2px 24px rgba(0,0,0,0.70);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:          #120a07;
+    --bg-deep:     #1c0f0a;
+    --surface:     rgba(38,20,12,0.92);
+    --surface-alt: rgba(28,14,8,0.80);
+    --ink:         #f3e2cc;
+    --ink-muted:   rgba(243,226,204,0.88);
+    --ink-soft:    rgba(243,226,204,0.66);
+    --ink-dim:     rgba(243,226,204,0.46);
+    --accent:      #c9965e;
+    --accent-lift: #dcae78;
+    --rule:        rgba(201,150,94,0.20);
+    --rule-firm:   rgba(201,150,94,0.40);
+    --wash:        rgba(201,150,94,0.09);
+    --good:        #8fb083;
+    --warn:        #d6ab52;
+    --stop:        #d98a80;
+    --shadow:      0 2px 24px rgba(0,0,0,0.70);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 18px;
+    line-height: 1.68;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: clamp(1.5rem,5vw,4.5rem) 1.25rem 6rem; }
+
+  .eyebrow {
+    font-family: "Cinzel", Georgia, serif;
+    font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--accent); margin: 0;
+  }
+  h1 {
+    font-family: "Playfair Display", Georgia, serif;
+    font-weight: 400; font-size: clamp(2rem,6vw,3rem); line-height: 1.12;
+    margin: 0.6rem 0 1rem; text-wrap: balance;
+  }
+  .lede { font-size: 1.15rem; color: var(--ink-muted); margin: 0; max-width: 40ch; }
+  .stamp {
+    font-family: "Cinzel", Georgia, serif; font-size: 0.56rem;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim);
+    margin-top: 1.6rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+  }
+
+  section { margin-top: 3.5rem; }
+  h2 {
+    font-family: "Playfair Display", Georgia, serif;
+    font-weight: 400; font-size: 1.5rem; margin: 0 0 0.3rem;
+    text-wrap: balance;
+  }
+  .sub { color: var(--ink-soft); font-style: italic; margin: 0 0 1.4rem; }
+  h3 {
+    font-family: "Cinzel", Georgia, serif; font-size: 0.6rem;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent);
+    margin: 2rem 0 0.7rem;
+  }
+  p { margin: 0 0 1rem; color: var(--ink-muted); }
+  strong { color: var(--ink); font-weight: 600; }
+  ul { margin: 0 0 1rem; padding-left: 1.15rem; color: var(--ink-muted); }
+  li { margin-bottom: 0.4rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.82em; background: var(--wash); color: var(--ink);
+    padding: 0.08em 0.36em; border-radius: 4px;
+  }
+  pre {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.8rem; line-height: 1.6;
+    background: var(--surface-alt); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 1rem 1.15rem; overflow-x: auto;
+    color: var(--ink-muted); margin: 0 0 1.2rem;
+  }
+  pre b { color: var(--accent); font-weight: 600; }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 1.2rem; }
+  table { border-collapse: collapse; width: 100%; min-width: 30rem; font-size: 0.95rem; }
+  th {
+    text-align: left; font-family: "Cinzel", Georgia, serif;
+    font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--ink-dim); padding: 0.5rem 0.7rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule-firm); white-space: nowrap;
+  }
+  td {
+    padding: 0.62rem 0.7rem 0.62rem 0; vertical-align: top;
+    border-bottom: 1px solid var(--rule); color: var(--ink-muted);
+  }
+  td:first-child { color: var(--ink); }
+
+  /* Kártyák — a rendszer két fele és a köztük lévő út */
+  .flow { display: grid; gap: 0.7rem; margin: 0 0 1.4rem; }
+  .node {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 12px; padding: 0.95rem 1.15rem; box-shadow: var(--shadow);
+  }
+  .node .who {
+    font-family: "Cinzel", Georgia, serif; font-size: 0.55rem;
+    letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent);
+    display: block; margin-bottom: 0.3rem;
+  }
+  .node .what { color: var(--ink); }
+  .node .how { color: var(--ink-soft); font-size: 0.92rem; }
+  .arrow {
+    text-align: center; color: var(--ink-dim); font-size: 0.85rem;
+    font-family: "Cinzel", Georgia, serif; letter-spacing: 0.12em;
+  }
+
+  .callout {
+    background: var(--wash); border: 1px solid var(--rule-firm);
+    border-left-width: 3px; border-radius: 9px;
+    padding: 1rem 1.2rem; margin: 1.3rem 0;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .tag {
+    font-family: "Cinzel", Georgia, serif; font-size: 0.56rem;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    display: block; margin-bottom: 0.5rem; color: var(--accent);
+  }
+  .callout.pick { border-left-color: var(--good); }
+  .callout.pick .tag { color: var(--good); }
+  .callout.care { border-left-color: var(--warn); }
+  .callout.care .tag { color: var(--warn); }
+
+  /* Fázisok — ez tényleg sorrend, ezért kap számot */
+  .phases { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.8rem; }
+  .phases li {
+    display: grid; grid-template-columns: 2.2rem 1fr; gap: 0.9rem;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 12px; padding: 1rem 1.15rem; margin: 0;
+  }
+  .phases .num {
+    font-family: "Cinzel", Georgia, serif; font-size: 1.1rem;
+    color: var(--accent); line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+  }
+  .phases .title { color: var(--ink); font-size: 1.05rem; display: block; }
+  .phases .body { color: var(--ink-soft); font-size: 0.95rem; }
+  .phases .ship {
+    font-family: "Cinzel", Georgia, serif; font-size: 0.52rem;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+    display: block; margin-top: 0.45rem;
+  }
+
+  .states { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0 0 1.2rem; }
+  .pill {
+    font-family: "Cinzel", Georgia, serif; font-size: 0.55rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    border: 1px solid var(--rule-firm); border-radius: 999px;
+    padding: 0.3rem 0.7rem; color: var(--ink-muted);
+  }
+  .pill.on  { border-color: var(--good); color: var(--good); }
+  .pill.off { border-color: var(--stop); color: var(--stop); }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.2rem; border-top: 1px solid var(--rule);
+    font-family: "Cinzel", Georgia, serif; font-size: 0.55rem;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--ink-dim); text-align: center;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Color Me Crazy · Salon Spellbook</p>
+    <h1>Online időpontfoglalás</h1>
+    <p class="lede">Hogyan kapcsoljuk össze a nyilvános weboldalt a szalon belső rendszerével úgy, hogy a vendég adata ott landoljon, ahol a receptkönyv is van.</p>
+    <p class="stamp">Terv · 2026. szeptember 17. · még nincs megvalósítva</p>
+  </header>
+
+  <section>
+    <h2>Amit nem kell megépíteni</h2>
+    <p class="sub">A Spellbook többet tud, mint elsőre látszik</p>
+    <p>Mielőtt bármi újat írnánk, érdemes számba venni, mi van már kész. Három dolog, ami pont a foglaláshoz kell, és már működik élesben:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Ami megvan</th><th>Hol</th><th>Mire jó a foglalásnál</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Munkaidő naponta, dolgozónként</td>
+            <td><code>WorkDay.startTime</code> / <code>endTime</code></td>
+            <td>Ez mondja meg, mikor lehet egyáltalán foglalni. <strong>Ez a szabad időpontok forrása.</strong></td>
+          </tr>
+          <tr>
+            <td>Tömeges munkaidő-beállítás, max 120 napra</td>
+            <td><code>calendar.setHoursBulk</code></td>
+            <td>Ezzel nyitjátok meg a következő hónapot — a „havonta berakjuk" pontosan ez, nem kell új felület.</td>
+          </tr>
+          <tr>
+            <td>Google Naptár, dolgozónként, <strong>írási joggal</strong></td>
+            <td><code>User.googleRefreshToken</code>, <code>gcal</code> router</td>
+            <td>A már beírt események kizárják a sávot, az elfogadott foglalás pedig bekerülhet a fodrász saját naptárába.</td>
+          </tr>
+          <tr>
+            <td>Szolgáltatások hosszal és árral</td>
+            <td><code>Service.duration</code>, <code>price</code></td>
+            <td>Ebből jön, hány perces sávot kell lefoglalni, és mit mutatunk a vendégnek.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Vagyis a foglaló nem egy új naptárrendszer. Egy <strong>olvasó réteg</strong> a meglévő munkaidő és Google Naptár fölött, plusz egy postaláda a beérkező kérésekhez.</p>
+  </section>
+
+  <section>
+    <h2>A két projekt összekapcsolása</h2>
+    <p class="sub">Az egyetlen érdemi építészeti döntés</p>
+    <p>A <code>colormecrazy.hu</code> egy <strong>statikus</strong> oldal — a Railway egyszerűen kiszolgálja a lefordított fájlokat, nincs mögötte szerver. Titkot nem tarthat, adatbázishoz nem nyúlhat. A Spellbooknak viszont van szervere, adatbázisa és Google-hozzáférése.</p>
+    <p>A kérdés tehát nem az, hol legyen a logika — hanem az, hol legyen az <em>űrlap</em>.</p>
+
+    <div class="flow">
+      <div class="node">
+        <span class="who">Vendég</span>
+        <span class="what">Kitölti az űrlapot a <code>colormecrazy.hu/idopontfoglalas</code> oldalon</span><br>
+        <span class="how">React komponens a meglévő SPA-ban, a szalon arculatában</span>
+      </div>
+      <div class="arrow">↓ &nbsp;fetch, más eredetre</div>
+      <div class="node">
+        <span class="who">Spellbook · nyilvános API</span>
+        <span class="what">Kiszámolja a szabad sávokat, fogadja a kérést</span><br>
+        <span class="how"><code>spellbook.colormecrazy.hu/api/foglalas/…</code> — CORS engedéllyel a szalon domainjére</span>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="node">
+        <span class="who">Spellbook · adatbázis</span>
+        <span class="what">A kérés <code>Booking</code> sorként landol, „kért" állapotban</span><br>
+        <span class="how">Vendég még nem keletkezik belőle</span>
+      </div>
+      <div class="arrow">↓ &nbsp;e-mail</div>
+      <div class="node">
+        <span class="who">Szalon</span>
+        <span class="what">A Spellbookban elfogadja vagy elutasítja</span><br>
+        <span class="how">Elfogadáskor: <code>Guest</code> jön létre, esemény a Google Naptárba, visszaigazoló levél</span>
+      </div>
+    </div>
+
+    <div class="callout pick">
+      <span class="tag">Ajánlás</span>
+      <p>Az űrlap <strong>a saját oldaladon maradjon</strong>, és csak az adat utazzon. A vendég végig a <code>colormecrazy.hu</code>-n van, a megszokott arculatban — ez bizalmi kérdés is: időpontfoglalásnál a legrosszabb, ha az ember hirtelen egy idegen kinézetű oldalon találja magát.</p>
+      <p>A két domain közös gyökéren ül (<code>colormecrazy.hu</code> és <code>spellbook.colormecrazy.hu</code>), így a CORS-engedély szűk és jól indokolható: pontosan egy eredetnek nyitunk, nem mindenkinek.</p>
+    </div>
+
+    <div class="callout care">
+      <span class="tag">A másik út, ha ez zsákutca lenne</span>
+      <p>Ha a CORS vagy a kétfelé fejlesztés soknak bizonyul, a foglaló oldal átköltözhet a Spellbookba (<code>spellbook.colormecrazy.hu/foglalas</code>), és a weboldalról csak egy gomb mutat rá. Semmi nem vész el — az API ugyanaz marad, csak az űrlap lakik máshol. Ezt a döntést később is meg lehet fordítani.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mi kerül az adatbázisba</h2>
+    <p class="sub">Egy új tábla, két új mező</p>
+    <p>A beérkező foglalás <strong>nem lesz azonnal vendég</strong>. Külön táblába kerül, és csak a jóváhagyáskor keletkezik belőle <code>Guest</code>. Így egy robot vagy egy meggondolatlan látogató nem szemeteli tele a receptkönyvet idegenek nevével, és a meg nem valósult kérések gyorsan törölhetők.</p>
+<pre><b>Booking</b>
+  id          a belső azonosító
+  token       kitalálhatatlan, ezzel nyílik a lemondó link
+  name        a vendég neve
+  email       a vendég e-mail címe
+  phone       a vendég telefonszáma
+  note        szabad szöveg — egészségi adat ide NEM kerülhet
+  userId      melyik fodrászhoz
+  serviceId   melyik szolgáltatásra
+  startsAt    a kért időpont kezdete
+  endsAt      a szolgáltatás hossza szerint kiszámolva
+  status      kért | elfogadva | elutasítva | lemondva | lezárult
+  guestId     csak elfogadáskor töltődik ki
+  gcalEventId a Google Naptárba kiírt esemény azonosítója
+  createdAt
+
+<b>Guest</b>
+  + email     eddig csak név és telefon volt
+
+<b>User</b>
+  + onlineBookable   false alapból — így indulhat egy emberrel a teszt
+
+<b>SalonSetting</b>
+  + bookingOpenUntil  meddig lehet előre foglalni (a havi nyitás)
+  + bookingLeadHours  ennél közelebbi időpontra már nem lehet (pl. 24)</pre>
+
+    <div class="states">
+      <span class="pill">kért</span>
+      <span class="pill on">elfogadva</span>
+      <span class="pill off">elutasítva</span>
+      <span class="pill off">lemondva</span>
+      <span class="pill">lezárult</span>
+    </div>
+    <p>Az állapotok közül csak az <strong>elfogadva</strong> foglal el sávot. A „kért" is blokkol ideiglenesen, hogy ne lehessen ugyanarra az időpontra hárman jelentkezni, amíg ti döntötök.</p>
+  </section>
+
+  <section>
+    <h2>Hogyan áll elő a szabad időpont</h2>
+    <p class="sub">Ez a rendszer szíve — és itt szokott elromlani</p>
+    <p>A vendég egy dolgot lát: mikor mehet. Ami emögött van, az öt lépés, ebben a sorrendben:</p>
+<pre><b>1.</b> Nyitva van-e a hónap?
+     bookingOpenUntil alapján. Ha nincs, üres a naptár,
+     és kiírjuk: "az októberi időpontok szeptember 25-től foglalhatók"
+
+<b>2.</b> Mikor dolgozik egyáltalán?
+     WorkDay sorok, ahol startTime és endTime ki van töltve.
+     Nincs WorkDay -> aznap nincs is szabad időpont
+
+<b>3.</b> Mi foglalja már?
+     a) a fodrász Google Naptárának eseményei arra a napra
+     b) a már elfogadott Booking-ok
+     c) a még el nem bírált "kért" Booking-ok
+
+<b>4.</b> Szeletelés
+     a maradék szabad idő felszabdalva a szolgáltatás hossza szerint,
+     15 perces lépésközzel, a végén takarítási ráhagyással
+
+<b>5.</b> Szűrés
+     ami közelebb van, mint bookingLeadHours, az kiesik</pre>
+
+    <div class="callout care">
+      <span class="tag">Amire a legjobban figyelni kell</span>
+      <p>A szabad időpontokat visszaadó végpont <strong>csak annyit mondhat, hogy egy sáv szabad vagy sem</strong>. Vendégnevet, szolgáltatást, „miért foglalt" indoklást soha nem adhat vissza — különben a nyilvános oldalról kiolvasható lenne, ki mikor jár a szalonba. Ez nem elméleti kockázat: ez a leggyakoribb adatszivárgás az ilyen rendszerekben.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>A végpontok</h2>
+    <p class="sub">Öt nyilvános cím, mind a Spellbookban</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Végpont</th><th>Mit csinál</th><th>Védelem</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /api/foglalas/dolgozok</code></td><td>Kihez lehet foglalni — név és a szolgáltatásai</td><td>Csak akinél <code>onlineBookable</code></td></tr>
+          <tr><td><code>GET /api/foglalas/szabad</code></td><td>Egy hónap szabad sávjai egy dolgozóra és szolgáltatásra</td><td>Csak kezdő időpontok, semmi más</td></tr>
+          <tr><td><code>POST /api/foglalas/keres</code></td><td>Beküldi a foglalási kérést</td><td>Beküldés-korlát IP és e-mail szerint</td></tr>
+          <tr><td><code>GET /api/foglalas/:token</code></td><td>A vendég megnézi a saját foglalását</td><td>Kitalálhatatlan token, nem sorszám</td></tr>
+          <tr><td><code>POST /api/foglalas/:token/lemondas</code></td><td>A vendég lemondja</td><td>Ugyanaz a token</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>A Spellbook tRPC-t használ, de ezek <strong>sima REST végpontok</strong> legyenek — a statikus oldalról így a legegyszerűbb hívni őket, és nem kell a tRPC klienst átvinni a másik projektbe.</p>
+  </section>
+
+  <section>
+    <h2>A jóváhagyás a Spellbookban</h2>
+    <p class="sub">Egy új oldal: Foglalások</p>
+    <p>A dashboardra kerül egy <strong>Foglalások</strong> menüpont, rajta a beérkezett kérések, legújabb elöl. Minden soron a vendég neve, elérhetősége, a kért időpont, a szolgáltatás — és két gomb.</p>
+    <p>Az <strong>Elfogadás</strong> négy dolgot csinál egy lépésben:</p>
+    <ul>
+      <li>létrehozza a <code>Guest</code> sort, ha még nincs ilyen nevű és telefonszámú vendég</li>
+      <li>kiírja az eseményt a fodrász <strong>Google Naptárába</strong> — így ott jelenik meg, ahol amúgy is dolgozik</li>
+      <li>elküldi a visszaigazoló levelet a lemondó linkkel</li>
+      <li>a foglalást <code>elfogadva</code> állapotba teszi</li>
+    </ul>
+    <p>Az <strong>Elutasítás</strong> felszabadítja a sávot és küld egy rövid, udvarias levelet. Az időpont módosítása ugyanez: elutasítás egy javasolt másik időponttal.</p>
+    <div class="callout">
+      <span class="tag">Miért éri meg a Google Naptárba kiírni</span>
+      <p>Mert a fodrász nem fog két helyre figyelni. Ha az elfogadott foglalás nem jelenik meg a saját naptárában, két hét múlva senki nem nézi a Foglalások oldalt. Az írási jog már megvan, a munkaidő kiírása is így működik — ugyanaz az út.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>A négy levél</h2>
+    <p class="sub">Brevo, ingyenes csomag</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Mikor</th><th>Kinek</th><th>Mi van benne</th></tr></thead>
+        <tbody>
+          <tr><td>Beküldéskor</td><td>Vendég</td><td>„Megkaptuk, hamarosan visszajelzünk" — időpont, szolgáltatás</td></tr>
+          <tr><td>Beküldéskor</td><td>Szalon</td><td>Új kérés érkezett, link a Foglalások oldalra</td></tr>
+          <tr><td>Elfogadáskor</td><td>Vendég</td><td>Visszaigazolás, cím, lemondó link, naptárba tehető melléklet</td></tr>
+          <tr><td>24 órával előtte</td><td>Vendég</td><td>Emlékeztető a lemondó linkkel</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>A levél <strong>soha ne tartalmazzon többet a kelleténél</strong>: időpont, szolgáltatás, lemondó link. Korábbi látogatás, színrecept, összeg nem való bele — az e-mail nem biztonságos csatorna.</p>
+    <p>Az ingyenes keret napi 300 levél. A havi nyitás napján, ha mind az ötven vendég aznap foglal, ez körülbelül 150 levél — belefér, de ez a nap a szűk keresztmetszet, nem az átlag.</p>
+  </section>
+
+  <section>
+    <h2>Építési sorrend</h2>
+    <p class="sub">Minden fázis végén legyen valami, ami működik</p>
+    <ol class="phases">
+      <li>
+        <span class="num">1</span>
+        <span>
+          <span class="title">Séma és a Foglalások oldal</span>
+          <span class="body">A <code>Booking</code> tábla, a két új mező, és a belső lista elfogadás–elutasítás gombokkal. Nyilvános űrlap és e-mail még nincs: kézzel viszel be egy próbafoglalást az adatbázisba, és végigjátszod a folyamatot.</span>
+          <span class="ship">Ekkor már használható belül</span>
+        </span>
+      </li>
+      <li>
+        <span class="num">2</span>
+        <span>
+          <span class="title">A szabad időpontok számítása és a nyilvános API</span>
+          <span class="body">Az öt lépéses algoritmus, és rá az öt végpont. Böngészőből vagy <code>curl</code>-lel tesztelhető, űrlap nélkül is.</span>
+          <span class="ship">Ekkor derül ki, jó-e a munkaidő-adat</span>
+        </span>
+      </li>
+      <li>
+        <span class="num">3</span>
+        <span>
+          <span class="title">Az űrlap a colormecrazy.hu-n</span>
+          <span class="body">Dolgozó, szolgáltatás, nap, sáv, adatok. Alatta a rövid adatvédelmi mondat és link a tájékoztatóra — kötelező pipa nélkül.</span>
+          <span class="ship">Ekkor tud élesben foglalni egy ember</span>
+        </span>
+      </li>
+      <li>
+        <span class="num">4</span>
+        <span>
+          <span class="title">Levelek és Google Naptár</span>
+          <span class="body">Brevo bekötése, a négy levél, a domain hitelesítése, és az esemény kiírása elfogadáskor.</span>
+          <span class="ship">Ekkortól nem kell kézzel szólni senkinek</span>
+        </span>
+      </li>
+      <li>
+        <span class="num">5</span>
+        <span>
+          <span class="title">Emlékeztető és takarítás</span>
+          <span class="body">Napi ütemezett feladat: 24 órás emlékeztető, és a 90 napnál régebbi, meg nem valósult foglalások törlése a meglévő adatvédelmi naplóba írva.</span>
+          <span class="ship">Ekkor lesz magától fenntartható</span>
+        </span>
+      </li>
+    </ol>
+    <p>Az <strong>1–2. fázis a Spellbookban van, egyedül is megcsinálható</strong>, és semmit nem kockáztat az élő oldalon. A colormecrazy.hu csak a 3. fázisban kerül elő.</p>
+  </section>
+
+  <section>
+    <h2>Amit korábban eldöntöttünk</h2>
+    <p class="sub">Hogy ne kelljen újratárgyalni</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Kérdés</th><th>Döntés</th><th>Következmény</th></tr></thead>
+        <tbody>
+          <tr><td>Fizetés</td><td>Nincs, a vendég a szalonban fizet</td><td>Nem kell ÁSZF, sem fizetési szolgáltató</td></tr>
+          <tr><td>Visszaigazolás</td><td>Kézi jóváhagyás</td><td>Nem lehet túlfoglalni, ti döntötök</td></tr>
+          <tr><td>Kihez lehet foglalni</td><td>Végül mindhármótokhoz, de előbb teszt egy emberrel</td><td>Ezért kell az <code>onlineBookable</code> jelző</td></tr>
+          <tr><td>Időpontok nyitása</td><td>Havonta egyszer</td><td>Kell a <code>bookingOpenUntil</code>, és a nyitás napja a levél-csúcs</td></tr>
+          <tr><td>Egészségi adat az űrlapon</td><td>Nem gyűjtünk</td><td>Nem kell hatásvizsgálat; allergiát személyesen kérdeztek</td></tr>
+          <tr><td>E-mail szolgáltató</td><td>Brevo, ingyenes csomag</td><td>0 Ft, a logó a levél alján marad</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Az adatvédelmi rész részletesen a repóban: <code>web/docs/tervek/idopontfoglalo-gdpr.md</code>, az e-mail árazás mellette. Ügyvéd ebben a felállásban nem kötelező, de egy egyszeri átnézés élesítés előtt megéri.</p>
+  </section>
+
+  <footer>Salon Spellbook · terv, nem megvalósítás</footer>
+</div>
