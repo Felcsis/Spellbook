@@ -23,6 +23,9 @@ export async function GET(req: Request) {
   const serviceId = url.searchParams.get("szolgaltatas");
   const fromParam = url.searchParams.get("tol");
   const days      = Math.min(Number(url.searchParams.get("napok") ?? 30) || 30, HORIZON_DAYS);
+  // Kiegészítők (fejmasszázs, mosás…) plusz ideje. Nélküle rövidebb sávot
+  // kínálnánk, mint amennyi a munka valójában — és csúszna az egész nap.
+  const extra     = Math.min(Math.max(Number(url.searchParams.get("plusz") ?? 0) || 0, 0), 180);
 
   if (!workerId || !serviceId)
     return json({ error: "Hiányzik a dolgozó vagy a szolgáltatás." }, origin, 400);
@@ -38,10 +41,10 @@ export async function GET(req: Request) {
   const from = fromParam ? new Date(`${fromParam}T00:00:00`) : new Date();
   if (isNaN(from.getTime())) return json({ error: "Hibás dátum." }, origin, 400);
 
-  const napok = await freeDays({ workerId, minutes: service.duration, from, days });
+  const napok = await freeDays({ workerId, minutes: service.duration + extra, from, days });
 
   return json({
-    szolgaltatas: { nev: service.name, perc: service.duration },
+    szolgaltatas: { nev: service.name, perc: service.duration + extra },
     napok,
   }, origin);
 }

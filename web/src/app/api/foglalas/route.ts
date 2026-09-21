@@ -27,6 +27,8 @@ export function OPTIONS(req: Request) {
 type Body = {
   nev?: string; email?: string; telefon?: string; megjegyzes?: string;
   dolgozo?: string; szolgaltatas?: string; kezdes?: string;
+  /** Kiegészítők plusz ideje percben, és a nevük a megjegyzéshez. */
+  plusz?: number; kiegeszitok?: string[];
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -45,6 +47,11 @@ export async function POST(req: Request) {
   const email = (body.email ?? "").trim().toLowerCase();
   const phone = (body.telefon ?? "").trim();
   const note  = (body.megjegyzes ?? "").trim();
+  // A kiegészítők ideje a foglalt sáv hosszát növeli — enélkül a rá következő
+  // vendég idejébe csúszna a munka.
+  const extra  = Math.min(Math.max(Number(body.plusz ?? 0) || 0, 0), 180);
+  const addons = (Array.isArray(body.kiegeszitok) ? body.kiegeszitok : [])
+    .map(x => String(x).trim()).filter(Boolean).slice(0, 6);
 
   if (name.length < 2)        return json({ error: "Kérünk, add meg a neved." }, origin, 400);
   if (!EMAIL_RE.test(email))  return json({ error: "Az e-mail cím nem jó." }, origin, 400);
@@ -91,14 +98,18 @@ export async function POST(req: Request) {
   // listázás óta eltelt percekben más is elfoglalhatta a sávot.
   // A nap és az óra a SZALON idejében — a szerver UTC-ben fut, ott a 11:30-as
   // kérés 09:30-nak látszana, és sosem találnánk meg a szabad sávok között.
+  const minutes = service.duration + extra;
+
   const { date: dayKey, minutes: startMin } = parts(start);
   const hhmm = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")}`;
-  const days   = await freeDays({ workerId: worker.id, minutes: service.duration, from: start, days: 1 });
+  const days   = await freeDays({ workerId: worker.id, minutes, from: start, days: 1 });
   const free   = days.find(d => d.date === dayKey)?.slots ?? [];
   if (!free.includes(hhmm))
     return json({ error: "Ez az időpont közben elkelt. Kérünk, válassz másikat." }, origin, 409);
 
-  const end = new Date(start.getTime() + service.duration * 60_000);
+  const end = new Date(start.getTime() + minutes * 60_000);
+  // A vendég azt lássa a levélben, amit kért — a kiegészítőkkel együtt.
+  const label = addons.length ? `${service.name} + ${addons.join(", ")}` : service.name;
 
   const booking = await db.booking.create({
     data: {
@@ -108,8 +119,8 @@ export async function POST(req: Request) {
       workerId: worker.id,
       // Név és hossz a kérés pillanatából: egy későbbi árlista-módosítás ne
       // írja át visszamenőleg, mit kért a vendég.
-      service:  service.name,
-      minutes:  service.duration,
+      service:  label,
+      minutes,
       startsAt: start,
       endsAt:   end,
       status:   "megerosites_varo",
@@ -120,7 +131,7 @@ export async function POST(req: Request) {
 
   if (isConfigured()) {
     const mail = verifyEmail(
-      { guestName: name, service: service.name, workerName: worker.name ?? "", start },
+      { guestName: name, service: label, workerName: worker.name ?? "", start },
       `${appUrl()}/foglalas/${booking.token}/megerosites`,
     );
     try {
