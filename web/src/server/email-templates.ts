@@ -86,6 +86,27 @@ export function requestReceived(m: BookingMail) {
   };
 }
 
+/**
+ * 0. A vendégnek, közvetlenül a beküldés után: erősítse meg a címét.
+ *
+ * Ez szűri ki azt, aki más nevében vagy kitalált címmel foglal: a kérés a szalon
+ * elé csak akkor kerül, ha a levél valódi postafiókba érkezett.
+ */
+export function verifyEmail(m: BookingMail, verifyUrl: string) {
+  return {
+    subject: `Erősítsd meg az időpontkérésed — ${SALON}`,
+    html: wrap("Már csak egy kattintás", `
+      <p>Kedves ${m.guestName}!</p>
+      <p>Az alábbi időpontot kérted. Kérünk, erősítsd meg, hogy tiéd ez a cím —
+         addig a kérés nem kerül elénk.</p>
+      ${details(m)}
+      ${button(verifyUrl, "Igen, én kértem")}
+      <p style="font-size:14px;color:#8a8078">Ha nem te voltál, ezt a levelet
+         nyugodtan hagyd figyelmen kívül: kérés nélkül semmi nem történik.</p>
+    `),
+  };
+}
+
 /** 2. A szalonnak, hogy van mit elbírálni. */
 export function salonNotice(m: BookingMail, manageUrl: string) {
   return {

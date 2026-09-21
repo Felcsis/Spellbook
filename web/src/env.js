@@ -55,6 +55,10 @@ export const env = createEnv({
     // a vállalkozás bejegyzett székhelye (számlára, tájékoztatóra), ez pedig az,
     // ahova a vendég megy.
     SALON_ADDRESS:  z.string().optional(),
+
+    // A Spellbook saját címe. A foglalási levelek linkjei ide mutatnak, ezért
+    // abszolút cím kell: egy levélben a relatív útvonal semmit nem ér.
+    APP_URL:        z.string().optional(),
   },
 
   /**
@@ -103,6 +107,7 @@ export const env = createEnv({
     MAIL_REPLY_TO:  process.env.MAIL_REPLY_TO,
     MAIL_SALON:     process.env.MAIL_SALON,
     SALON_ADDRESS:  process.env.SALON_ADDRESS,
+    APP_URL:        process.env.APP_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

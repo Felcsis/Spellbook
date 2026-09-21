@@ -75,6 +75,10 @@ model User {
   googleCalendarId   String? // melyik naptár; üresen a "primary"
   googleEmail        String? // melyik fiókkal kötötte össze — ez látszik a UI-on
   googleConnectedAt  DateTime?
+
+  /// Lehet-e hozzá online időpontot kérni. Alapból NEM: így egy emberrel
+  /// lehet élesben kipróbálni, mielőtt mindenki bekerül.
+  onlineBookable     Boolean             @default(false)
   accounts           Account[]
   sessions           Session[]
   posts              Post[]
@@ -87,6 +91,7 @@ model User {
   timeOff            TimeOff[]
   bookableWindows    BookableWindow[]
   ignoredEventTitles IgnoredEventTitle[]
+  bookings           Booking[]
   expenses           Expense[]           @relation("ExpenseCreatedBy")
   assignedExpenses   Expense[]           @relation("ExpenseAssignedTo")
 
@@ -161,6 +166,7 @@ model Guest {
   consentSource String? // "szóban" | "papíron" | "online"
 
   appointments Appointment[]
+  bookings     Booking[]
 
   @@index([name])
   @@schema("spellbook")
@@ -318,6 +324,54 @@ model IgnoredEventTitle {
   createdAt DateTime @default(now())
 
   @@index([workerId])
+  @@schema("spellbook")
+}
+
+/// Beérkezett foglalási kérés a nyilvános foglalóoldalról.
+///
+/// Szándékosan NEM vendég: a kérésből csak jóváhagyáskor lesz `Guest`. Így egy
+/// robot vagy egy meggondolatlan látogató nem szemeteli tele a receptkönyvet
+/// idegen nevekkel, és a meg nem valósult kérések gyorsan törölhetők.
+model Booking {
+  id    String @id @default(cuid())
+  /// Kitalálhatatlan azonosító: ezzel nyílik a vendég saját oldala és a lemondás.
+  token String @unique
+
+  name  String
+  email String
+  phone String
+  /// Szabad szöveg a vendégtől. Egészségi adat ide NEM kerülhet — a foglalóoldal
+  /// ezt ki is írja.
+  note  String?
+
+  worker   User   @relation(fields: [workerId], references: [id])
+  workerId String
+  /// A kért szolgáltatás neve és hossza a kérés pillanatában, hogy egy későbbi
+  /// árlista-módosítás ne írja át visszamenőleg, mit kért a vendég.
+  service  String
+  minutes  Int
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  /// kert | megerosites_varo | elfogadva | elutasitva | lemondva
+  status      String    @default("megerosites_varo")
+  /// Az e-mailes megerősítés ideje. Enélkül a kérés nem foglal helyet.
+  confirmedAt DateTime?
+
+  /// Csak elfogadáskor töltődik ki.
+  guest         Guest?  @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  guestId       String?
+  /// A dolgozó naptárába kiírt esemény.
+  googleEventId String?
+
+  /// Visszaélés-szűréshez: honnan érkezett a kérés.
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([startsAt])
+  @@index([status])
+  @@index([email])
   @@schema("spellbook")
 }
 
