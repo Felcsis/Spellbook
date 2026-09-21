@@ -50,6 +50,11 @@ export const env = createEnv({
     MAIL_FROM_NAME: z.string().optional(),   // "Color Me Crazy"
     MAIL_REPLY_TO:  z.string().optional(),   // a domainen nincs postafiók
     MAIL_SALON:     z.string().optional(),   // ide megy az értesítés a szalonnak
+
+    // A szalon látogatható címe. NEM azonos a székhellyel: a GDPR_CONTROLLER_ADDRESS
+    // a vállalkozás bejegyzett székhelye (számlára, tájékoztatóra), ez pedig az,
+    // ahova a vendég megy.
+    SALON_ADDRESS:  z.string().optional(),
   },
 
   /**
@@ -97,6 +102,7 @@ export const env = createEnv({
     MAIL_FROM_NAME: process.env.MAIL_FROM_NAME,
     MAIL_REPLY_TO:  process.env.MAIL_REPLY_TO,
     MAIL_SALON:     process.env.MAIL_SALON,
+    SALON_ADDRESS:  process.env.SALON_ADDRESS,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

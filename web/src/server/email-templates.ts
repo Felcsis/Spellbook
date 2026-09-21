@@ -20,8 +20,15 @@ export type BookingMail = {
 
 const SALON = "Color Me Crazy";
 
+/**
+ * A szalon látogatható címe — ahova a vendég megy.
+ *
+ * Szándékosan NEM a székhely (`GDPR_CONTROLLER_ADDRESS`): az a vállalkozás
+ * bejegyzett címe, ami a számlára és az adatkezelési tájékoztatóra való. Egy
+ * időpont-visszaigazoláson oda kell kiírni, ahol a vendéget várjuk.
+ */
 function address(): string {
-  return env.GDPR_CONTROLLER_ADDRESS?.trim() || "Nemes Takács utca 8, Szeged";
+  return env.SALON_ADDRESS?.trim() || "Nemes Takács utca 8, Szeged";
 }
 
 function phone(): string {
