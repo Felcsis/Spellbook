@@ -310,7 +310,11 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = col; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = isEditing ? col : "var(--text-dim)"; }}
                     title="Szerkesztés">✎</button>
-                  <button onClick={() => { if (isEditing) resetWork(); delW.mutate({ id: e.id }); }} style={delBtnStyle}
+                  <button onClick={() => {
+                      if (!confirm(`Törlöd ${e.user.name ?? "a dolgozó"} aznapi bejegyzését (${fmt(e.earnings)})? Ez nem vonható vissza.`)) return;
+                      if (isEditing) resetWork();
+                      delW.mutate({ id: e.id });
+                    }} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "var(--color-danger)"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}
                     title="Törlés">✕</button>
@@ -348,7 +352,10 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     )}
                   </div>
                   <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem", alignSelf: "flex-start" }}>{fmt(card.total)}</div>
-                  <button onClick={() => delCard.mutate({ id: card.id })} style={delBtnStyle}
+                  <button onClick={() => {
+                      if (!confirm(`Törlöd ${card.guest.name} mai kártyáját? A rajta lévő recept és anyagok is elvesznek.`)) return;
+                      delCard.mutate({ id: card.id });
+                    }} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "var(--color-danger)"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}
                     title="Törlés">✕</button>
@@ -375,7 +382,10 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     </div>
                   </div>
                   <div style={{ fontFamily: "var(--font-playfair)", color: col, fontWeight: 700, fontSize: "0.98rem" }}>{fmt(e.amount)}</div>
-                  <button onClick={() => delC.mutate({ id: e.id })} style={delBtnStyle}
+                  <button onClick={() => {
+                      if (!confirm(`Törlöd ezt a kiadást: ${e.description} (${fmt(e.amount)})?`)) return;
+                      delC.mutate({ id: e.id });
+                    }} style={delBtnStyle}
                     onMouseEnter={el => { (el.target as HTMLElement).style.color = "var(--color-danger)"; }}
                     onMouseLeave={el => { (el.target as HTMLElement).style.color = "var(--text-dim)"; }}>✕</button>
                 </div>
@@ -598,7 +608,11 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
             {editingEntryId ? (
               <div style={{ display: "flex", gap: "0.6rem" }}>
                 <button type="button" disabled={delW.isPending}
-                  onClick={() => { delW.mutate({ id: editingEntryId }); resetWork(); }}
+                  onClick={() => {
+                    if (!confirm("Törlöd ezt a bejegyzést? Ez nem vonható vissza.")) return;
+                    delW.mutate({ id: editingEntryId });
+                    resetWork();
+                  }}
                   style={{ padding: "0.8rem 1rem", borderRadius: "10px", border: "1px solid rgba(220,80,80,0.35)", background: "rgba(220,80,80,0.08)", color: "#e07070", fontFamily: "var(--font-cinzel)", fontSize: "0.65rem", letterSpacing: "0.15em", cursor: "pointer", transition: "all 0.2s" }}>
                   {delW.isPending ? "Törlés…" : "✕ Törlés"}
                 </button>
@@ -1744,7 +1758,10 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                     workerName: full.worker.name ?? "",
                   });
                 }}
-                onRemoveWindow={w => removeWindow.mutate({ id: w.id })}
+                onRemoveWindow={w => {
+                  if (!confirm(`Leveszed a foglalható sávot? ${w.workerName} · ${w.start}–${w.end}`)) return;
+                  removeWindow.mutate({ id: w.id });
+                }}
                 onSelectRange={(date, fromMin, toMin) => {
                   const hhmm = (m: number) =>
                     `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
