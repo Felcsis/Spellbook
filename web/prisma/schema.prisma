@@ -85,6 +85,7 @@ model User {
   guestCards         GuestCard[]
   appointments       Appointment[]
   timeOff            TimeOff[]
+  bookableWindows    BookableWindow[]
   expenses           Expense[]         @relation("ExpenseCreatedBy")
   assignedExpenses   Expense[]         @relation("ExpenseAssignedTo")
 
@@ -279,6 +280,27 @@ model TimeOff {
 
   @@unique([date, workerId])
   @@index([date])
+  @@schema("spellbook")
+}
+
+/// Online foglalható idősáv.
+///
+/// A munkaidő a belső nyilvántartás: mikor van bent a dolgozó. Ez viszont azt
+/// mondja meg, mennyit adunk ki ebből a nyilvános foglalónak — a maradék marad
+/// beugró vendégnek, konzultációnak, szünetnek.
+///
+/// Egy naphoz és dolgozóhoz több sáv is tartozhat (pl. délelőtt és késő délután).
+model BookableWindow {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  worker    User     @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  workerId  String
+  startTime String // "HH:MM"
+  endTime   String // "HH:MM"
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([workerId, date])
   @@schema("spellbook")
 }
 

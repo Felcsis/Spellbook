@@ -14,7 +14,7 @@ import { api } from "~/trpc/react";
 const fmtFt = (n: number) =>
   new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 
-type Mode = null | "hours" | "off" | "sum";
+type Mode = null | "hours" | "off" | "sum" | "bookable";
 
 export function SelectionBar({ dates, workers, defaultWorkerId, summary, onClear }: {
   dates:  string[];                       // "YYYY-MM-DD", rendezve
@@ -36,10 +36,20 @@ export function SelectionBar({ dates, workers, defaultWorkerId, summary, onClear
     void utils.calendar.month.invalidate();
     void utils.timeOff.list.invalidate();
     void utils.appointments.freeSlots.invalidate();
+    void utils.bookable.list.invalidate();
   };
 
   const setHours = api.calendar.setHoursBulk.useMutation({
     onSuccess: r => { setMsg(`${r.count} napra beállítva: ${start}–${end}`); setMode(null); refresh(); },
+    onError:   e => setMsg(e.message),
+  });
+
+  const setBookable = api.bookable.addBulk.useMutation({
+    onSuccess: r => { setMsg(`${r.count} napra kiadva online: ${start}–${end}`); setMode(null); refresh(); },
+    onError:   e => setMsg(e.message),
+  });
+  const clearBookable = api.bookable.clearDays.useMutation({
+    onSuccess: r => { setMsg(r.count > 0 ? `${r.count} sáv levéve` : "Nem volt kiadott sáv"); setMode(null); refresh(); },
     onError:   e => setMsg(e.message),
   });
 
@@ -53,7 +63,8 @@ export function SelectionBar({ dates, workers, defaultWorkerId, summary, onClear
     onError:   e => setMsg(e.message),
   });
 
-  const busy = setHours.isPending || setOff.isPending || clearOff.isPending;
+  const busy = setHours.isPending || setOff.isPending || clearOff.isPending
+    || setBookable.isPending || clearBookable.isPending;
   const label = dates.length === 1
     ? new Date(`${dates[0]}T12:00:00`).toLocaleDateString("hu-HU", { month: "long", day: "numeric" })
     : `${dates.length} nap`;
@@ -77,6 +88,9 @@ export function SelectionBar({ dates, workers, defaultWorkerId, summary, onClear
 
         <button onClick={() => { setMode(mode === "hours" ? null : "hours"); setMsg(""); }} style={btn(mode === "hours")}>
           Munkaidő
+        </button>
+        <button onClick={() => { setMode(mode === "bookable" ? null : "bookable"); setMsg(""); }} style={btn(mode === "bookable")}>
+          Foglalható
         </button>
         <button onClick={() => { setMode(mode === "off" ? null : "off"); setMsg(""); }} style={btn(mode === "off")}>
           Szabadság
@@ -109,6 +123,35 @@ export function SelectionBar({ dates, workers, defaultWorkerId, summary, onClear
             style={{ ...btn(false), color: "var(--text-dim)" }}>
             Munkaidő törlése
           </button>
+        </div>
+      )}
+
+      {mode === "bookable" && (
+        <div style={{ marginTop: "0.7rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
+          {workers.length > 1 && (
+            <select value={worker} onChange={e => setWorker(e.target.value)} style={field}>
+              {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+          )}
+          <input type="time" value={start} onChange={e => setStart(e.target.value)} style={field} aria-label="Sáv kezdete" />
+          <span style={{ color: "var(--text-soft)" }}>–</span>
+          <input type="time" value={end} onChange={e => setEnd(e.target.value)} style={field} aria-label="Sáv vége" />
+          <button disabled={busy}
+            onClick={() => setBookable.mutate({ dates, workerId: worker, startTime: start, endTime: end })}
+            style={primary}>
+            {busy ? "Mentés…" : `Kiadás ${dates.length} napra`}
+          </button>
+          <button disabled={busy}
+            onClick={() => clearBookable.mutate({ dates, workerId: worker })}
+            style={{ ...btn(false), color: "var(--text-dim)" }}>
+            Kiadás visszavonása
+          </button>
+          <span style={{
+            flexBasis: "100%", fontFamily: "var(--font-cormorant)", fontSize: "0.82rem",
+            color: "var(--text-dim)", fontStyle: "italic",
+          }}>
+            Ennyit adunk ki online foglalásra ezekre a napokra — a munkaidő többi része marad beugró vendégnek.
+          </span>
         </div>
       )}
 

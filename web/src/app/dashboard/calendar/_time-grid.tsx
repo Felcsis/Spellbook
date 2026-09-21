@@ -42,6 +42,14 @@ export type GridBooking = {
   color:     string;
 };
 
+/** Online foglalásra kiadott idősáv. */
+export type GridWindow = {
+  id:    string;
+  start: string;   // "HH:MM"
+  end:   string;
+  workerName: string;
+};
+
 /** Egy munkaidő-sáv: érkezés–távozás, a dolgozó színével. */
 export type GridBand = {
   id:    string;
@@ -126,7 +134,7 @@ function layout<T extends { start: string; end: string }>(events: T[]): Placed<T
   return out;
 }
 
-export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, showAllDay = true }: {
+export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewBooking, onSelectRange, onMove, onCancel, onDropBooking, onResizeBooking, markMode = false, onRemoveWindow, showAllDay = true }: {
   days: {
     date:     Date;
     label:    string;
@@ -134,6 +142,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
     isToday:  boolean;
     events:   GridEvent[];
     bookings: GridBooking[];
+    windows:  GridWindow[];
     bands:    GridBand[];
     allDay:   { id: string; text: string; color: string }[];
   }[];
@@ -152,6 +161,9 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
   onDropBooking?: (b: GridBooking, date: Date, startMinutes: number) => void;
   /** Alsó él húzásával módosított hossz. */
   onResizeBooking?: (b: GridBooking, minutes: number) => void;
+  /** "Kiadás" mód: a húzás foglalható sávot jelöl, nem időpontot nyit. */
+  markMode?: boolean;
+  onRemoveWindow?: (w: GridWindow) => void;
 }) {
   // Az aktuális idő sávja. Csak a böngészőben állítjuk be (a szerveren nincs
   // "most"), különben a kiszolgált és a megjelenített oldal eltérne.
@@ -372,6 +384,33 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                   background: "var(--border)", opacity: 0.5,
                 }} />
               ))}
+
+              {/* Online foglalásra kiadott sávok */}
+              {d.windows.map(w => {
+                const a0 = minutesOf(w.start);
+                const b0 = minutesOf(w.end);
+                if (isNaN(a0) || isNaN(b0) || b0 <= a0) return null;
+                return (
+                  <div key={w.id} title={`Online foglalható · ${w.workerName} · ${w.start}–${w.end}`}
+                    style={{
+                      position: "absolute", left: 0, right: 0,
+                      top: top(a0), height: ((b0 - a0) / 60) * PX_PER_HOUR,
+                      background: "repeating-linear-gradient(135deg, rgba(82,118,102,0.16) 0 6px, transparent 6px 12px)",
+                      borderTop: "1px solid rgba(82,118,102,0.45)",
+                      borderBottom: "1px solid rgba(82,118,102,0.45)",
+                      pointerEvents: markMode ? "auto" : "none",
+                    }}>
+                    {markMode && onRemoveWindow && (
+                      <button onClick={ev => { ev.stopPropagation(); onRemoveWindow(w); }}
+                        title="Sáv levétele"
+                        style={{
+                          position: "absolute", top: 1, right: 2, background: "none", border: "none",
+                          cursor: "pointer", color: "#527666", fontSize: "0.62rem", lineHeight: 1, padding: 0,
+                        }}>✕</button>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Munkaidő-sávok — halvány fénycsík a háttérben */}
               {d.bands.map(b => {

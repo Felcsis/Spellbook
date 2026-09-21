@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { useIsMobile } from "~/app/_responsive";
 import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { StarfieldBg } from "./_starfield-bg";
-import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent } from "./_time-grid";
+import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent, type GridWindow } from "./_time-grid";
 import { BookingModal } from "./_booking-modal";
 import { MiniCalendar } from "./_mini-calendar";
 import { DayPanel, type DaySection, type Total } from "./_day-panel";
@@ -1036,6 +1036,17 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
   const { data: timeOff = [] } = api.timeOff.list.useQuery({
     from: gFrom.toISOString(), to: gTo.toISOString(),
   });
+
+  // Online foglalásra kiadott sávok. "Kiadás" módban a húzás ilyet jelöl,
+  // egyébként időpontot nyit — így nem kell két külön mozdulatot megtanulni.
+  const { data: windows = [] } = api.bookable.list.useQuery({
+    from: gFrom.toISOString(), to: gTo.toISOString(),
+  });
+  const [markMode, setMarkMode] = useState(false);
+
+  const refreshWindows = () => void utils.bookable.list.invalidate();
+  const addWindow    = api.bookable.add.useMutation({ onSuccess: refreshWindows });
+  const removeWindow = api.bookable.remove.useMutation({ onSuccess: refreshWindows });
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
   // Húzással áthelyezett / átméretezett időpont. Ütközésnél nem tiltunk, csak
@@ -1093,6 +1104,15 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
 
   const userColors: Record<string, string> = {};
   users.forEach((u, i) => { userColors[u.id] = USER_COLORS[i % USER_COLORS.length]!; });
+
+  const byWindowDate: Record<string, GridWindow[]> = {};
+  for (const w of windows) {
+    const d   = new Date(w.date);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+    (byWindowDate[key] ??= []).push({
+      id: w.id, start: w.startTime, end: w.endTime, workerName: w.worker.name ?? "?",
+    });
+  }
 
   const byBookingDate: Record<string, GridBooking[]> = {};
   appointments
@@ -1230,6 +1250,19 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           ))}
         </div>
 
+        <button onClick={() => setMarkMode(m => !m)}
+          title="Húzással jelöld ki, mennyit adsz ki online foglalásra"
+          style={{
+            padding: "0.42rem 0.9rem", borderRadius: 8,
+            border: markMode ? "1px solid rgba(82,118,102,0.7)" : "1px solid var(--border)",
+            background: markMode ? "rgba(82,118,102,0.16)" : "transparent",
+            color: markMode ? "#527666" : "var(--text-soft)",
+            fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em",
+            cursor: "pointer", textTransform: "uppercase", whiteSpace: "nowrap",
+          }}>
+          ⊞ Foglalható sáv
+        </button>
+
         <button onClick={() => setBooking({ date: anchor })}
           style={{
             padding: "0.42rem 0.9rem", borderRadius: 8,
@@ -1286,6 +1319,18 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
           userColors={userColors} today={todayStr} onOpen={setModalDate} isMobile={isMobile}
           selected={selectedDays} onSelect={setSelectedDays} />
       )}
+      {markMode && (
+        <div style={{
+          marginBottom: "0.75rem", padding: "0.5rem 0.85rem", borderRadius: 10,
+          background: "rgba(82,118,102,0.10)", border: "1px solid rgba(82,118,102,0.35)",
+          fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: "#527666",
+        }}>
+          <strong>Kiadás mód.</strong> Húzd végig az idősávot a naptáron, és az online
+          foglalható lesz — a többi idő marad beugró vendégnek. A csíkos sávok a már
+          kiadott idők; a sarkukban lévő ✕ leveszi őket.
+        </div>
+      )}
+
       {dragNote && (
         <div style={{
           position: "fixed", bottom: "1rem", left: "50%", transform: "translateX(-50%)",
@@ -1378,6 +1423,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
             sub:   String(date.getDate()),
             events: evs,
             bookings: byBookingDate[ds] ?? [],
+            windows:  byWindowDate[ds] ?? [],
             bands,
             allDay: [
               // A munkanap akkor is látszik, ha nincs hozzá óra megadva.
@@ -1487,7 +1533,19 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                 onOpenDay={setModalDate}
                 onOpenCard={ev => openCardFromEvent(ev)}
                 onNewBooking={date => setBooking({ date })}
+                markMode={markMode}
+                onRemoveWindow={w => removeWindow.mutate({ id: w.id })}
                 onSelectRange={(date, fromMin, toMin) => {
+                  const hhmm = (m: number) =>
+                    `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+                  if (markMode) {
+                    addWindow.mutate({
+                      date: toDateStr(date),
+                      workerId: currentUserId || activeUsers[0]?.id,
+                      startTime: hhmm(fromMin), endTime: hhmm(toMin),
+                    });
+                    return;
+                  }
                   const start = new Date(date);
                   start.setHours(Math.floor(fromMin / 60), fromMin % 60, 0, 0);
                   setBooking({
