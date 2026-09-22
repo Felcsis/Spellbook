@@ -31,8 +31,8 @@ export const bookingsRouter = createTRPCRouter({
   /** Egy időszak elbírálásra váró kérései. */
   pending: protectedProcedure
     .input(z.object({ from: z.string(), to: z.string() }))
-    .query(({ ctx, input }) =>
-      ctx.db.booking.findMany({
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db.booking.findMany({
         where: {
           status:   PENDING,
           startsAt: { gte: new Date(input.from), lte: new Date(input.to) },
@@ -40,8 +40,38 @@ export const bookingsRouter = createTRPCRouter({
         },
         orderBy: { startsAt: "asc" },
         include: { worker: { select: { id: true, name: true } } },
-      })
-    ),
+      });
+
+      // Párban kért látogatásnál a kártyán látszania kell a másik félnek is:
+      // enélkül az egyikőtök elfogadná a maga részét, és nem tudná, hogy a
+      // vendég a kettőt egyben kérte.
+      const groups = rows.map(r => r.groupId).filter((g): g is string => !!g);
+      // A csoport MINDEN sora kell, a listában lévők is: adminként mindkét fél
+      // itt van, és korábban épp ezeket zártuk ki — így sosem lett párja.
+      const others = groups.length
+        ? await ctx.db.booking.findMany({
+            where:  { groupId: { in: groups } },
+            select: { id: true, groupId: true, service: true, startsAt: true, status: true, worker: { select: { name: true } } },
+          })
+        : [];
+
+      return rows.map(r => {
+        const other = r.groupId
+          ? others.find(o => o.groupId === r.groupId && o.id !== r.id)
+          : undefined;
+        return {
+          ...r,
+          pair: other
+            ? {
+                service:    other.service,
+                workerName: other.worker.name ?? "",
+                startsAt:   other.startsAt,
+                status:     other.status,
+              }
+            : null,
+        };
+      });
+    }),
 
   /**
    * Elfogadás. Ekkor keletkezik a vendég és az előjegyzés — addig a kérés
@@ -87,10 +117,25 @@ export const bookingsRouter = createTRPCRouter({
         data:  { status: "elfogadva", guestId: guest.id },
       });
 
-      if (isConfigured()) {
+      // Párban kért látogatás: a vendég egyetlen visszaigazolást kapjon, és
+      // csak akkor, ha mindkét kolléga elfogadta. Félkész alkalomról értesíteni
+      // rosszabb a hallgatásnál: nem tudná, mire számítson.
+      const siblings = b.groupId
+        ? await ctx.db.booking.findMany({
+            where:  { groupId: b.groupId, id: { not: b.id } },
+            select: { service: true, startsAt: true, status: true, worker: { select: { name: true } } },
+          })
+        : [];
+      const waiting = siblings.some(x => x.status === PENDING || x.status === "megerosites_varo");
+      const other   = siblings.find(x => x.status === "elfogadva");
+
+      if (isConfigured() && !waiting) {
         const mail = confirmed({
           guestName: name, service: b.service,
           workerName: b.worker.name ?? "", start: b.startsAt,
+          ...(other ? {
+            also: { service: other.service, workerName: other.worker.name ?? "", start: other.startsAt },
+          } : {}),
           // Saját link a vendégnek: itt nézheti meg és mondhatja le. Enélkül
           // csak telefonon tudna szólni, ami mindkettőtöknek macerásabb.
           link: `${appUrl()}/foglalas/${b.token}`,
@@ -118,11 +163,23 @@ export const bookingsRouter = createTRPCRouter({
 
       await ctx.db.booking.update({ where: { id: b.id }, data: { status: "elutasitva" } });
 
+      // Párban kért látogatásnál a másik fél döntése áll: csak ezt a részt
+      // utasítottuk el, és a levélnek ezt kell megmondania.
+      const sibling = b.groupId
+        ? await ctx.db.booking.findFirst({
+            where:  { groupId: b.groupId, id: { not: b.id }, status: { in: [PENDING, "elfogadva"] } },
+            select: { service: true, worker: { select: { name: true } } },
+          })
+        : null;
+
       if (isConfigured()) {
+        const extra = sibling
+          ? `A látogatás másik része (${sibling.service}, ${sibling.worker.name ?? ""}) továbbra is él.`
+          : undefined;
         const mail = declined({
           guestName: b.name, service: b.service,
           workerName: b.worker.name ?? "", start: b.startsAt,
-        }, input.reason);
+        }, [input.reason, extra].filter(Boolean).join(" "));
         try { await send({ to: { email: b.email, name: b.name }, subject: mail.subject, html: mail.html }); }
         catch { /* az elutasítás akkor is megtörtént */ }
       }

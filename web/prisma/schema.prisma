@@ -381,6 +381,10 @@ model Booking {
   /// A dolgozó naptárába kiírt esemény.
   googleEventId String?
 
+  /// Két kolléga egy látogatásban: a párban kért foglalások közös jele.
+  /// Külön sor mindkettő, mert külön naptárba megy és külön bírálják el.
+  groupId   String?
+
   /// Visszaélés-szűréshez: honnan érkezett a kérés.
   ip        String?
   createdAt DateTime @default(now())
@@ -388,6 +392,7 @@ model Booking {
   @@index([startsAt])
   @@index([status])
   @@index([email])
+  @@index([groupId])
   @@schema("spellbook")
 }
 

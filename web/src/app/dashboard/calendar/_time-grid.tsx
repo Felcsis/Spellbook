@@ -56,6 +56,8 @@ export type GridRequest = {
   start:     string;
   end:       string;
   workerName: string;
+  /** Párban kért látogatás másik fele — a vendég a kettőt egyben kérte. */
+  pair?: { service: string; workerName: string; time: string; status: string } | null;
 };
 
 /** Online foglalásra kiadott idősáv. */
@@ -571,7 +573,9 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                   <div key={r.id}
                     onMouseDown={ev => ev.stopPropagation()}
                     onClick={ev => { ev.stopPropagation(); onOpenRequest?.(r); }}
-                    title={`${r.guestName} — kattints az elbíráláshoz`}
+                    title={r.pair
+                      ? `${r.guestName} — párban kért látogatás: utána ${r.pair.time}, ${r.pair.workerName} (${r.pair.service}). Kattints az elbíráláshoz.`
+                      : `${r.guestName} — kattints az elbíráláshoz`}
                     style={{
                       position: "absolute", top: top(s0), height: ((e0 - s0) / 60) * PX_PER_HOUR - 2,
                       left: `calc(${col * w0}% + 3px)`, width: `calc(${w0}% - 6px)`,
@@ -593,6 +597,14 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                     <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.72rem", color: "var(--text-soft)", lineHeight: 1.1 }}>
                       {r.service}
                     </div>
+                    {r.pair && (
+                      <div style={{
+                        fontFamily: "var(--font-cormorant)", fontSize: "0.68rem",
+                        color: "var(--text-dim)", lineHeight: 1.1, fontStyle: "italic",
+                      }}>
+                        ⇄ utána {r.pair.time} · {r.pair.workerName}
+                      </div>
+                    )}
                     <div style={{
                       fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em",
                       color: "#8a6a20", marginTop: "0.15rem", textDecoration: "underline",

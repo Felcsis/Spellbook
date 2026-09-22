@@ -17,6 +17,8 @@ export type BookingMail = {
   start:     Date;
   /** A vendég saját linkje: itt nézheti meg és mondhatja le az időpontot. */
   link?:     string;
+  /** Párban kért látogatás másik fele: utána mindjárt a másik kollégához megy. */
+  also?:     { service: string; workerName: string; start: Date };
 };
 
 const SALON = "Color Me Crazy";
@@ -59,6 +61,15 @@ function details(m: BookingMail): string {
         <td style="padding:.35rem 0;text-align:right"><strong>${m.service}</strong></td></tr>
     <tr><td style="padding:.35rem 0;color:#8a8078">Kihez</td>
         <td style="padding:.35rem 0;text-align:right"><strong>${m.workerName}</strong></td></tr>
+    ${m.also ? `
+    <tr><td colspan="2" style="padding:.7rem 0 .2rem;color:#8a8078;font-size:13px">
+        És mindjárt utána:</td></tr>
+    <tr><td style="padding:.35rem 0;color:#8a8078">Mikor</td>
+        <td style="padding:.35rem 0;text-align:right"><strong>${fmt(m.also.start)}</strong></td></tr>
+    <tr><td style="padding:.35rem 0;color:#8a8078">Mit</td>
+        <td style="padding:.35rem 0;text-align:right"><strong>${m.also.service}</strong></td></tr>
+    <tr><td style="padding:.35rem 0;color:#8a8078">Kihez</td>
+        <td style="padding:.35rem 0;text-align:right"><strong>${m.also.workerName}</strong></td></tr>` : ""}
   </table>`;
 }
 

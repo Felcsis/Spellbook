@@ -1259,6 +1259,14 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       id: r.id, guestName: r.name, service: r.service, phone: r.phone,
       start: start.toISOString(), end: new Date(r.endsAt).toISOString(),
       workerName: r.worker.name ?? "?",
+      pair: r.pair
+        ? {
+            service:    r.pair.service,
+            workerName: r.pair.workerName,
+            time:       new Date(r.pair.startsAt).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" }),
+            status:     r.pair.status,
+          }
+        : null,
     });
   }
 

@@ -106,6 +106,17 @@ export const HORIZON_DAYS = 60;
 /** Ráhagyás két vendég között. */
 export const BUFFER_MIN   = 10;
 
+/**
+ * Párban kért foglalás: a vendég két kollégához jön egy látogatásban.
+ *
+ * `PAIR_GAP_MIN` a legkisebb szünet a kettő közt — átülés, kézmosás, csúszás.
+ * Nulla perccel az első apró csúszása azonnal vinné a másodikat is.
+ * `PAIR_MAX_WAIT_MIN` a legtöbb, amennyit a vendéget várakoztatjuk: ennél
+ * tovább ülni már nem egy látogatás.
+ */
+export const PAIR_GAP_MIN      = 15;
+export const PAIR_MAX_WAIT_MIN = 30;
+
 const TZ = "Europe/Budapest";
 
 /**
@@ -287,13 +298,25 @@ export async function freeDays(opts: {
  */
 /** A vendég saját foglalása a tokenje alapján. */
 export async function bookingByToken(token: string) {
-  return db.booking.findUnique({
+  const b = await db.booking.findUnique({
     where:  { token },
     select: {
-      id: true, name: true, service: true, startsAt: true, status: true,
+      id: true, name: true, service: true, startsAt: true, status: true, groupId: true,
       worker: { select: { name: true } },
     },
   });
+  if (!b) return null;
+
+  // Párban kért látogatás: a vendég a kettőt egy alkalomnak érzi, ezért mindkettőt
+  // látnia kell — és tudnia kell, hogy a lemondás az egészre szól.
+  const pair = b.groupId
+    ? await db.booking.findFirst({
+        where:  { groupId: b.groupId, id: { not: b.id } },
+        select: { service: true, startsAt: true, status: true, worker: { select: { name: true } } },
+      })
+    : null;
+
+  return { ...b, pair };
 }
 
 /**
@@ -304,7 +327,7 @@ export async function bookingByToken(token: string) {
  * A már megkezdett vagy elmúlt időpontot nem lehet visszamondani.
  */
 export async function cancelBooking(token: string): Promise<
-  | { ok: true; booking: { name: string; service: string; startsAt: Date; workerName: string } }
+  | { ok: true; booking: { name: string; service: string; startsAt: Date; workerName: string }; alsoCancelled: number }
   | { ok: false; reason: "nincs" | "lejart" | "mar-lemondva" }
 > {
   const b = await db.booking.findUnique({
@@ -316,20 +339,31 @@ export async function cancelBooking(token: string): Promise<
     return { ok: false, reason: "mar-lemondva" };
   if (b.startsAt < new Date()) return { ok: false, reason: "lejart" };
 
-  await db.booking.update({ where: { id: b.id }, data: { status: "lemondva" } });
+  // Párban kért látogatásnál a vendég egyetlen alkalmat mondott le a fejében —
+  // ha csak az egyik felét vennénk le, a másik kolléga hiába várná.
+  const group = b.groupId
+    ? await db.booking.findMany({
+        where: { groupId: b.groupId, status: { notIn: ["lemondva", "elutasitva"] } },
+      })
+    : [b];
 
-  // Ha már elfogadtuk, az előjegyzés is essen ki a naptárból — különben a
-  // szalon egy olyan vendégre várna, aki szólt, hogy nem jön.
-  if (b.status === "elfogadva") {
-    const appt = await db.appointment.findFirst({
-      where: { workerId: b.workerId, start: b.startsAt, status: "foglalt" },
-      select: { id: true },
-    });
-    if (appt) await db.appointment.update({ where: { id: appt.id }, data: { status: "lemondott" } });
+  for (const row of group) {
+    await db.booking.update({ where: { id: row.id }, data: { status: "lemondva" } });
+
+    // Ha már elfogadtuk, az előjegyzés is essen ki a naptárból — különben a
+    // szalon egy olyan vendégre várna, aki szólt, hogy nem jön.
+    if (row.status === "elfogadva") {
+      const appt = await db.appointment.findFirst({
+        where: { workerId: row.workerId, start: row.startsAt, status: "foglalt" },
+        select: { id: true },
+      });
+      if (appt) await db.appointment.update({ where: { id: appt.id }, data: { status: "lemondott" } });
+    }
   }
 
   return {
     ok: true,
+    alsoCancelled: Math.max(group.length - 1, 0),
     booking: { name: b.name, service: b.service, startsAt: b.startsAt, workerName: b.worker.name ?? "" },
   };
 }
@@ -341,7 +375,7 @@ export async function confirmBooking(token: string): Promise<
   const booking = await db.booking.findUnique({
     where:  { token },
     select: {
-      id: true, name: true, email: true, service: true, minutes: true,
+      id: true, name: true, email: true, service: true, minutes: true, groupId: true,
       startsAt: true, status: true, worker: { select: { name: true, notifyEmail: true } },
     },
   });
@@ -361,13 +395,32 @@ export async function confirmBooking(token: string): Promise<
   if (booking.startsAt < new Date())
     return { ok: false, reason: "lejart" };
 
-  await db.booking.update({
-    where: { id: booking.id },
-    data:  { status: "kert", confirmedAt: new Date() },
+  // Párban kért látogatásnál egy kattintás erősíti meg mindkét felét: a vendég
+  // egy alkalmat kért, két levélnyi hitelesítés csak elriasztaná.
+  const group = booking.groupId
+    ? await db.booking.findMany({
+        where:  { groupId: booking.groupId, status: "megerosites_varo" },
+        select: { id: true, service: true, startsAt: true, worker: { select: { name: true, notifyEmail: true } } },
+        orderBy: { startsAt: "asc" },
+      })
+    : [];
+
+  await db.booking.updateMany({
+    where: booking.groupId
+      ? { groupId: booking.groupId, status: "megerosites_varo" }
+      : { id: booking.id },
+    data: { status: "kert", confirmedAt: new Date() },
   });
 
   if (isConfigured()) {
-    const mail = { guestName: booking.name, service: booking.service, workerName: info.workerName, start: booking.startsAt };
+    const other = group.find(g => g.id !== booking.id);
+    const mail = {
+      guestName: booking.name, service: booking.service,
+      workerName: info.workerName, start: booking.startsAt,
+      ...(other ? {
+        also: { service: other.service, workerName: other.worker.name ?? "", start: other.startsAt },
+      } : {}),
+    };
     const guestMail = requestReceived(mail);
     const salon     = salonAddress();
     const salonMail = salonNotice(mail, `${appUrl()}/dashboard/calendar`);
@@ -375,8 +428,11 @@ export async function confirmBooking(token: string): Promise<
     // Mindenki a sajátját bírálja el, ezért a dolgozó is kap értesítést a saját
     // címére. A belépési címére nem lehet küldeni: az kitalált (@salon-spellbook.local).
     // A szalon címe kettőzésre kerülne, ha a dolgozóé ugyanaz — ezért halmaz.
-    const worker = booking.worker.notifyEmail?.trim() || null;
-    const to = Array.from(new Set([salon, worker].filter((x): x is string => !!x)));
+    // Mindkét kolléga a sajátját bírálja el, ezért a pár másik fele is kap
+    // értesítést a saját címére.
+    const workers = [booking.worker.notifyEmail, ...group.map(g => g.worker.notifyEmail)]
+      .map(x => x?.trim() || null);
+    const to = Array.from(new Set([salon, ...workers].filter((x): x is string => !!x)));
 
     // A levél elakadása ne vegye el a megerősítést: a kérés már bent van.
     await Promise.allSettled([
@@ -386,4 +442,66 @@ export async function confirmBooking(token: string): Promise<
   }
 
   return { ok: true, alreadyDone: false, booking: info };
+}
+
+/**
+ * Szabad kezdések két kollégára, egy látogatásban.
+ *
+ * Akkor ajánlunk fel egy kezdést, ha az első szolgáltatás belefér, ÉS utána a
+ * második is — legalább `PAIR_GAP_MIN` szünettel, de legfeljebb
+ * `PAIR_MAX_WAIT_MIN` várakozással. A vendég egyetlen időpontot lát; hogy ez a
+ * háttérben két kérés, az a szalon dolga.
+ */
+export async function freeDaysPair(opts: {
+  first:  { workerId: string; minutes: number; serviceId: string; categoryId: string };
+  second: { workerId: string; minutes: number; serviceId: string; categoryId: string };
+  from:   Date;
+  days:   number;
+}): Promise<FreeDay[]> {
+  const [a, b] = await Promise.all([
+    freeDays({ ...opts.first,  from: opts.from, days: opts.days }),
+    freeDays({ ...opts.second, from: opts.from, days: opts.days }),
+  ]);
+
+  const secondByDay = new Map(b.map(d => [d.date, d.slots.map(toMinutes)]));
+  const out: FreeDay[] = [];
+
+  for (const day of a) {
+    const later = secondByDay.get(day.date);
+    if (!later?.length) continue;
+
+    const slots = day.slots.filter(hhmm => {
+      const ends     = toMinutes(hhmm) + opts.first.minutes;
+      const earliest = ends + PAIR_GAP_MIN;
+      const latest   = ends + PAIR_MAX_WAIT_MIN;
+      return later.some(m => m >= earliest && m <= latest);
+    });
+
+    if (slots.length) out.push({ date: day.date, slots });
+  }
+  return out;
+}
+
+/**
+ * A második szolgáltatás kezdése egy elfogadott első időponthoz.
+ *
+ * A vendég csak az első kezdést választja ki; a másodikat mi tesszük a
+ * legkorábbi olyan szabad helyre, ami a szünet után jön. Így nem kell két
+ * időpontot egyeztetnie, és nem is csúszhat szét a kettő.
+ */
+export async function pairSecondStart(opts: {
+  second: { workerId: string; minutes: number; serviceId: string; categoryId: string };
+  firstEnd: Date;
+}): Promise<Date | null> {
+  const days = await freeDays({ ...opts.second, from: opts.firstEnd, days: 1 });
+  const key  = parts(opts.firstEnd).date;
+  const ends = parts(opts.firstEnd).minutes;
+
+  const slots = days.find(d => d.date === key)?.slots.map(toMinutes) ?? [];
+  const fit   = slots
+    .filter(m => m >= ends + PAIR_GAP_MIN && m <= ends + PAIR_MAX_WAIT_MIN)
+    .sort((x, y) => x - y)[0];
+
+  if (fit === undefined) return null;
+  return fromSalonLocal(`${key}T${String(Math.floor(fit / 60)).padStart(2, "0")}:${String(fit % 60).padStart(2, "0")}`);
 }

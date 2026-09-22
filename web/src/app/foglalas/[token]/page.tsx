@@ -70,7 +70,27 @@ export default async function Page({ params }: { params: Promise<{ token: string
           <Row label="Mikor" value={when} />
           <Row label="Mit"   value={b.service} />
           <Row label="Kihez" value={b.worker.name ?? ""} />
+
+          {b.pair && (
+            <>
+              <div style={{
+                margin: "0.7rem 0 0.2rem", fontSize: "0.8rem",
+                color: "var(--text-dim)", fontStyle: "italic",
+              }}>
+                És mindjárt utána:
+              </div>
+              <Row label="Mikor" value={formatWhen(b.pair.startsAt)} />
+              <Row label="Mit"   value={b.pair.service} />
+              <Row label="Kihez" value={b.pair.worker.name ?? ""} />
+            </>
+          )}
         </div>
+
+        {b.pair && cancellable && (
+          <p style={{ fontSize: "0.85rem", color: "var(--text-soft)", margin: "0 0 0.6rem", lineHeight: 1.6 }}>
+            A lemondás <strong>mindkét időpontra</strong> vonatkozik — egy látogatásként kérted őket.
+          </p>
+        )}
 
         {cancellable && <CancelBox token={token} />}
 

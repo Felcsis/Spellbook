@@ -10,7 +10,7 @@
  */
 import { randomBytes } from "crypto";
 import { db } from "~/server/db";
-import { bookingOpen, closedResponse, corsHeaders, freeDays, fromSalonLocal, json, appUrl, parts, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
+import { bookingOpen, closedResponse, corsHeaders, freeDays, fromSalonLocal, json, appUrl, parts, pairSecondStart, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
 import { isConfigured, send } from "~/server/email";
 import { verifyEmail } from "~/server/email-templates";
 
@@ -27,6 +27,8 @@ export function OPTIONS(req: Request) {
 type Body = {
   nev?: string; email?: string; telefon?: string; megjegyzes?: string;
   dolgozo?: string; szolgaltatas?: string; kezdes?: string;
+  /** Párban kért látogatás: a másik kolléga és az ő szolgáltatása. */
+  dolgozo2?: string; szolgaltatas2?: string;
   /** Kiegészítők plusz ideje percben, és a nevük a megjegyzéshez. */
   plusz?: number; kiegeszitok?: string[];
 };
@@ -118,8 +120,44 @@ export async function POST(req: Request) {
   // A vendég azt lássa a levélben, amit kért — a kiegészítőkkel együtt.
   const label = addons.length ? `${service.name} + ${addons.join(", ")}` : service.name;
 
+  // Párban kért látogatás: a második kolléga ideje az első után következik.
+  // A vendég csak az elsőt választja ki; a másodikat mi tesszük a legkorábbi
+  // szabad helyre a szünet után — így nem kell két időpontot egyeztetnie.
+  let second: {
+    worker: { id: string; name: string | null };
+    service: { id: string; name: string; duration: number; categoryId: string };
+    start: Date;
+  } | null = null;
+
+  if (body.dolgozo2 && body.szolgaltatas2) {
+    const [w2, s2] = await Promise.all([
+      db.user.findFirst({ where: { id: body.dolgozo2, active: true, onlineBookable: true }, select: { id: true, name: true } }),
+      db.service.findFirst({
+        where:  { id: body.szolgaltatas2, active: true },
+        select: { id: true, name: true, duration: true, categoryId: true },
+      }),
+    ]);
+    if (!w2) return json({ error: "A másik kollégához most nem lehet online időpontot kérni." }, origin, 404);
+    if (!s2 || s2.duration <= 0)
+      return json({ error: "A második szolgáltatásra nem lehet online időpontot kérni." }, origin, 400);
+    if (w2.id === worker.id)
+      return json({ error: "A két szolgáltatás ugyanahhoz a kollégához szól — kérd külön." }, origin, 400);
+
+    const at = await pairSecondStart({
+      second: { workerId: w2.id, minutes: s2.duration, serviceId: s2.id, categoryId: s2.categoryId },
+      firstEnd: end,
+    });
+    if (!at)
+      return json({ error: "A kettő már nem ér össze ezen az időponton. Kérünk, válassz másikat." }, origin, 409);
+
+    second = { worker: w2, service: s2, start: at };
+  }
+
+  const groupId = second ? randomBytes(12).toString("base64url") : null;
+
   const booking = await db.booking.create({
     data: {
+      groupId,
       token:    randomBytes(24).toString("base64url"),
       name, email, phone,
       note:     note || null,
@@ -135,6 +173,25 @@ export async function POST(req: Request) {
     },
     select: { id: true, token: true },
   });
+
+  if (second) {
+    await db.booking.create({
+      data: {
+        groupId,
+        // Külön token: a második rész önmagában is megnyitható és lemondható.
+        token:    randomBytes(24).toString("base64url"),
+        name, email, phone,
+        note:     note || null,
+        workerId: second.worker.id,
+        service:  second.service.name,
+        minutes:  second.service.duration,
+        startsAt: second.start,
+        endsAt:   new Date(second.start.getTime() + second.service.duration * 60_000),
+        status:   "megerosites_varo",
+        ip,
+      },
+    });
+  }
 
   if (isConfigured()) {
     const mail = verifyEmail(
