@@ -431,6 +431,26 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                       pointerEvents: "none",
                       zIndex: 1,
                     }}>
+                    {/* Mire adtuk ki — a sávon magán, ne csak egérrel fölé húzva.
+                        Enélkül egyforma csíkos sávok sorakoznak, és nem látszik,
+                        melyik szól férfi hajvágásra és melyik festésre. */}
+                    {w.scope && (
+                      <span style={{
+                        position: "absolute", top: 1, left: 4,
+                        // A ✕ gomb helye a jobb felső sarok; a felirat ne fusson alá.
+                        right: markMode ? 18 : 4,
+                        fontFamily: "var(--font-cinzel)", fontSize: "0.52rem",
+                        letterSpacing: "0.06em", textTransform: "uppercase",
+                        color: w.color, lineHeight: 1.25, fontWeight: 600,
+                        // A csíkos háttéren a betű elveszne: halvány alap alá.
+                        background: "var(--bg-card)", borderRadius: 4,
+                        padding: "0.05rem 0.25rem",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        {w.scope}
+                      </span>
+                    )}
+
                     {markMode && onRemoveWindow && (
                       <button onClick={ev => { ev.stopPropagation(); onRemoveWindow(w); }}
                         title="Sáv levétele"
