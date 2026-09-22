@@ -231,7 +231,10 @@ function ServiceRow({
 }
 
 // ── Category block ─────────────────────────────────────────────────────────
-function CategoryBlock({ cat, isAdmin }: { cat: Category; isAdmin: boolean }) {
+function CategoryBlock({ cat, canEdit }: { cat: Category; canEdit: boolean }) {
+  // A "szerkeszthetem-e" a kategória gazdájától függ, nem a szerepkörtől —
+  // a kozmetikus a saját kezeléseit írja, a fodrász árakhoz nem nyúl.
+  const isAdmin = canEdit;
   const utils = api.useUtils();
   const [addSvc, setAddSvc]     = useState(false);
   const [editSvc, setEditSvc]   = useState<Service | null>(null);
@@ -655,25 +658,28 @@ async function downloadPriceListPdf(
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────
-export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
+export default function ServicesClient({ isAdmin, userId }: { isAdmin: boolean; userId: string }) {
   const { data: categories = [], isLoading } = api.services.listCategories.useQuery();
   const [tab,        setTab]       = useState<"services" | "materials">("services");
-  const [priceList,  setPriceList] = useState<PriceList>("master");
+  const [priceList,  setPriceList] = useState<PriceList | null>(null);
   const [addCat,     setAddCat]    = useState(false);
   const [pdfImport,  setPdfImport] = useState(false);
 
   // Csak a használatban lévő árlistákat mutatjuk: egy lista akkor jelenik meg, ha van
   // hozzá rendelt AKTÍV dolgozó. Az adatok megmaradnak; ha egy dolgozót arra a listára
   // állítasz (Admin → Szerkesztés → Árlista), a lista automatikusan visszajön.
-  //
-  // A szalonban MA EGY árlista van: a korábbi mester lista tartalma, "Fodrász
-  // árlista" néven. A 'beginner' kulcsú, régi kezdő lista adata megmaradt, de
-  // mivel senki nincs rá állítva, nem jelenik meg.
   const { data: allUsers = [] } = api.calendar.users.useQuery();
   const LIST_DEFS: [PriceList, string][] = PRICE_LISTS.map(l => [l.key, `${l.icon} ${l.label}`]);
   const usedLists = new Set(allUsers.filter(u => u.active !== false).map(u => (u.priceListType as PriceList | undefined) ?? "beginner"));
   const shownLists = LIST_DEFS.filter(([k]) => usedLists.has(k));
-  const effList: PriceList = shownLists.some(([k]) => k === priceList) ? priceList : (shownLists[0]?.[0] ?? "master");
+
+  // Alapból a SAJÁT árlistája nyílik meg: a kozmetikus ne a fodrász árakat
+  // lássa elsőre. Az admin válthat, a többiek a magukét látják.
+  const myList = (allUsers.find(u => u.id === userId)?.priceListType as PriceList | undefined) ?? null;
+  const effList: PriceList =
+    (priceList && shownLists.some(([k]) => k === priceList) ? priceList : null) ??
+    (myList && shownLists.some(([k]) => k === myList) ? myList : null) ??
+    shownLists[0]?.[0] ?? "master";
 
   const visibleCats = categories.filter(c => c.priceListType === effList);
 
@@ -693,7 +699,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <Btn variant="ghost" onClick={() => void downloadPriceListPdf(visibleCats, priceListLabel(effList))}>⬇ Árlista PDF</Btn>
             {isAdmin && <Btn variant="ghost" onClick={() => setPdfImport(true)}>📄 PDF import</Btn>}
-            {isAdmin && <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>}
+            <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>
           </div>
         )}
       </div>
@@ -735,22 +741,21 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
             <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>
               {`Még nincs ${priceListLabel(effList).toLowerCase()}`}
             </div>
-            {isAdmin && (
-              <>
-                <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "1rem", marginBottom: "1.5rem" }}>Hozd létre az első kategóriát, majd adj hozzá szolgáltatásokat.</div>
-                <Btn onClick={() => setAddCat(true)}>＋ Első kategória</Btn>
-              </>
-            )}
+            <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, fontSize: "1rem", marginBottom: "1.5rem" }}>Hozd létre az első kategóriát, majd adj hozzá szolgáltatásokat.</div>
+            <Btn onClick={() => setAddCat(true)}>＋ Első kategória</Btn>
           </div>
         ) : (
-          visibleCats.map(cat => <CategoryBlock key={cat.id} cat={cat} isAdmin={isAdmin} />)
+          visibleCats.map(cat => (
+            <CategoryBlock key={cat.id} cat={cat}
+              canEdit={isAdmin || (cat as { userId?: string }).userId === userId} />
+          ))
         )
       )}
 
       {/* Materials tab */}
       {tab === "materials" && <MaterialsPanel isAdmin={isAdmin} />}
 
-      {isAdmin && addCat    && <CategoryModal priceListType={effList} onClose={() => setAddCat(false)} />}
+      {addCat && <CategoryModal priceListType={effList} onClose={() => setAddCat(false)} />}
       {isAdmin && pdfImport && <PdfImportModal priceListType={effList} onClose={() => setPdfImport(false)} />}
     </div>
   );

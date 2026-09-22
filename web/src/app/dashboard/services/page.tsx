@@ -1,12 +1,20 @@
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
 import ServicesClient from "./_client";
-import { isCalendarOnly } from "~/server/auth/access";
 
+/**
+ * Az árlista a "csak naptár" dolgozónak is elérhető — a kozmetikus a saját
+ * kezeléseit maga veszi fel. Amit lát és amihez hozzányúlhat, azt nem a
+ * szerepkör szabja meg, hanem az, hogy melyik árlistán dolgozik és melyik
+ * kategória az övé; ezt a szerver is ellenőrzi, nem csak a felület.
+ */
 export default async function ServicesPage() {
   const session = await auth();
   if (!session) redirect("/login");
-  // A csak naptáras dolgozó a szalon többi adatát nem látja.
-  if (isCalendarOnly(session.user.role)) redirect("/dashboard/calendar");
-  return <ServicesClient isAdmin={session.user.role === "admin"} />;
+  return (
+    <ServicesClient
+      isAdmin={session.user.role === "admin"}
+      userId={session.user.id}
+    />
+  );
 }

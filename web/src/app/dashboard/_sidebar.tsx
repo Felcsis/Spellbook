@@ -29,6 +29,8 @@ const NAV_STAFF = [
 /** Csak naptár — olyan dolgozónak, akinek a szalon többi adatához nincs köze. */
 const NAV_CALENDAR = [
   { key: "calendar", icon: "🌙", label: "Munkanaptár", href: "/dashboard/calendar" },
+  // A saját árlistáját maga kezeli (a szalon pénzügyeit továbbra sem látja).
+  { key: "services", icon: "✂", label: "Szolgáltatások", href: "/dashboard/services" },
 ];
 
 

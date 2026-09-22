@@ -2,6 +2,42 @@ import { z } from "zod";
 import { PRICE_LIST_KEYS } from "~/lib/price-lists";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import type { db } from "~/server/db";
+
+/**
+ * A saját szolgáltatásait mindenki maga kezeli.
+ *
+ * A kozmetikus a saját kezeléseit veszi fel, a fodrász árakhoz viszont nem
+ * nyúlhat. Ezért nem a szerepkör dönt, hanem az, hogy KIÉ a kategória: azé,
+ * aki létrehozta. Az admin mindenhez hozzáfér.
+ *
+ * A felületen ugyanez látszik (a más kategóriáján nincs szerkesztő gomb), de
+ * az elrejtés önmagában nem védelem — a végpont közvetlenül is hívható.
+ */
+type Ctx = { db: typeof db; session: { user: { id: string; role: string } } };
+
+async function assertOwnsCategory(ctx: Ctx, categoryId: string) {
+  if (ctx.session.user.role === "admin") return;
+  const cat = await ctx.db.serviceCategory.findUnique({
+    where:  { id: categoryId },
+    select: { userId: true },
+  });
+  if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs ilyen kategória." });
+  if (cat.userId !== ctx.session.user.id)
+    throw new TRPCError({ code: "FORBIDDEN", message: "Ez a kategória nem a tiéd." });
+}
+
+/** Ugyanez egy szolgáltatásra: a kategóriája dönti el, kié. */
+async function assertOwnsService(ctx: Ctx, serviceId: string) {
+  if (ctx.session.user.role === "admin") return;
+  const svc = await ctx.db.service.findUnique({
+    where:  { id: serviceId },
+    select: { category: { select: { userId: true } } },
+  });
+  if (!svc) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs ilyen szolgáltatás." });
+  if (svc.category.userId !== ctx.session.user.id)
+    throw new TRPCError({ code: "FORBIDDEN", message: "Ez a szolgáltatás nem a tiéd." });
+}
 
 function requireAdmin(role: string) {
   if (role !== "admin") {
@@ -22,11 +58,20 @@ export const servicesRouter = createTRPCRouter({
     })
   ),
 
-  // Az alábbiak csak adminnak
+  // Kategóriát bárki vehet fel — az lesz a gazdája. Módosítani és törölni
+  // csak a sajátját tudja; az admin mindenkiét.
   createCategory: protectedProcedure
     .input(z.object({ name: z.string().min(1), priceListType: z.enum(PRICE_LIST_KEYS).default("master") }))
     .mutation(async ({ ctx, input }) => {
-      requireAdmin(ctx.session.user.role);
+      // Aki nem admin, csak a saját árlistájára vehet fel kategóriát: a
+      // kozmetikus ne tudjon a fodrász listába nyúlni, és fordítva.
+      if (ctx.session.user.role !== "admin") {
+        const me = await ctx.db.user.findUnique({
+          where: { id: ctx.session.user.id }, select: { priceListType: true },
+        });
+        if (me?.priceListType !== input.priceListType)
+          throw new TRPCError({ code: "FORBIDDEN", message: "Csak a saját árlistádra vehetsz fel kategóriát." });
+      }
       const last = await ctx.db.serviceCategory.findFirst({
         where:   { priceListType: input.priceListType },
         orderBy: { order: "desc" },
@@ -39,8 +84,8 @@ export const servicesRouter = createTRPCRouter({
 
   updateCategory: protectedProcedure
     .input(z.object({ id: z.string(), name: z.string().min(1) }))
-    .mutation(({ ctx, input }) => {
-      requireAdmin(ctx.session.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await assertOwnsCategory(ctx, input.id);
       return ctx.db.serviceCategory.update({
         where: { id: input.id },
         data:  { name: input.name },
@@ -49,8 +94,8 @@ export const servicesRouter = createTRPCRouter({
 
   deleteCategory: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ ctx, input }) => {
-      requireAdmin(ctx.session.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await assertOwnsCategory(ctx, input.id);
       return ctx.db.serviceCategory.delete({ where: { id: input.id } });
     }),
 
@@ -64,7 +109,7 @@ export const servicesRouter = createTRPCRouter({
       perHour:     z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      requireAdmin(ctx.session.user.role);
+      await assertOwnsCategory(ctx, input.categoryId);
       const last = await ctx.db.service.findFirst({
         where:   { categoryId: input.categoryId },
         orderBy: { order: "desc" },
@@ -94,23 +139,24 @@ export const servicesRouter = createTRPCRouter({
       active:      z.boolean().optional(),
       perHour:     z.boolean().optional(),
     }))
-    .mutation(({ ctx, input }) => {
-      requireAdmin(ctx.session.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await assertOwnsService(ctx, input.id);
       const { id, ...data } = input;
       return ctx.db.service.update({ where: { id }, data });
     }),
 
   deleteService: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ ctx, input }) => {
-      requireAdmin(ctx.session.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await assertOwnsService(ctx, input.id);
       return ctx.db.service.delete({ where: { id: input.id } });
     }),
 
   reorderServices: protectedProcedure
     .input(z.array(z.object({ id: z.string(), order: z.number().int() })))
     .mutation(async ({ ctx, input }) => {
-      requireAdmin(ctx.session.user.role);
+      // Sorrendezni csak a sajátjai között lehet.
+      for (const { id } of input) await assertOwnsService(ctx, id);
       await ctx.db.$transaction(
         input.map(({ id, order }) => ctx.db.service.update({ where: { id }, data: { order } }))
       );
