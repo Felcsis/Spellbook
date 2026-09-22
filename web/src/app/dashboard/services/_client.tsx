@@ -14,7 +14,7 @@ type Service = {
 type Category = {
   id: string; name: string; order: number; priceListType: string; services: Service[];
 };
-type PriceList = "master" | "beginner";
+import { PRICE_LISTS, priceListIcon, priceListLabel, type PriceList } from "~/lib/price-lists";
 
 // ── Style helpers ──────────────────────────────────────────────────────────
 const gold   = "var(--color-teal)";
@@ -670,7 +670,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
   // árlista" néven. A 'beginner' kulcsú, régi kezdő lista adata megmaradt, de
   // mivel senki nincs rá állítva, nem jelenik meg.
   const { data: allUsers = [] } = api.calendar.users.useQuery();
-  const LIST_DEFS: [PriceList, string][] = [["master", "✦ Fodrász árlista"], ["beginner", "◈ Régi kezdő árlista"]];
+  const LIST_DEFS: [PriceList, string][] = PRICE_LISTS.map(l => [l.key, `${l.icon} ${l.label}`]);
   const usedLists = new Set(allUsers.filter(u => u.active !== false).map(u => (u.priceListType as PriceList | undefined) ?? "beginner"));
   const shownLists = LIST_DEFS.filter(([k]) => usedLists.has(k));
   const effList: PriceList = shownLists.some(([k]) => k === priceList) ? priceList : (shownLists[0]?.[0] ?? "master");
@@ -691,7 +691,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
         </div>
         {tab === "services" && (
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <Btn variant="ghost" onClick={() => void downloadPriceListPdf(visibleCats, effList === "master" ? "Fodrász árlista" : "Régi kezdő árlista")}>⬇ Árlista PDF</Btn>
+            <Btn variant="ghost" onClick={() => void downloadPriceListPdf(visibleCats, priceListLabel(effList))}>⬇ Árlista PDF</Btn>
             {isAdmin && <Btn variant="ghost" onClick={() => setPdfImport(true)}>📄 PDF import</Btn>}
             {isAdmin && <Btn onClick={() => setAddCat(true)}>＋ Kategória</Btn>}
           </div>
@@ -721,7 +721,7 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
       )}
       {tab === "services" && (!isAdmin || shownLists.length <= 1) && (
         <div style={{ marginBottom: "2rem", fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.15em", color: effList === "master" ? gold : "#c4926e", textTransform: "uppercase" }}>
-          {effList === "master" ? "✦ Fodrász árlista" : "◈ Régi kezdő árlista"}
+          {`${priceListIcon(effList)} ${priceListLabel(effList)}`}
         </div>
       )}
 
@@ -731,9 +731,9 @@ export default function ServicesClient({ isAdmin }: { isAdmin: boolean }) {
           <div style={{ color: dimmed, fontFamily: "var(--font-cormorant)", fontSize: "1.1rem" }}>Betöltés...</div>
         ) : visibleCats.length === 0 ? (
           <div style={{ background: panelBg, border, borderRadius: 14, padding: "3rem", textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{effList === "master" ? "✦" : "✂"}</div>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{priceListIcon(effList)}</div>
             <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "1rem", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>
-              {effList === "master" ? "Még nincs fodrász árlista" : "Még nincs régi árlista"}
+              {`Még nincs ${priceListLabel(effList).toLowerCase()}`}
             </div>
             {isAdmin && (
               <>

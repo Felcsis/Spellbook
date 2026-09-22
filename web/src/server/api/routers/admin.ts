@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRICE_LIST_KEYS } from "~/lib/price-lists";
 import { hash } from "bcryptjs";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
@@ -50,7 +51,7 @@ export const adminRouter = createTRPCRouter({
       name:          z.string().min(1).optional(),
       email:         z.string().email().optional(),
       role:          z.enum(["admin", "staff", "calendar"]).optional(),
-      priceListType: z.enum(["master", "beginner"]).optional(),
+      priceListType: z.enum(PRICE_LIST_KEYS).optional(),
       // Üres string = töröljük. A belépési címtől külön: oda nem megy levél.
       notifyEmail:   z.union([z.string().email(), z.literal("")]).optional(),
     }))

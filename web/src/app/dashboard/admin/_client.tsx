@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import { PRICE_LISTS, priceListLabel, type PriceList } from "~/lib/price-lists";
 import { useIsMobile } from "~/app/_responsive";
 import { toDateStr } from "~/lib/date";
 
@@ -142,6 +143,7 @@ function EditUserModal({ user, onClose, onSaved }: {
   const [email, setEmail] = useState(user.email ?? "");
   const [role, setRole]   = useState<"admin" | "staff" | "calendar">(user.role as "admin" | "staff" | "calendar");
   const [notify, setNotify] = useState(user.notifyEmail ?? "");
+  const [priceList, setPriceList] = useState<PriceList>((user.priceListType as PriceList) ?? "master");
   const [pw, setPw]       = useState("");
   const [err, setErr]     = useState("");
 
@@ -167,8 +169,15 @@ function EditUserModal({ user, onClose, onSaved }: {
         A fenti Email a belépéshez kell, ide viszont valódi, működő cím jöjjön:
         a hozzá érkező foglalási kérésről erre megy az értesítés.
       </p>
-      {/* Árlistából egy van (Fodrász árlista) — amíg így marad, nincs mit
-          választani, és egy félrekattintás üres listára tenné a dolgozót. */}
+      {/* Amióta a kozmetika külön árlista, van mit választani: ez dönti el,
+          milyen tételekkel dolgozik, és mire lehet hozzá online időpontot kérni. */}
+      <Field label="Árlista">
+        <Select value={priceList} onChange={e => setPriceList(e.target.value as PriceList)}>
+          {PRICE_LISTS.map(l => (
+            <option key={l.key} value={l.key}>{l.icon} {l.label}</option>
+          ))}
+        </Select>
+      </Field>
       <div style={{ borderTop: "1px solid var(--border)", margin: "1rem 0", paddingTop: "1rem" }}>
         <Field label="Új jelszó (opcionális)">
           <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -182,7 +191,7 @@ function EditUserModal({ user, onClose, onSaved }: {
       {err && <p style={{ color: "#e05555", fontSize: "0.85rem", marginBottom: "1rem" }}>{err}</p>}
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
         <Btn variant="ghost" onClick={onClose}>Mégse</Btn>
-        <Btn onClick={() => update.mutate({ id: user.id, name, email, role, notifyEmail: notify.trim() })} disabled={update.isPending}>
+        <Btn onClick={() => update.mutate({ id: user.id, name, email, role, notifyEmail: notify.trim(), priceListType: priceList })} disabled={update.isPending}>
           {update.isPending ? "Mentés…" : "Mentés"}
         </Btn>
       </div>
@@ -464,7 +473,7 @@ export default function AdminClient() {
                     </span>
                   )}
                   <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 20, background: "rgba(120,180,160,0.1)", color: "var(--text-soft)", border: "1px solid var(--border)", fontFamily: "var(--font-cinzel)", letterSpacing: "0.06em" }}>
-                    {u.priceListType === "master" ? "Fodrász árlista" : "Régi kezdő árlista"}
+                    {priceListLabel(u.priceListType)}
                   </span>
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-soft)", marginTop: "0.1rem" }}>{u.email}</div>

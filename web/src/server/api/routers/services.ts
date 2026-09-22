@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRICE_LIST_KEYS } from "~/lib/price-lists";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
@@ -23,7 +24,7 @@ export const servicesRouter = createTRPCRouter({
 
   // Az alábbiak csak adminnak
   createCategory: protectedProcedure
-    .input(z.object({ name: z.string().min(1), priceListType: z.enum(["master", "beginner"]).default("master") }))
+    .input(z.object({ name: z.string().min(1), priceListType: z.enum(PRICE_LIST_KEYS).default("master") }))
     .mutation(async ({ ctx, input }) => {
       requireAdmin(ctx.session.user.role);
       const last = await ctx.db.serviceCategory.findFirst({
@@ -117,7 +118,7 @@ export const servicesRouter = createTRPCRouter({
 
   bulkImport: protectedProcedure
     .input(z.object({
-      priceListType: z.enum(["master", "beginner"]).default("master"),
+      priceListType: z.enum(PRICE_LIST_KEYS).default("master"),
       categories: z.array(z.object({
         name: z.string().min(1),
         services: z.array(z.object({
