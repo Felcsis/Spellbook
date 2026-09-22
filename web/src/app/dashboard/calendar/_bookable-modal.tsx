@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
+import { EMPTY_SCOPE, ScopePicker, scopeCount, type Scope } from "./_scope-picker";
 
 const lbl: React.CSSProperties = {
   fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.15em",
@@ -51,46 +52,11 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
   const [msg,    setMsg]    = useState("");
 
   // Mire adjuk ki a sávot. Üresen: bármire — ez a leggyakoribb, ezért ez az alap.
-  const [cats, setCats] = useState<string[]>([]);
-  const [svcs, setSvcs] = useState<string[]>([]);
-  const [openCat, setOpenCat] = useState<string | null>(null);
-
-  const { data: allCategories = [] } = api.calendar.services.useQuery();
+  const [scope, setScope] = useState<Scope>(EMPTY_SCOPE);
   // Mindenki a saját árlistájáról dolgozik; a másik lista tételeit fel se kínáljuk.
-  const listType   = workers.find(w => w.id === worker)?.priceListType;
-  const categories = listType
-    ? allCategories.filter(c => c.priceListType === listType)
-    : allCategories;
+  const listType = workers.find(w => w.id === worker)?.priceListType;
 
-  /** A kategória állapota: egészben kiadva, néhány tétele, vagy semmi. */
-  function catState(c: { id: string; services: { id: string }[] }) {
-    if (cats.includes(c.id)) return "mind" as const;
-    return c.services.some(s => svcs.includes(s.id)) ? "reszben" as const : "nincs" as const;
-  }
-
-  function toggleCat(c: { id: string; services: { id: string }[] }) {
-    const ids = c.services.map(s => s.id);
-    if (cats.includes(c.id)) {
-      setCats(x => x.filter(id => id !== c.id));
-    } else {
-      setCats(x => [...x, c.id]);
-      // A kategória egészben tartalmazza a tételeit: a külön jelöltek feleslegessé válnak.
-      setSvcs(x => x.filter(id => !ids.includes(id)));
-    }
-  }
-
-  function toggleSvc(catId: string, id: string, siblingIds: string[]) {
-    // Ha a kategória egészben ki volt adva, a tételenkénti jelölésre bontjuk —
-    // különben a pipa levétele látszólag nem csinálna semmit.
-    if (cats.includes(catId)) {
-      setCats(x => x.filter(c => c !== catId));
-      setSvcs(x => [...new Set([...x, ...siblingIds])].filter(s => s !== id));
-      return;
-    }
-    setSvcs(x => x.includes(id) ? x.filter(s => s !== id) : [...x, id]);
-  }
-
-  const scopeCount = cats.length + svcs.length;
+  const n = scopeCount(scope);
 
   const save = api.bookable.setDays.useMutation({
     onSuccess: r => {
@@ -193,71 +159,12 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
             fontFamily: "var(--font-cormorant)", fontSize: "0.88rem",
             color: "var(--text-dim)", fontStyle: "italic", marginBottom: "0.45rem",
           }}>
-            {scopeCount === 0
+            {n === 0
               ? "Bármire — ha semmit nem jelölsz, a teljes árlista kérhető erre a sávra."
               : "Csak a bejelölt szolgáltatásokra lehet ide időpontot kérni."}
           </div>
 
-          <div style={{
-            maxHeight: 190, overflowY: "auto", borderRadius: 10,
-            border: "1px solid var(--border)", background: "var(--bg-panel)", padding: "0.3rem",
-          }}>
-            {categories.map(c => {
-              const state = catState(c);
-              const open  = openCat === c.id;
-              const ids   = c.services.map(s => s.id);
-              return (
-                <div key={c.id} style={{ marginBottom: "0.15rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                    <button type="button" onClick={() => toggleCat(c)}
-                      style={{
-                        flex: 1, textAlign: "left", cursor: "pointer", borderRadius: 7,
-                        padding: "0.3rem 0.5rem",
-                        border: state === "nincs" ? "1px solid transparent" : "1px solid var(--border-strong)",
-                        background: state === "mind" ? "var(--bg-active)" : "transparent",
-                        color: state === "nincs" ? "var(--text-soft)" : "var(--color-teal)",
-                        fontFamily: "var(--font-cormorant)", fontSize: "0.92rem",
-                      }}>
-                      {state === "mind" ? "◉" : state === "reszben" ? "◐" : "○"} {c.name}
-                      {state === "reszben" && (
-                        <span style={{ color: "var(--text-dim)", fontSize: "0.8rem" }}>
-                          {" "}· {c.services.filter(x => svcs.includes(x.id)).length} tétel
-                        </span>
-                      )}
-                    </button>
-                    <button type="button" onClick={() => setOpenCat(open ? null : c.id)}
-                      title="Tételenként"
-                      style={{
-                        background: "none", border: "none", cursor: "pointer",
-                        color: "var(--text-dim)", fontSize: "0.8rem", padding: "0.2rem 0.3rem",
-                      }}>
-                      {open ? "▴" : "▾"}
-                    </button>
-                  </div>
-
-                  {open && (
-                    <div style={{ paddingLeft: "1.1rem" }}>
-                      {c.services.map(sv => {
-                        const on = cats.includes(c.id) || svcs.includes(sv.id);
-                        return (
-                          <button key={sv.id} type="button" onClick={() => toggleSvc(c.id, sv.id, ids)}
-                            style={{
-                              display: "block", width: "100%", textAlign: "left", cursor: "pointer",
-                              background: "none", border: "none", padding: "0.2rem 0.4rem",
-                              color: on ? "var(--color-teal)" : "var(--text-dim)",
-                              fontFamily: "var(--font-cormorant)", fontSize: "0.88rem",
-                            }}>
-                            {on ? "✓" : "·"} {sv.name}
-                            <span style={{ color: "var(--text-dim)" }}> · {sv.duration} perc</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <ScopePicker listType={listType} value={scope} onChange={setScope} />
         </div>
 
         <div style={{ marginBottom: "1rem" }}>
@@ -297,7 +204,7 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
             ? "Ezzel a beállítással egyetlen nap sem esik bele."
             : <>Érintett napok: <strong>{days.length}</strong> · {start}–{end}
                 {breaks.length > 0 && <>, szünet: {breaks.map(b => `${b.start}–${b.end}`).join(", ")}</>}
-                {scopeCount > 0 && <>, {scopeCount} szolgáltatásra</>}</>}
+                {n > 0 && <>, {n} szolgáltatásra</>}</>}
         </div>
 
         {msg && (
@@ -322,7 +229,7 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
             disabled={days.length === 0 || save.isPending}
             onClick={() => { setMsg(""); save.mutate({
               dates: days, workerId: worker, startTime: start, endTime: end, breaks,
-              categoryIds: cats, serviceIds: svcs,
+              categoryIds: scope.cats, serviceIds: scope.svcs,
             }); }}
             style={{
               padding: "0.6rem 1.4rem", borderRadius: 9, border: "none",

@@ -9,6 +9,7 @@ import { StarfieldBg } from "./_starfield-bg";
 import { TimeGrid, hourRange, type GridBand, type GridBooking, type GridEvent, type GridRequest, type GridWindow } from "./_time-grid";
 import { BookingModal } from "./_booking-modal";
 import { BookableModal } from "./_bookable-modal";
+import { WindowScopeModal, type PendingWindow } from "./_window-scope-modal";
 import { RequestModal, type RequestDetails } from "./_request-modal";
 import { AppointmentModal, type AppointmentDetails } from "./_appointment-modal";
 import { MiniCalendar } from "./_mini-calendar";
@@ -1150,9 +1151,10 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
 
   const [markMode,    setMarkMode]    = useState(false);
   const [bookableForm, setBookableForm] = useState(false);
+  // A húzással kijelölt sáv, amíg el nem döntöd, mire adod ki.
+  const [pendingWindow, setPendingWindow] = useState<PendingWindow | null>(null);
 
   const refreshWindows = () => void utils.bookable.list.invalidate();
-  const addWindow    = api.bookable.add.useMutation({ onSuccess: refreshWindows });
   const removeWindow = api.bookable.remove.useMutation({ onSuccess: refreshWindows });
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
@@ -1519,6 +1521,13 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
         </div>
       )}
 
+      {pendingWindow && (
+        <WindowScopeModal
+          pending={pendingWindow}
+          onClose={() => setPendingWindow(null)}
+          onSaved={refreshWindows} />
+      )}
+
       {bookableForm && (
         <BookableModal
           defaultDate={anchor}
@@ -1789,10 +1798,16 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
                   const hhmm = (m: number) =>
                     `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
                   if (markMode) {
-                    addWindow.mutate({
+                    // Nem mentünk azonnal: előbb eldöntheted, hogy a sáv bármire
+                    // szóljon-e, vagy csak bizonyos szolgáltatásokra.
+                    const wid = currentUserId || activeUsers[0]?.id || "";
+                    const w   = activeUsers.find(u => u.id === wid);
+                    setPendingWindow({
                       date: toDateStr(date),
-                      workerId: currentUserId || activeUsers[0]?.id,
+                      workerId: wid,
                       startTime: hhmm(fromMin), endTime: hhmm(toMin),
+                      workerName: w?.name ?? undefined,
+                      listType: w?.priceListType ?? undefined,
                     });
                     return;
                   }
