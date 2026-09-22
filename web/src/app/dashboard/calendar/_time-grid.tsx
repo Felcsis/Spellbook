@@ -66,6 +66,8 @@ export type GridWindow = {
   workerName: string;
   /** A dolgozó sötétebb színe — így látszik, kinek a kiadott ideje. */
   color: string;
+  /** Mire adtuk ki. Üresen: bármire kérhető erre a sávra időpont. */
+  scope?: string;
 };
 
 /** Egy munkaidő-sáv: érkezés–távozás, a dolgozó színével. */
@@ -414,7 +416,8 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                 const b0 = minutesOf(w.end);
                 if (isNaN(a0) || isNaN(b0) || b0 <= a0) return null;
                 return (
-                  <div key={w.id} title={`Online foglalható · ${w.workerName} · ${w.start}–${w.end}`}
+                  <div key={w.id}
+                    title={`Online foglalható · ${w.workerName} · ${w.start}–${w.end}${w.scope ? ` · ${w.scope}` : ""}`}
                     style={{
                       position: "absolute", left: 0, right: 0,
                       top: top(a0), height: ((b0 - a0) / 60) * PX_PER_HOUR,

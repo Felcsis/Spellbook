@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     }),
     db.service.findFirst({
       where:  { id: body.szolgaltatas, active: true },
-      select: { id: true, name: true, duration: true },
+      select: { id: true, name: true, duration: true, categoryId: true },
     }),
   ]);
   if (!worker)  return json({ error: "Ehhez a kollégához most nem lehet online időpontot kérni." }, origin, 404);
@@ -104,7 +104,12 @@ export async function POST(req: Request) {
 
   const { date: dayKey, minutes: startMin } = parts(start);
   const hhmm = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")}`;
-  const days   = await freeDays({ workerId: worker.id, minutes, from: start, days: 1 });
+  const days   = await freeDays({
+    workerId: worker.id, minutes, from: start, days: 1,
+    // A sáv szólhat csak bizonyos szolgáltatásokra; ugyanazzal a szűréssel
+    // kell néznünk, amivel a vendégnek felajánlottuk.
+    serviceId: service.id, categoryId: service.categoryId,
+  });
   const free   = days.find(d => d.date === dayKey)?.slots ?? [];
   if (!free.includes(hhmm))
     return json({ error: "Ez az időpont közben elkelt. Kérünk, válassz másikat." }, origin, 409);

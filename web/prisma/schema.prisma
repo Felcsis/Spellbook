@@ -309,6 +309,17 @@ model BookableWindow {
   workerId  String
   startTime String // "HH:MM"
   endTime   String // "HH:MM"
+
+  /// Mire adjuk ki ezt a sávot. Mindkettő üresen: bármire lehet rá időpontot
+  /// kérni. Kategória és egyedi tétel egyszerre is megadható — a délelőtt mehet
+  /// "Férfi hajvágás" egészben, a délután meg két kiválasztott festésre.
+  ///
+  /// Azért id-listák és nem kapcsolótábla: a sáv rövid életű (egy napra szól),
+  /// tucatszám keletkezik a havi nyitáskor, és sosem kérdezünk rá visszafelé,
+  /// hogy "melyik sávokban szerepel ez a szolgáltatás".
+  categoryIds String[] @default([])
+  serviceIds  String[] @default([])
+
   createdAt DateTime @default(now())
 
   @@index([date])

@@ -149,6 +149,9 @@ export async function freeDays(opts: {
   minutes:  number;
   from:     Date;
   days:     number;
+  /** Mire kérik az időpontot. Enélkül csak a szűretlen sávok jönnek szóba. */
+  serviceId?:  string;
+  categoryId?: string;
 }): Promise<FreeDay[]> {
   // A `date` oszlop naptári nap (DATE), ezért a határokat is UTC-éjfélre tesszük.
   // Helyi idejű határral az adatbázis a naphoz kerekít, és a tartomány utolsó
@@ -172,7 +175,10 @@ export async function freeDays(opts: {
   const [windows, timeOff, appointments, bookings] = await Promise.all([
     db.bookableWindow.findMany({
       where:  { workerId: worker.id, date: { gte: first, lt: last } },
-      select: { date: true, startTime: true, endTime: true },
+      select: {
+        date: true, startTime: true, endTime: true,
+        categoryIds: true, serviceIds: true,
+      },
     }),
     db.timeOff.findMany({
       where:  { date: { gte: first, lt: last }, OR: [{ workerId: worker.id }, { workerId: null }] },
@@ -208,10 +214,25 @@ export async function freeDays(opts: {
     } catch { /* lejárt hozzáférés — a többi adat még használható */ }
   }
 
+  /**
+   * Ráfér-e a kért szolgáltatás erre a sávra.
+   *
+   * Üres szűrés = bármire kiadtuk. Különben elég, ha vagy a tétel, vagy a
+   * kategóriája szerepel: a szalon a délelőttöt kiadhatja "Férfi hajvágás"
+   * egészben, és mellé jelölhet két külön festést is.
+   */
+  const fits = (w: { categoryIds: string[]; serviceIds: string[] }) => {
+    if (!w.categoryIds.length && !w.serviceIds.length) return true;
+    if (opts.serviceId  && w.serviceIds.includes(opts.serviceId))   return true;
+    if (opts.categoryId && w.categoryIds.includes(opts.categoryId)) return true;
+    return false;
+  };
+
   const byDay = new Map<string, Window[]>();
   for (const w of windows) {
     const key = dayKey(new Date(w.date));
     if (closed.has(key)) continue;
+    if (!fits(w)) continue;
     const from = toMinutes(w.startTime);
     const to   = toMinutes(w.endTime);
     if (isNaN(from) || isNaN(to) || to <= from) continue;

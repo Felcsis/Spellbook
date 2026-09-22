@@ -32,7 +32,7 @@ function toDateStr(d: Date) {
 
 export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }: {
   defaultDate: Date;
-  workers: { id: string; name: string | null }[];
+  workers: { id: string; name: string | null; priceListType?: string }[];
   defaultWorkerId: string;
   onClose: () => void;
 }) {
@@ -49,6 +49,48 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4]);
   const [breaks, setBreaks] = useState<{ start: string; end: string }[]>([]);
   const [msg,    setMsg]    = useState("");
+
+  // Mire adjuk ki a sávot. Üresen: bármire — ez a leggyakoribb, ezért ez az alap.
+  const [cats, setCats] = useState<string[]>([]);
+  const [svcs, setSvcs] = useState<string[]>([]);
+  const [openCat, setOpenCat] = useState<string | null>(null);
+
+  const { data: allCategories = [] } = api.calendar.services.useQuery();
+  // Mindenki a saját árlistájáról dolgozik; a másik lista tételeit fel se kínáljuk.
+  const listType   = workers.find(w => w.id === worker)?.priceListType;
+  const categories = listType
+    ? allCategories.filter(c => c.priceListType === listType)
+    : allCategories;
+
+  /** A kategória állapota: egészben kiadva, néhány tétele, vagy semmi. */
+  function catState(c: { id: string; services: { id: string }[] }) {
+    if (cats.includes(c.id)) return "mind" as const;
+    return c.services.some(s => svcs.includes(s.id)) ? "reszben" as const : "nincs" as const;
+  }
+
+  function toggleCat(c: { id: string; services: { id: string }[] }) {
+    const ids = c.services.map(s => s.id);
+    if (cats.includes(c.id)) {
+      setCats(x => x.filter(id => id !== c.id));
+    } else {
+      setCats(x => [...x, c.id]);
+      // A kategória egészben tartalmazza a tételeit: a külön jelöltek feleslegessé válnak.
+      setSvcs(x => x.filter(id => !ids.includes(id)));
+    }
+  }
+
+  function toggleSvc(catId: string, id: string, siblingIds: string[]) {
+    // Ha a kategória egészben ki volt adva, a tételenkénti jelölésre bontjuk —
+    // különben a pipa levétele látszólag nem csinálna semmit.
+    if (cats.includes(catId)) {
+      setCats(x => x.filter(c => c !== catId));
+      setSvcs(x => [...new Set([...x, ...siblingIds])].filter(s => s !== id));
+      return;
+    }
+    setSvcs(x => x.includes(id) ? x.filter(s => s !== id) : [...x, id]);
+  }
+
+  const scopeCount = cats.length + svcs.length;
 
   const save = api.bookable.setDays.useMutation({
     onSuccess: r => {
@@ -146,6 +188,79 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
         </div>
 
         <div style={{ marginBottom: "1rem" }}>
+          <span style={lbl}>Mire lehet kérni</span>
+          <div style={{
+            fontFamily: "var(--font-cormorant)", fontSize: "0.88rem",
+            color: "var(--text-dim)", fontStyle: "italic", marginBottom: "0.45rem",
+          }}>
+            {scopeCount === 0
+              ? "Bármire — ha semmit nem jelölsz, a teljes árlista kérhető erre a sávra."
+              : "Csak a bejelölt szolgáltatásokra lehet ide időpontot kérni."}
+          </div>
+
+          <div style={{
+            maxHeight: 190, overflowY: "auto", borderRadius: 10,
+            border: "1px solid var(--border)", background: "var(--bg-panel)", padding: "0.3rem",
+          }}>
+            {categories.map(c => {
+              const state = catState(c);
+              const open  = openCat === c.id;
+              const ids   = c.services.map(s => s.id);
+              return (
+                <div key={c.id} style={{ marginBottom: "0.15rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <button type="button" onClick={() => toggleCat(c)}
+                      style={{
+                        flex: 1, textAlign: "left", cursor: "pointer", borderRadius: 7,
+                        padding: "0.3rem 0.5rem",
+                        border: state === "nincs" ? "1px solid transparent" : "1px solid var(--border-strong)",
+                        background: state === "mind" ? "var(--bg-active)" : "transparent",
+                        color: state === "nincs" ? "var(--text-soft)" : "var(--color-teal)",
+                        fontFamily: "var(--font-cormorant)", fontSize: "0.92rem",
+                      }}>
+                      {state === "mind" ? "◉" : state === "reszben" ? "◐" : "○"} {c.name}
+                      {state === "reszben" && (
+                        <span style={{ color: "var(--text-dim)", fontSize: "0.8rem" }}>
+                          {" "}· {c.services.filter(x => svcs.includes(x.id)).length} tétel
+                        </span>
+                      )}
+                    </button>
+                    <button type="button" onClick={() => setOpenCat(open ? null : c.id)}
+                      title="Tételenként"
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        color: "var(--text-dim)", fontSize: "0.8rem", padding: "0.2rem 0.3rem",
+                      }}>
+                      {open ? "▴" : "▾"}
+                    </button>
+                  </div>
+
+                  {open && (
+                    <div style={{ paddingLeft: "1.1rem" }}>
+                      {c.services.map(sv => {
+                        const on = cats.includes(c.id) || svcs.includes(sv.id);
+                        return (
+                          <button key={sv.id} type="button" onClick={() => toggleSvc(c.id, sv.id, ids)}
+                            style={{
+                              display: "block", width: "100%", textAlign: "left", cursor: "pointer",
+                              background: "none", border: "none", padding: "0.2rem 0.4rem",
+                              color: on ? "var(--color-teal)" : "var(--text-dim)",
+                              fontFamily: "var(--font-cormorant)", fontSize: "0.88rem",
+                            }}>
+                            {on ? "✓" : "·"} {sv.name}
+                            <span style={{ color: "var(--text-dim)" }}> · {sv.duration} perc</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
           <span style={lbl}>Szünetek</span>
           {breaks.length === 0 && (
             <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.88rem", color: "var(--text-dim)", fontStyle: "italic", marginBottom: "0.4rem" }}>
@@ -181,7 +296,8 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
           {days.length === 0
             ? "Ezzel a beállítással egyetlen nap sem esik bele."
             : <>Érintett napok: <strong>{days.length}</strong> · {start}–{end}
-                {breaks.length > 0 && <>, szünet: {breaks.map(b => `${b.start}–${b.end}`).join(", ")}</>}</>}
+                {breaks.length > 0 && <>, szünet: {breaks.map(b => `${b.start}–${b.end}`).join(", ")}</>}
+                {scopeCount > 0 && <>, {scopeCount} szolgáltatásra</>}</>}
         </div>
 
         {msg && (
@@ -204,7 +320,10 @@ export function BookableModal({ defaultDate, workers, defaultWorkerId, onClose }
           </button>
           <button
             disabled={days.length === 0 || save.isPending}
-            onClick={() => { setMsg(""); save.mutate({ dates: days, workerId: worker, startTime: start, endTime: end, breaks }); }}
+            onClick={() => { setMsg(""); save.mutate({
+              dates: days, workerId: worker, startTime: start, endTime: end, breaks,
+              categoryIds: cats, serviceIds: svcs,
+            }); }}
             style={{
               padding: "0.6rem 1.4rem", borderRadius: 9, border: "none",
               background: days.length && !save.isPending ? "linear-gradient(120deg,#4a7a6a,#527666,#4a7a6a)" : "var(--bg-card)",

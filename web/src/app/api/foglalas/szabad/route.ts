@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
   const service = await db.service.findFirst({
     where:  { id: serviceId, active: true },
-    select: { id: true, name: true, duration: true },
+    select: { id: true, name: true, duration: true, categoryId: true },
   });
   if (!service) return json({ error: "Nincs ilyen szolgáltatás." }, origin, 404);
   if (service.duration <= 0)
@@ -41,7 +41,10 @@ export async function GET(req: Request) {
   const from = fromParam ? new Date(`${fromParam}T00:00:00`) : new Date();
   if (isNaN(from.getTime())) return json({ error: "Hibás dátum." }, origin, 400);
 
-  const napok = await freeDays({ workerId, minutes: service.duration + extra, from, days });
+  const napok = await freeDays({
+    workerId, minutes: service.duration + extra, from, days,
+    serviceId: service.id, categoryId: service.categoryId,
+  });
 
   return json({
     szolgaltatas: { nev: service.name, perc: service.duration + extra },

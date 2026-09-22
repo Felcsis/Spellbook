@@ -1097,6 +1097,8 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
 
   const utils = api.useUtils();
   const { data: users = [] }                    = api.calendar.users.useQuery();
+  // Az árlista a kiadott sávok feliratához kell: mire szól a sáv.
+  const { data: serviceCats = [] }              = api.calendar.services.useQuery();
   const { data: monthData = { workDays: [], financeEntries: [], guestCards: [] } } =
     api.calendar.month.useQuery({ year: qYear, month: qMonth });
 
@@ -1226,6 +1228,18 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
     closedDays[key] = `${who}${t.reason ?? "nem foglalható"}`;
   }
 
+  // Mire szól egy kiadott sáv — a naptárban a nevek mondják meg, nem az id-k.
+  const catName = new Map(serviceCats.map(c => [c.id, c.name]));
+  const svcName = new Map(serviceCats.flatMap(c => c.services.map(s => [s.id, s.name] as const)));
+  const scopeLabel = (w: { categoryIds: string[]; serviceIds: string[] }) => {
+    const names = [
+      ...w.categoryIds.map(id => catName.get(id)),
+      ...w.serviceIds.map(id  => svcName.get(id)),
+    ].filter(Boolean) as string[];
+    if (!names.length) return undefined;
+    return names.length <= 2 ? names.join(", ") : `${names[0]} és még ${names.length - 1}`;
+  };
+
   const byWindowDate: Record<string, GridWindow[]> = {};
   for (const w of windows) {
     const d   = new Date(w.date);
@@ -1234,6 +1248,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       id: w.id, start: w.startTime, end: w.endTime,
       workerName: w.worker.name ?? "?",
       color: userDeep[w.workerId] ?? "#527666",
+      scope: scopeLabel(w),
     });
   }
 
@@ -1499,7 +1514,7 @@ export default function CalendarClient({ currentUserId = "" }: { currentUserId?:
       {bookableForm && (
         <BookableModal
           defaultDate={anchor}
-          workers={activeUsers.map(u => ({ id: u.id, name: u.name }))}
+          workers={activeUsers.map(u => ({ id: u.id, name: u.name, priceListType: u.priceListType }))}
           defaultWorkerId={currentUserId || activeUsers[0]?.id || ""}
           onClose={() => setBookableForm(false)} />
       )}

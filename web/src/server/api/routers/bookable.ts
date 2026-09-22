@@ -12,6 +12,15 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 const HHMM = z.string().regex(/^\d{1,2}:\d{2}$/, "Az időt ÓÓ:PP alakban kell megadni.");
 
+/**
+ * Mire adjuk ki a sávot. Üresen hagyva bármire — ez a leggyakoribb eset, és így
+ * a régi, szűrés nélküli sávok is változatlanul működnek.
+ */
+const SCOPE = {
+  categoryIds: z.array(z.string()).max(40).default([]),
+  serviceIds:  z.array(z.string()).max(200).default([]),
+};
+
 /** Staff csak a saját sávjait kezelheti. */
 function targetWorker(ctx: { session: { user: { id: string; role: string } } }, wanted?: string) {
   return ctx.session.user.role === "admin" && wanted ? wanted : ctx.session.user.id;
@@ -35,6 +44,7 @@ export const bookableRouter = createTRPCRouter({
       workerId:  z.string().optional(),
       startTime: HHMM,
       endTime:   HHMM,
+      ...SCOPE,
     }))
     .mutation(async ({ ctx, input }) => {
       const workerId = targetWorker(ctx, input.workerId);
@@ -49,9 +59,16 @@ export const bookableRouter = createTRPCRouter({
 
       // Ami érintkezik vagy átfed, azt egy sávvá olvasztjuk — így nem keletkezik
       // tucatnyi apró, egymás melletti sáv ugyanarra a délelőttre.
+      // Csak az azonos szűrésű sávokat vonjuk össze: egy "férfi hajvágás"
+      // délelőttöt nem olvaszthatunk egy "női festés" délutánba, mert azzal
+      // mindkettőre kinyitnánk a másikat.
+      const same = (a: string[], b: string[]) =>
+        a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
+
       const existing = await ctx.db.bookableWindow.findMany({ where: { workerId, date } });
       const touching = existing.filter(w =>
-        mins(w.startTime) <= mins(input.endTime) && mins(w.endTime) >= mins(input.startTime),
+        mins(w.startTime) <= mins(input.endTime) && mins(w.endTime) >= mins(input.startTime)
+        && same(w.categoryIds, input.categoryIds) && same(w.serviceIds, input.serviceIds),
       );
 
       const startMin = Math.min(mins(input.startTime), ...touching.map(w => mins(w.startTime)));
@@ -62,7 +79,10 @@ export const bookableRouter = createTRPCRouter({
         await ctx.db.bookableWindow.deleteMany({ where: { id: { in: touching.map(w => w.id) } } });
 
       return ctx.db.bookableWindow.create({
-        data: { date, workerId, startTime: fmt(startMin), endTime: fmt(endMin) },
+        data: {
+          date, workerId, startTime: fmt(startMin), endTime: fmt(endMin),
+          categoryIds: input.categoryIds, serviceIds: input.serviceIds,
+        },
       });
     }),
 
@@ -91,6 +111,7 @@ export const bookableRouter = createTRPCRouter({
       startTime: HHMM,
       endTime:   HHMM,
       breaks:    z.array(z.object({ start: HHMM, end: HHMM })).max(6).default([]),
+      ...SCOPE,
     }))
     .mutation(async ({ ctx, input }) => {
       const workerId = targetWorker(ctx, input.workerId);
@@ -129,7 +150,10 @@ export const bookableRouter = createTRPCRouter({
         await ctx.db.bookableWindow.deleteMany({ where: { workerId, date } });
         for (const sg of usable)
           await ctx.db.bookableWindow.create({
-            data: { date, workerId, startTime: fmt(sg.from), endTime: fmt(sg.to) },
+            data: {
+              date, workerId, startTime: fmt(sg.from), endTime: fmt(sg.to),
+              categoryIds: input.categoryIds, serviceIds: input.serviceIds,
+            },
           });
       }
       return { days: input.dates.length, perDay: usable.length };
@@ -142,6 +166,7 @@ export const bookableRouter = createTRPCRouter({
       workerId:  z.string().optional(),
       startTime: HHMM,
       endTime:   HHMM,
+      ...SCOPE,
     }))
     .mutation(async ({ ctx, input }) => {
       const workerId = targetWorker(ctx, input.workerId);
@@ -149,7 +174,10 @@ export const bookableRouter = createTRPCRouter({
         const date = new Date(ds);
         await ctx.db.bookableWindow.deleteMany({ where: { workerId, date } });
         await ctx.db.bookableWindow.create({
-          data: { date, workerId, startTime: input.startTime, endTime: input.endTime },
+          data: {
+            date, workerId, startTime: input.startTime, endTime: input.endTime,
+            categoryIds: input.categoryIds, serviceIds: input.serviceIds,
+          },
         });
       }
       return { count: input.dates.length };
