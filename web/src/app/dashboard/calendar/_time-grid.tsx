@@ -423,9 +423,12 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                     style={{
                       position: "absolute", left: 0, right: 0,
                       top: top(a0), height: ((b0 - a0) / 60) * PX_PER_HOUR,
-                      background: `repeating-linear-gradient(135deg, ${w.color}33 0 6px, transparent 6px 12px)`,
-                      borderTop: `1px solid ${w.color}99`,
-                      borderBottom: `1px solid ${w.color}99`,
+                      // Tömör zöld, nem csíkos: a Google-naptár időpontjai a
+                      // dolgozó meleg színében, színátmenettel jelennek meg, így
+                      // a kiadott idő egy pillantásból megkülönböztethető tőlük.
+                      background:   "var(--bookable-bg)",
+                      borderTop:    "1px solid var(--bookable-border)",
+                      borderBottom: "1px solid var(--bookable-border)",
                       // A sáv háttérdísz: sosem nyelheti el a kattintást, különben
                       // a fölötte lévő kérés- és időpontkártyák gombjai elérhetetlenek.
                       pointerEvents: "none",
@@ -441,7 +444,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                         right: markMode ? 18 : 4,
                         fontFamily: "var(--font-cinzel)", fontSize: "0.52rem",
                         letterSpacing: "0.06em", textTransform: "uppercase",
-                        color: w.color, lineHeight: 1.25, fontWeight: 600,
+                        color: "var(--bookable-text)", lineHeight: 1.25, fontWeight: 600,
                         // A csíkos háttéren a betű elveszne: halvány alap alá.
                         background: "var(--bg-card)", borderRadius: 4,
                         padding: "0.05rem 0.25rem",
@@ -456,7 +459,7 @@ export function TimeGrid({ days, fromHour, toHour, onOpenCard, onOpenDay, onNewB
                         title="Sáv levétele"
                         style={{
                           position: "absolute", top: 1, right: 2, background: "none", border: "none",
-                          cursor: "pointer", color: w.color, fontSize: "0.7rem", lineHeight: 1, padding: "0 .15rem",
+                          cursor: "pointer", color: "var(--bookable-text)", fontSize: "0.7rem", lineHeight: 1, padding: "0 .15rem",
                           pointerEvents: "auto",
                         }}>✕</button>
                     )}
