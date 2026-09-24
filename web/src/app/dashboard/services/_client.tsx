@@ -673,15 +673,20 @@ export default function ServicesClient({ isAdmin, userId }: { isAdmin: boolean; 
   const usedLists = new Set(allUsers.filter(u => u.active !== false).map(u => (u.priceListType as PriceList | undefined) ?? "beginner"));
   const shownLists = LIST_DEFS.filter(([k]) => usedLists.has(k));
 
-  // Alapból a SAJÁT árlistája nyílik meg: a kozmetikus ne a fodrász árakat
-  // lássa elsőre. Az admin válthat, a többiek a magukét látják.
+  // Aki nem admin, KIZÁRÓLAG a saját árlistáját látja. A kozmetikusnak a
+  // fodrász árak nem tartoznak rá, és fordítva — ezért nem alapértelmezés,
+  // hanem korlát: váltó sincs, és más listája nem jön elő tartaléknak sem.
   const myList = (allUsers.find(u => u.id === userId)?.priceListType as PriceList | undefined) ?? null;
-  const effList: PriceList =
-    (priceList && shownLists.some(([k]) => k === priceList) ? priceList : null) ??
-    (myList && shownLists.some(([k]) => k === myList) ? myList : null) ??
-    shownLists[0]?.[0] ?? "master";
+  const effList: PriceList = isAdmin
+    ? ((priceList && shownLists.some(([k]) => k === priceList) ? priceList : null) ??
+       (myList && shownLists.some(([k]) => k === myList) ? myList : null) ??
+       shownLists[0]?.[0] ?? "master")
+    : (myList ?? "master");
 
-  const visibleCats = categories.filter(c => c.priceListType === effList);
+  // Amíg nem tudjuk, ki melyik listán van, inkább üresen marad, mint hogy egy
+  // pillanatra a más árait mutassa.
+  const listKnown = isAdmin || myList !== null;
+  const visibleCats = listKnown ? categories.filter(c => c.priceListType === effList) : [];
 
   return (
     <div style={{ maxWidth: 760 }}>
