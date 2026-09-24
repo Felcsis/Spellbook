@@ -502,6 +502,10 @@ model Expense {
   amount       Float
   date         DateTime @db.Date
   category     String   @default("egyéb")
+  /// "expense" | "income" — a bevétel itt a szolgáltatáson kívüli pénz (pl.
+  /// székbérlet). Azért nem FinanceEntry, mert abból bért és szolgáltatási
+  /// statisztikát számolunk; ez csak a szalon nyereségébe számít bele.
+  kind         String   @default("expense")
   notes        String?
   paid         Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -519,7 +523,7 @@ model Expense {
   @@schema("spellbook")
 }
 
-// Havonta ismétlődő kiadás (bérleti díj, könyvelés, járulék…). Minden hónapban
+// Havonta ismétlődő kiadás (bérleti díj, könyvelés, járulék…) vagy bevétel (székbérlet). Minden hónapban
 // létrehoz egy "függőben" kiadást a megadott napon — azért nem fizetettet, mert
 // az összeg változhat (járulék), és így látszik, mit kell még kifizetni.
 //
@@ -530,6 +534,7 @@ model RecurringExpense {
   title        String
   amount       Float
   category     String   @default("Egyéb")
+  kind         String   @default("expense") // "expense" | "income"
   notes        String?
   /// A hónap hányadik napján esedékes (1–31); rövidebb hónapban az utolsó nap.
   dayOfMonth   Int

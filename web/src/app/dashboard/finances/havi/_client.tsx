@@ -59,6 +59,7 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
   const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: activeFilter });
   const { data: myCards = [], isLoading: cardsLoading } = api.guests.myCards.useQuery({ year, month }, { enabled: !isAdmin });
   const { data: expenseList = [] } = api.expenses.list.useQuery({ year, month }, { enabled: isAdmin });
+  const { data: incomeList = [] } = api.expenses.list.useQuery({ year, month, kind: "income" }, { enabled: isAdmin });
   const { data: myExpenses = [] } = api.expenses.listMine.useQuery({ year, month }, { enabled: !isAdmin });
   const del        = api.finance.delete.useMutation({ onSuccess: inv });
   const updateDate = api.finance.updateDate.useMutation({ onSuccess: inv });
@@ -104,7 +105,10 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
     .filter(st => !st.isOwner)
     .reduce((s, st) => s + Math.max(0, st.svcRev - st.wageEstimate), 0);
   const overheadTotal = expenseList.reduce((s, e) => s + e.amount, 0);
-  const profit = revenue - staffWageTotal - overheadTotal;
+  // Szolgáltatáson kívüli bevétel (székbérlet) — bér nem jár utána, egészében a szalonnak jut.
+  const otherIncome = incomeList.reduce((s, e) => s + e.amount, 0);
+  const otherIncomeFrom = [...new Set(incomeList.map(e => e.assignedTo?.name).filter(Boolean))].join(", ");
+  const profit = revenue - staffWageTotal - overheadTotal + otherIncome;
 
   const visibleEntries = isAdmin ? entries : entries.filter(e => e.type === "revenue" || e.type === "material" || e.type === "wage");
   const { byDate, sortedDates } = buildVisitGroups(visibleEntries);
@@ -157,7 +161,8 @@ export default function HaviClient({ isAdmin = true, userId = "", canSeeProfit =
             <StatBox label="Áthaladó pénz" value={totalIncome} color="#527666" sub={`${fmt(revenue)} szolg. + ${fmt(material)} anyag`} large />
             {isAdmin && !isOwnView && !filterUserId && staffWageTotal > 0 && <StatBox label={wage > 0 ? "Kifizetett bér" : "Bérköltség"} value={staffWageTotal} color="#7256a0" sub={wage > 0 ? "dolgozóknak" : "dolgozók 60%-a (becsült)"} />}
             {isAdmin && !filterUserId && overheadTotal > 0 && <StatBox label="Rezsi / kiadás" value={overheadTotal} color="#e87171" sub="bérleti díj, rezsi…" />}
-            {isAdmin && canSeeProfit && !filterUserId && <StatBox label="Nyereség (tiéd)" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub="anyag nélkül + 40% − kiadás" large />}
+            {isAdmin && !filterUserId && otherIncome > 0 && <StatBox label="Egyéb bevétel" value={otherIncome} color="#527666" sub={otherIncomeFrom ? `székbérlet: ${otherIncomeFrom}` : "székbérlet…"} />}
+            {isAdmin && canSeeProfit && !filterUserId && <StatBox label="Nyereség (tiéd)" value={profit} color={profit >= 0 ? "#527666" : "#c47878"} sub={otherIncome > 0 ? "anyag nélkül + 40% − kiadás + egyéb bev." : "anyag nélkül + 40% − kiadás"} large />}
             {fw && fw.material > 0 && <StatBox label="Anyagköltség" value={fw.material} color="#a06830" sub="kiadás" />}
             {fw && fw.wageEstimate > 0 && <StatBox label={fw.wage > 0 ? "Bér" : "60% bér"} value={fw.wage > 0 ? fw.wage : fw.wageEstimate} color={fwColor} sub={fw.wage > 0 ? "rögzített" : "számított"} />}
             {fw && fw.expenses > 0 && <StatBox label="Kiadásaid" value={fw.expenses} color="var(--color-danger)" sub="levonva béredből" />}

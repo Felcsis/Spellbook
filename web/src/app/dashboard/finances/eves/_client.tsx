@@ -86,12 +86,14 @@ export default function EvesClient({ isAdmin = true, userId = "", canSeeProfit =
   const { data: yearData = [], isLoading } = api.finance.yearSummary.useQuery({ year, filterUserId });
   const { data: perUserData = [] } = api.finance.perUserYear.useQuery({ year }, { enabled: isAdmin });
   const { data: yearExpenses = [] } = api.expenses.list.useQuery({ year }, { enabled: isAdmin });
+  const { data: yearIncomes = [] } = api.expenses.list.useQuery({ year, kind: "income" }, { enabled: isAdmin });
   const { data: myYearCards = [] } = api.guests.myCardsYear.useQuery({ year }, { enabled: !isAdmin });
 
   const yearRev      = yearData.reduce((s, m) => s + m.revenue, 0);
   const yearMat      = yearData.reduce((s, m) => s + m.material, 0);
   const yearWage     = yearData.reduce((s, m) => s + m.wage, 0);
   const yearOverhead = yearExpenses.reduce((s, e) => s + e.amount, 0);
+  const yearOtherIncome = yearIncomes.reduce((s, e) => s + e.amount, 0);
   const yearTotalIncome = yearRev + yearMat;
 
   // Staff: aggregate services from yearly guest cards
@@ -123,7 +125,7 @@ export default function EvesClient({ isAdmin = true, userId = "", canSeeProfit =
 
   const yearStaffWage     = workerYearStats.filter(w => !w.isOwner).reduce((s, w) => s + w.earn, 0);
   const yearStaffEstimate = workerYearStats.filter(w => !w.isOwner).reduce((s, w) => s + w.wageEstimate, 0);
-  const yearProfit        = yearRev - yearStaffWage - yearOverhead;
+  const yearProfit        = yearRev - yearStaffWage - yearOverhead + yearOtherIncome;
 
   const chartData: ChartEntry[] = yearData.map(m => ({
     month:    MONTHS_SHORT[m.month - 1] ?? "",
@@ -182,6 +184,7 @@ export default function EvesClient({ isAdmin = true, userId = "", canSeeProfit =
               <StatBox label={yearWage > 0 ? "Bérek" : "Várható bér"} value={yearStaffWage > 0 ? yearStaffWage : yearStaffEstimate} color="#7256a0" sub={yearWage > 0 ? "összesen" : "becslés"} />
             )}
             {isAdmin && !filterUserId && yearOverhead > 0 && <StatBox label="Kiadások" value={yearOverhead} color="#e87171" sub="rezsi, bérleti díj…" />}
+            {isAdmin && !filterUserId && yearOtherIncome > 0 && <StatBox label="Egyéb bevétel" value={yearOtherIncome} color="#527666" sub="székbérlet…" />}
             {isAdmin && canSeeProfit && !filterUserId && yearTotalIncome > 0 && (
               <StatBox label="Nyereség" value={yearProfit} color={yearProfit >= 0 ? "#527666" : "#c47878"} sub={`${Math.round((yearProfit / yearTotalIncome) * 100)}% árrés`} large />
             )}

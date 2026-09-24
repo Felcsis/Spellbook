@@ -39,11 +39,13 @@ export default function DashboardClient({
   const { data: entries = [], isLoading } = api.finance.list.useQuery({ year, month, filterUserId: !isAdmin ? userId : undefined });
   const { data: allUsers = [] } = api.calendar.users.useQuery(undefined, { enabled: isAdmin });
   const { data: expenseList = [] } = api.expenses.list.useQuery({ year, month }, { enabled: isAdmin });
+  const { data: incomeList = [] } = api.expenses.list.useQuery({ year, month, kind: "income" }, { enabled: isAdmin });
 
   const revenue  = entries.filter(e => e.type === "revenue").reduce((s, e) => s + e.amount, 0);
   const material = entries.filter(e => e.type === "material").reduce((s, e) => s + e.amount, 0);
   const wages    = entries.filter(e => e.type === "wage").reduce((s, e) => s + e.amount, 0);
   const expenses = expenseList.reduce((s, e) => s + e.amount, 0);
+  const otherIncome = incomeList.reduce((s, e) => s + e.amount, 0);
 
   const todayRev = entries
     .filter(e => e.type === "revenue" && toDateStr(new Date(e.date)) === todayStr)
@@ -212,6 +214,7 @@ export default function DashboardClient({
                 { label: "Összes anyagköltség", value: material, color: "#c08848" },
                 { label: "Bérek",             value: wages > 0 ? wages : Math.round(revenue * 0.6), color: "rgba(140,80,220,0.9)" },
                 { label: "Kiadások",          value: expenses, color: "var(--color-danger)" },
+                ...(otherIncome > 0 ? [{ label: "Egyéb bevétel (székbérlet)", value: otherIncome, color: "#7ab88a" }] : []),
               ].map(row => (
                 <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: CREAM_DIM }}>{row.label}</span>

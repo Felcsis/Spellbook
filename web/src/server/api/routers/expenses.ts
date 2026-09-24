@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, salonProcedure } from "~/server/api/trpc";
 import { dueDateIn, materializeRecurringExpenses, nextDueFromToday } from "~/server/recurring-expenses";
 
@@ -20,10 +21,15 @@ function firstDue(start: string, dayOfMonth: number): Date {
   return dueDateIn(y, m - 1, dayOfMonth);
 }
 
+const KIND = z.enum(["expense", "income"]);
+
 export const expensesRouter = createTRPCRouter({
+  /** Alapból a kiadások; `kind: "income"`-mal az egyéb bevételek (csak adminnak). */
   list: salonProcedure
-    .input(z.object({ year: z.number(), month: z.number().optional() }))
+    .input(z.object({ year: z.number(), month: z.number().optional(), kind: KIND.default("expense") }))
     .query(async ({ ctx, input }) => {
+      if (input.kind === "income" && ctx.session.user.role !== "admin")
+        throw new TRPCError({ code: "FORBIDDEN" });
       await materializeRecurringExpenses();
       const from = input.month
         ? new Date(input.year, input.month - 1, 1)
@@ -32,7 +38,7 @@ export const expensesRouter = createTRPCRouter({
         ? new Date(input.year, input.month, 1)
         : new Date(input.year + 1, 0, 1);
       return ctx.db.expense.findMany({
-        where: { date: { gte: from, lt: to } },
+        where: { date: { gte: from, lt: to }, kind: input.kind },
         orderBy: { date: "desc" },
         include: {
           createdBy:  { select: { id: true, name: true } },
@@ -52,6 +58,8 @@ export const expensesRouter = createTRPCRouter({
 
   recurringList: salonProcedure.query(({ ctx }) =>
     ctx.db.recurringExpense.findMany({
+      // A bevétel (pl. a székbérlet) a szalon ügye — a munkatárs nem látja.
+      where: ctx.session.user.role === "admin" ? {} : { kind: "expense" },
       orderBy: [{ active: "desc" }, { dayOfMonth: "asc" }],
       include: { assignedTo: { select: { id: true, name: true } } },
     })
@@ -62,6 +70,7 @@ export const expensesRouter = createTRPCRouter({
       title:        z.string().min(1),
       amount:       z.number().positive(),
       category:     z.string().default("Egyéb"),
+      kind:         KIND.default("expense"),
       notes:        z.string().optional(),
       /** Az első esedékesség napja; ebből jön a hónap napja is. */
       startDate:    z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -74,6 +83,7 @@ export const expensesRouter = createTRPCRouter({
           title:        input.title,
           amount:       input.amount,
           category:     input.category,
+          kind:         input.kind,
           notes:        input.notes,
           dayOfMonth,
           nextDue:      firstDue(input.startDate, dayOfMonth),
@@ -138,6 +148,7 @@ export const expensesRouter = createTRPCRouter({
       amount:       z.number().positive(),
       date:         z.string(),
       category:     z.string().default("Egyéb"),
+      kind:         KIND.default("expense"),
       notes:        z.string().optional(),
       paid:         z.boolean().default(true),
       assignedToId: z.string().optional(),
@@ -149,6 +160,7 @@ export const expensesRouter = createTRPCRouter({
           amount:       input.amount,
           date:         new Date(input.date),
           category:     input.category,
+          kind:         input.kind,
           notes:        input.notes,
           paid:         input.paid,
           createdById:  ctx.session.user.id,
@@ -198,7 +210,7 @@ export const expensesRouter = createTRPCRouter({
         ? new Date(input.year, input.month, 1)
         : new Date(input.year + 1, 0, 1);
       return ctx.db.expense.findMany({
-        where: { assignedToId: ctx.session.user.id, date: { gte: from, lt: to } },
+        where: { assignedToId: ctx.session.user.id, date: { gte: from, lt: to }, kind: "expense" },
         orderBy: { date: "desc" },
         select: { id: true, title: true, amount: true, date: true, category: true, notes: true, paid: true, recurringId: true },
       });

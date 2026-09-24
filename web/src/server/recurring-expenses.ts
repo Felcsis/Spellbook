@@ -53,6 +53,7 @@ export async function materializeRecurringExpenses(): Promise<number> {
           amount:       t.amount,
           date:         at,
           category:     t.category,
+          kind:         t.kind,
           notes:        t.notes,
           paid:         false,
           createdById:  t.createdById,
