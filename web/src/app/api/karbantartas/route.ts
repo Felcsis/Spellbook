@@ -1,5 +1,6 @@
 /**
- * Napi karbantartás: emlékeztető levél és a régi kérések törlése.
+ * Napi karbantartás: emlékeztető levél, a régi kérések törlése és az
+ * esedékes havi kiadások létrehozása.
  *
  * Kívülről hívható végpont, mert a Next.js nem futtat magától ütemezett
  * feladatot. Kulcs védi (`MAINT_KEY`): enélkül bárki tudná pörgetni a
@@ -8,6 +9,7 @@
  * Naponta egyszer kell hívni; többszöri futás nem okoz kárt.
  */
 import { runBookingMaintenance } from "~/server/booking-maintenance";
+import { materializeRecurringExpenses } from "~/server/recurring-expenses";
 import { env } from "~/env";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +31,8 @@ export async function POST(req: Request) {
   }
 
   const result = await runBookingMaintenance();
-  return new Response(JSON.stringify({ ok: true, ...result }), {
+  const recurringCreated = await materializeRecurringExpenses();
+  return new Response(JSON.stringify({ ok: true, ...result, recurringCreated }), {
     status: 200, headers: { "Content-Type": "application/json" },
   });
 }

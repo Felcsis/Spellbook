@@ -99,6 +99,8 @@ model User {
   bookings           Booking[]
   expenses           Expense[]           @relation("ExpenseCreatedBy")
   assignedExpenses   Expense[]           @relation("ExpenseAssignedTo")
+  recurringExpenses         RecurringExpense[] @relation("RecurringCreatedBy")
+  assignedRecurringExpenses RecurringExpense[] @relation("RecurringAssignedTo")
 
   @@schema("spellbook")
 }
@@ -507,9 +509,39 @@ model Expense {
   createdById  String
   assignedTo   User?    @relation("ExpenseAssignedTo", fields: [assignedToId], references: [id])
   assignedToId String?
+  /// Melyik havi sablonból jött létre. A sablon törlése után a kiadás megmarad.
+  recurring    RecurringExpense? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+  recurringId  String?
 
+  @@unique([recurringId, date])
   @@index([date])
   @@index([assignedToId])
+  @@schema("spellbook")
+}
+
+// Havonta ismétlődő kiadás (bérleti díj, könyvelés, járulék…). Minden hónapban
+// létrehoz egy "függőben" kiadást a megadott napon — azért nem fizetettet, mert
+// az összeg változhat (járulék), és így látszik, mit kell még kifizetni.
+//
+// A `nextDue` a következő még létre nem hozott nap. Csak előre lép, ezért ha a
+// felhasználó kitöröl egy havi példányt, az nem jön vissza.
+model RecurringExpense {
+  id           String   @id @default(cuid())
+  title        String
+  amount       Float
+  category     String   @default("Egyéb")
+  notes        String?
+  /// A hónap hányadik napján esedékes (1–31); rövidebb hónapban az utolsó nap.
+  dayOfMonth   Int
+  nextDue      DateTime @db.Date
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  createdBy    User     @relation("RecurringCreatedBy", fields: [createdById], references: [id])
+  createdById  String
+  assignedTo   User?    @relation("RecurringAssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
+  expenses     Expense[]
+
   @@schema("spellbook")
 }
 

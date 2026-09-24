@@ -13,6 +13,7 @@ const CATEGORIES = [
   "Szoftver / előfizetés",
   "Bérleti díj",
   "Könyvelés / admin",
+  "Adó / járulék",
   "Marketing",
   "Egyéb",
 ];
@@ -24,6 +25,7 @@ const CAT_COLORS: Record<string, string> = {
   "Szoftver / előfizetés":"#a78bfa",
   "Bérleti díj":          "#e8b4c8",
   "Könyvelés / admin":    "#9278b0",
+  "Adó / járulék":        "#d4a373",
   "Marketing":            "var(--color-warn)",
   "Egyéb":                "#6b7280",
 };
@@ -66,9 +68,10 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
   const [notes,        setNotes]        = useState("");
   const [paid,         setPaid]         = useState(true);
   const [assignedToId, setAssignedToId] = useState<string>("");
+  const [recurring,    setRecurring]    = useState(false);
 
   const utils = api.useUtils();
-  const inv = () => { void utils.expenses.list.invalidate(); };
+  const inv = () => { void utils.expenses.list.invalidate(); void utils.expenses.recurringList.invalidate(); };
 
   const { data: users = [] } = api.admin.listStaff.useQuery(undefined, { enabled: isAdmin });
 
@@ -89,8 +92,13 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
     onError: (e) => setSaveError(e.message),
   });
   const del    = api.expenses.delete.useMutation({ onSuccess: inv });
+  const setPaidMut = api.expenses.setPaid.useMutation({ onSuccess: inv });
+  const createRecurring = api.expenses.recurringCreate.useMutation({
+    onSuccess: () => { inv(); resetForm(); setShowForm(false); setSaveError(null); },
+    onError: (e) => setSaveError(e.message),
+  });
 
-  function resetForm() { setTitle(""); setAmount(""); setDate(toDateStr(now)); setCategory(CATEGORIES[0]!); setNotes(""); setPaid(true); setAssignedToId(""); }
+  function resetForm() { setTitle(""); setAmount(""); setDate(toDateStr(now)); setCategory(CATEGORIES[0]!); setNotes(""); setPaid(true); setAssignedToId(""); setRecurring(false); }
 
   function openEdit(e: typeof expenses[number]) {
     setEditId(e.id);
@@ -109,7 +117,9 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
     const amt = parseFloat(amount);
     if (!title.trim() || isNaN(amt) || amt <= 0) return;
     const assignedId = isAdmin ? (assignedToId || undefined) : userId;
-    if (editId) {
+    if (!editId && recurring) {
+      createRecurring.mutate({ title: title.trim(), amount: amt, startDate: date, category, notes: notes || undefined, assignedToId: assignedId });
+    } else if (editId) {
       update.mutate({ id: editId, title: title.trim(), amount: amt, date, category, notes: notes || undefined, paid, assignedToId: assignedId ?? null });
     } else {
       create.mutate({ title: title.trim(), amount: amt, date, category, notes: notes || undefined, paid, assignedToId: assignedId });
@@ -198,6 +208,18 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
               <label style={labelStyle}>Megjegyzés</label>
               <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Opcionális…" style={inputStyle} />
             </div>
+            {!editId && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", paddingBottom: "0.15rem" }}>
+                <button type="button" onClick={() => setRecurring(v => !v)}
+                  style={{ width: 40, height: 22, borderRadius: 11, border: "none", background: recurring ? "var(--color-teal)" : "var(--bg-active)", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: "50%", background: "white", position: "absolute", top: 2, left: recurring ? 20 : 2, transition: "left 0.2s" }} />
+                </button>
+                <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.1em", color: recurring ? "var(--color-teal)" : "var(--text-muted)", textTransform: "uppercase" }}>
+                  ↻ Havonta
+                </span>
+              </div>
+            )}
+            {!recurring && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", paddingBottom: "0.15rem" }}>
               <button type="button" onClick={() => setPaid(v => !v)}
                 style={{ width: 40, height: 22, borderRadius: 11, border: "none", background: paid ? "var(--color-teal)" : "var(--bg-active)", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
@@ -207,7 +229,14 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
                 {paid ? "Fizetve" : "Függőben"}
               </span>
             </div>
+            )}
           </div>
+
+          {!editId && recurring && (
+            <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+              Minden hónap {Number(date.slice(8, 10))}. napján magától bekerül „függőben” jelöléssel — ha más lett az összeg, átírod, és fizetettre állítod. Az első a dátumnál megadott nap.
+            </div>
+          )}
 
           {saveError && (
             <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 8, padding: "0.6rem 1rem", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", color: "var(--color-danger)" }}>
@@ -219,9 +248,9 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
               style={{ padding: "0.6rem 1.2rem", borderRadius: 9, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontFamily: "var(--font-cinzel)", fontSize: "0.58rem", letterSpacing: "0.12em", cursor: "pointer" }}>
               Mégsem
             </button>
-            <button type="submit" disabled={create.isPending || update.isPending} className="btn-gold"
+            <button type="submit" disabled={create.isPending || update.isPending || createRecurring.isPending} className="btn-gold"
               style={{ padding: "0.6rem 1.5rem", borderRadius: 9, fontFamily: "var(--font-cinzel)", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.15em" }}>
-              {(create.isPending || update.isPending) ? "Mentés…" : editId ? "Frissítés" : "Mentés"}
+              {(create.isPending || update.isPending || createRecurring.isPending) ? "Mentés…" : editId ? "Frissítés" : "Mentés"}
             </button>
           </div>
         </form>
@@ -310,6 +339,8 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
         </div>
       )}
 
+      <RecurringPanel isAdmin={isAdmin} userId={userId} users={users} onChange={inv} />
+
       {/* List */}
       {listError && (
         <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 10, padding: "1rem", marginBottom: "1rem", fontFamily: "var(--font-cormorant)", color: "var(--color-danger)", fontSize: "0.95rem" }}>
@@ -335,7 +366,13 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
                   <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.15rem" }}>
                     <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.1em", color: col, padding: "0.1rem 0.4rem", border: `1px solid ${col}44`, borderRadius: 4, textTransform: "uppercase" }}>{e.category}</span>
                     <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-muted)" }}>{new Date(e.date).toLocaleDateString("hu-HU", { timeZone: "UTC", year: "numeric", month: "long", day: "numeric" })}</span>
-                    {!e.paid && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "var(--color-warn)", padding: "0.1rem 0.4rem", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4 }}>FÜGGŐBEN</span>}
+                    {!e.paid && (
+                      <button onClick={() => setPaidMut.mutate({ id: e.id, paid: true })} title="Fizetettnek jelölöm"
+                        style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "var(--color-warn)", padding: "0.1rem 0.4rem", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4, background: "none", cursor: "pointer" }}>
+                        FÜGGŐBEN · KIFIZETVE ✓
+                      </button>
+                    )}
+                    {e.recurringId && <span title="Havonta ismétlődő" style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "var(--color-teal)", padding: "0.1rem 0.4rem", border: "1px solid var(--border)", borderRadius: 4 }}>↻ HAVI</span>}
                     {e.assignedTo && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.44rem", letterSpacing: "0.08em", color: "#e8b4c8", padding: "0.1rem 0.4rem", border: "1px solid rgba(232,180,200,0.35)", borderRadius: 4 }}>👤 {e.assignedTo.name}</span>}
                     {e.notes && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", fontStyle: "italic" }}>{e.notes}</span>}
                   </div>
@@ -356,6 +393,92 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Havonta ismétlődő kiadások ────────────────────────────────────────────
+
+function RecurringPanel({ isAdmin, userId, users, onChange }: {
+  isAdmin: boolean; userId: string;
+  users: { id: string; name: string | null }[];
+  onChange: () => void;
+}) {
+  const { data: all = [] } = api.expenses.recurringList.useQuery();
+  const list = isAdmin ? all : all.filter(r => (r.assignedToId ?? r.createdById) === userId);
+  const upd = api.expenses.recurringUpdate.useMutation({ onSuccess: () => { onChange(); setEditId(null); } });
+  const del = api.expenses.recurringDelete.useMutation({ onSuccess: onChange });
+
+  const [editId, setEditId] = useState<string | null>(null);
+  const [eTitle, setETitle] = useState("");
+  const [eAmount, setEAmount] = useState("");
+  const [eDay, setEDay] = useState("");
+  const [eCat, setECat] = useState("");
+  const [eWho, setEWho] = useState("");
+
+  if (list.length === 0) return null;
+
+  const small: React.CSSProperties = { ...inputStyle, padding: "0.4rem 0.6rem", fontSize: "0.95rem" };
+  const iconBtn: React.CSSProperties = { background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", padding: "0.2rem 0.35rem", borderRadius: 5 };
+
+  return (
+    <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 14, padding: "1.1rem 1.25rem", marginBottom: "1.5rem" }}>
+      <div style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.5rem", letterSpacing: "0.18em", color: "rgba(122,158,140,0.5)", textTransform: "uppercase", marginBottom: "0.85rem" }}>↻ Havonta ismétlődő</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+        {list.map(r => {
+          const col = CAT_COLORS[r.category] ?? "#6b7280";
+          if (editId === r.id) {
+            return (
+              <form key={r.id} onSubmit={ev => {
+                  ev.preventDefault();
+                  const amt = parseFloat(eAmount), day = parseInt(eDay, 10);
+                  if (!eTitle.trim() || isNaN(amt) || amt <= 0 || !(day >= 1 && day <= 31)) return;
+                  upd.mutate({ id: r.id, title: eTitle.trim(), amount: amt, dayOfMonth: day, category: eCat, ...(isAdmin && { assignedToId: eWho || null }) });
+                }}
+                style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                <input value={eTitle} onChange={e => setETitle(e.target.value)} style={{ ...small, flex: "2 1 140px", width: "auto" }} />
+                <input type="number" value={eAmount} onChange={e => setEAmount(e.target.value)} min="1" style={{ ...small, flex: "1 1 90px", width: "auto" }} title="Összeg (Ft)" />
+                <input type="number" value={eDay} onChange={e => setEDay(e.target.value)} min="1" max="31" style={{ ...small, flex: "0 0 70px", width: 70 }} title="A hónap napja" />
+                <select value={eCat} onChange={e => setECat(e.target.value)} style={{ ...small, flex: "1 1 130px", width: "auto" }}>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {isAdmin && (
+                  <select value={eWho} onChange={e => setEWho(e.target.value)} style={{ ...small, flex: "1 1 110px", width: "auto" }}>
+                    <option value="">— Általános —</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.name ?? "?"}</option>)}
+                  </select>
+                )}
+                <button type="submit" className="btn-gold" disabled={upd.isPending} style={{ padding: "0.4rem 0.9rem", borderRadius: 8, fontFamily: "var(--font-cinzel)", fontSize: "0.55rem", letterSpacing: "0.12em" }}>Mentés</button>
+                <button type="button" onClick={() => setEditId(null)} style={iconBtn}>Mégsem</button>
+              </form>
+            );
+          }
+          return (
+            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", opacity: r.active ? 1 : 0.5 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: col, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", fontWeight: 600 }}>{r.title}</span>
+                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.85rem", color: "var(--text-muted)", marginLeft: "0.6rem" }}>
+                  {r.active
+                    ? `minden hó ${r.dayOfMonth}. · következő: ${new Date(r.nextDue).toLocaleDateString("hu-HU", { timeZone: "UTC", month: "long", day: "numeric" })}`
+                    : "szünetel"}
+                  {r.assignedTo && ` · ${r.assignedTo.name}`}
+                </span>
+              </div>
+              <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.95rem", color: "var(--color-danger)", fontWeight: 700 }}>{fmt(r.amount)}</span>
+              <div style={{ display: "flex", gap: "0.2rem" }}>
+                <button title="Szerkesztés" style={iconBtn} onClick={() => {
+                  setEditId(r.id); setETitle(r.title); setEAmount(String(r.amount)); setEDay(String(r.dayOfMonth)); setECat(r.category); setEWho(r.assignedToId ?? "");
+                }}>✎</button>
+                <button title={r.active ? "Szüneteltetés" : "Folytatás"} style={iconBtn}
+                  onClick={() => upd.mutate({ id: r.id, active: !r.active })}>{r.active ? "⏸" : "▶"}</button>
+                <button title="Törlés" style={iconBtn}
+                  onClick={() => { if (confirm(`Törlöd a(z) „${r.title}” ismétlődést? A már rögzített kiadások megmaradnak.`)) del.mutate({ id: r.id }); }}>✕</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
