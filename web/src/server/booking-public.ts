@@ -100,9 +100,47 @@ export function appUrl(): string {
   return "http://localhost:3000";
 }
 
-/** Mennyivel előbb és meddig előre lehet időpontot kérni. */
+/**
+ * Mennyivel előbb és meddig előre lehet időpontot kérni.
+ *
+ * Ezek most a szalon beállításai (Admin → Foglalás), nem a kódé — a `LEAD_HOURS`
+ * és a `HORIZON_DAYS` csak a tartalék érték, ha a beállítás-sor hiányzik.
+ */
 export const LEAD_HOURS   = 12;
 export const HORIZON_DAYS = 60;
+
+export type BookingLimits = {
+  leadHours: number;
+  /** Eddig a napig lehet kérni (a nap végéig). */
+  until: Date;
+  /** Hány napra előre — a listázásnak ez a korlátja. */
+  horizonDays: number;
+};
+
+/**
+ * A szalon korlátai. A `bookingOpenUntil` a "havonta nyitjuk a következő
+ * hónapot" eszköze: amíg nincs kitöltve, a horizont dönt.
+ */
+export async function bookingLimits(): Promise<BookingLimits> {
+  const s = await db.salonSetting.findUnique({ where: { id: "default" } });
+  const leadHours   = s?.bookingLeadHours   ?? LEAD_HOURS;
+  const horizonDays = s?.bookingHorizonDays ?? HORIZON_DAYS;
+
+  const byHorizon = new Date(Date.now() + horizonDays * 86_400_000);
+  // A kézi nyitási dátum csak szűkíteni tud: ha távolabb van, mint a horizont,
+  // attól még nem látunk előrébb.
+  const until = s?.bookingOpenUntil && s.bookingOpenUntil < byHorizon
+    ? endOfDay(s.bookingOpenUntil)
+    : byHorizon;
+
+  return { leadHours, until, horizonDays };
+}
+
+/** A megadott nap vége a szalon idejében. */
+function endOfDay(d: Date): Date {
+  const { date } = parts(d);
+  return fromSalonLocal(`${date}T23:59`) ?? d;
+}
 /** Ráhagyás két vendég között. */
 export const BUFFER_MIN   = 10;
 
@@ -267,10 +305,14 @@ export async function freeDays(opts: {
       });
   };
 
-  const earliest = new Date(Date.now() + LEAD_HOURS * 3600_000);
+  const { leadHours, until } = await bookingLimits();
+  const earliest = new Date(Date.now() + leadHours * 3600_000);
+  const latestKey = parts(until).date;
   const out: FreeDay[] = [];
 
   for (const [key, wins] of [...byDay.entries()].sort()) {
+    // Amit a szalon még nem nyitott meg, azt nem kínáljuk fel.
+    if (key > latestKey) continue;
     const slots = daySlots(wins, busyOf(key), {
       minutes: opts.minutes, step: 15, buffer: BUFFER_MIN,
     });

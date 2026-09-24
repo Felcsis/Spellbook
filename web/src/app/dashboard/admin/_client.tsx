@@ -379,6 +379,72 @@ function StaffFinances({ users }: { users: UserRow[] }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
+/**
+ * A foglalás korlátai.
+ *
+ * A "nyitva eddig" az, amivel havonta nyitjátok a következő hónapot: amíg üres,
+ * a horizont dönt. Azért itt van és nem a kódban, mert ez a szalon döntése.
+ */
+function BookingLimits() {
+  const utils = api.useUtils();
+  const { data } = api.bookings.limits.useQuery();
+  const [until, setUntil] = useState<string | null>(null);
+  const [lead,  setLead]  = useState<string | null>(null);
+  const [days,  setDays]  = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [err,   setErr]   = useState("");
+
+  const save = api.bookings.setLimits.useMutation({
+    onSuccess: () => { setSaved(true); setErr(""); void utils.bookings.limits.invalidate(); },
+    onError:   e => { setErr(e.message); setSaved(false); },
+  });
+
+  if (!data) return null;
+
+  // A mezők addig a mentett értéket mutatják, amíg hozzá nem nyúlsz.
+  const untilVal = until ?? (data.bookingOpenUntil ? new Date(data.bookingOpenUntil).toISOString().slice(0, 10) : "");
+  const leadVal  = lead  ?? String(data.bookingLeadHours);
+  const daysVal  = days  ?? String(data.bookingHorizonDays);
+
+  return (
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "1.25rem" }}>
+      <h2 style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.72rem", letterSpacing: "0.14em", color: "var(--color-teal)", margin: "0 0 0.25rem", textTransform: "uppercase" }}>
+        Online foglalás korlátai
+      </h2>
+      <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", fontSize: "0.92rem", margin: "0 0 1rem" }}>
+        Ez szabja meg, mit lát a vendég a foglalóoldalon.
+      </p>
+
+      <Field label="Nyitva eddig (opcionális)">
+        <Input type="date" value={untilVal} onChange={e => { setUntil(e.target.value); setSaved(false); }} />
+      </Field>
+      <p style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-dim)", fontSize: "0.85rem", margin: "-0.5rem 0 1rem", fontStyle: "italic" }}>
+        Eddig a napig lehet online időpontot kérni. Ezzel nyitjátok havonta a
+        következő hónapot. Üresen hagyva a lenti „hány napra előre” dönt.
+      </p>
+
+      <Field label="Legkorábban hány órával előbb kérhető">
+        <Input type="number" min={0} value={leadVal} onChange={e => { setLead(e.target.value); setSaved(false); }} />
+      </Field>
+      <Field label="Hány napra előre lássa a vendég">
+        <Input type="number" min={1} value={daysVal} onChange={e => { setDays(e.target.value); setSaved(false); }} />
+      </Field>
+
+      {err && <p style={{ color: "#e05555", fontSize: "0.85rem", marginBottom: "0.75rem" }}>{err}</p>}
+      {saved && <p style={{ color: "#527666", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Elmentve.</p>}
+
+      <Btn disabled={save.isPending}
+        onClick={() => save.mutate({
+          bookingOpenUntil:   untilVal || null,
+          bookingLeadHours:   Number(leadVal) || 0,
+          bookingHorizonDays: Number(daysVal) || 60,
+        })}>
+        {save.isPending ? "Mentés…" : "Mentés"}
+      </Btn>
+    </div>
+  );
+}
+
 export default function AdminClient() {
   const isMobile = useIsMobile();
   const { data: users = [], refetch } = api.admin.listUsers.useQuery();
@@ -387,7 +453,7 @@ export default function AdminClient() {
   const [archiveTarget, setArchiveTarget] = useState<UserRow | null>(null);
   const [settleUser, setSettleUser]       = useState<UserRow | null>(null);
   const [showArchived, setShowArchived]   = useState(false);
-  const [tab, setTab] = useState<"users" | "finances">("users");
+  const [tab, setTab] = useState<"users" | "finances" | "booking">("users");
   const restore = api.admin.restoreUser.useMutation({ onSuccess: () => void refetch() });
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
@@ -417,9 +483,11 @@ export default function AdminClient() {
       <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1.75rem", background: "var(--bg-panel)", padding: "0.25rem", borderRadius: 10, width: "fit-content" }}>
         <button style={tabStyle(tab === "users")}   onClick={() => setTab("users")}>Felhasználók</button>
         <button style={tabStyle(tab === "finances")} onClick={() => setTab("finances")}>Pénzügyek</button>
+        <button style={tabStyle(tab === "booking")}  onClick={() => setTab("booking")}>Foglalás</button>
       </div>
 
       {tab === "finances" && <StaffFinances users={users} />}
+      {tab === "booking"  && <BookingLimits />}
 
       {/* User cards */}
       {tab === "users" && <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>

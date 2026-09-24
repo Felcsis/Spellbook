@@ -1,0 +1,30 @@
+# Napi karbantartás a foglalásokhoz: emlékeztető levél a holnapi vendégeknek,
+# és a 90 napnál régebbi, meg nem valósult kérések törlése.
+#
+# Azért itt és nem a Spellbookban: a Next.js nem futtat magától ütemezett
+# feladatot. A végpontot kulcs védi (MAINT_KEY), a hívás pedig többször is
+# lefuthat kár nélkül.
+name: Napi karbantartás
+
+on:
+  schedule:
+    # 06:10 UTC — nyáron 08:10, télen 07:10 Budapesten. Reggel megy ki az
+    # emlékeztető, hogy a vendégnek legyen ideje szólni, ha nem tud jönni.
+    - cron: "10 6 * * *"
+  workflow_dispatch:   # kézzel is indítható
+
+jobs:
+  karbantartas:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Emlékeztetők és takarítás
+        run: |
+          valasz=$(curl -sS -X POST "https://spellbook.colormecrazy.hu/api/karbantartas" \
+            -H "Authorization: Bearer ${{ secrets.MAINT_KEY }}" \
+            -w "\n%{http_code}")
+          kod=$(echo "$valasz" | tail -1)
+          echo "$valasz" | head -n -1
+          if [ "$kod" != "200" ]; then
+            echo "A karbantartás nem futott le (HTTP $kod)"
+            exit 1
+          fi

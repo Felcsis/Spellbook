@@ -65,6 +65,10 @@ export const env = createEnv({
     // foglalóoldal nincs kész, a szervernek kell nemet mondania.
     // Nyitáshoz: BOOKING_OPEN=true
     BOOKING_OPEN:   z.string().optional(),
+
+    // A napi karbantartás (emlékeztető + takarítás) végpontjának kulcsa.
+    // Enélkül a végpont zárva marad.
+    MAINT_KEY:      z.string().optional(),
   },
 
   /**
@@ -115,6 +119,7 @@ export const env = createEnv({
     SALON_ADDRESS:  process.env.SALON_ADDRESS,
     APP_URL:        process.env.APP_URL,
     BOOKING_OPEN:   process.env.BOOKING_OPEN,
+    MAINT_KEY:      process.env.MAINT_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

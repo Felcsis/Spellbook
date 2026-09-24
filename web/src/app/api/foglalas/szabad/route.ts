@@ -6,7 +6,7 @@
  * lenne, ki mikor jár a szalonba.
  */
 import { db } from "~/server/db";
-import { bookingOpen, closedResponse, corsHeaders, freeDays, freeDaysPair, json, HORIZON_DAYS } from "~/server/booking-public";
+import { bookingOpen, bookingLimits, closedResponse, corsHeaders, freeDays, freeDaysPair, json } from "~/server/booking-public";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,8 @@ export async function GET(req: Request) {
   const workerId  = url.searchParams.get("dolgozo");
   const serviceId = url.searchParams.get("szolgaltatas");
   const fromParam = url.searchParams.get("tol");
-  const days      = Math.min(Number(url.searchParams.get("napok") ?? 30) || 30, HORIZON_DAYS);
+  const { horizonDays } = await bookingLimits();
+  const days      = Math.min(Number(url.searchParams.get("napok") ?? 30) || 30, horizonDays);
   // Kiegészítők (fejmasszázs, mosás…) plusz ideje. Nélküle rövidebb sávot
   // kínálnánk, mint amennyi a munka valójában — és csúszna az egész nap.
   const extra     = Math.min(Math.max(Number(url.searchParams.get("plusz") ?? 0) || 0, 0), 180);

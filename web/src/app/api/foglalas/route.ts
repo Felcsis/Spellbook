@@ -10,7 +10,7 @@
  */
 import { randomBytes } from "crypto";
 import { db } from "~/server/db";
-import { bookingOpen, closedResponse, corsHeaders, freeDays, fromSalonLocal, json, appUrl, parts, pairSecondStart, HORIZON_DAYS, LEAD_HOURS } from "~/server/booking-public";
+import { bookingOpen, bookingLimits, closedResponse, corsHeaders, freeDays, fromSalonLocal, json, appUrl, parts, pairSecondStart } from "~/server/booking-public";
 import { isConfigured, send } from "~/server/email";
 import { verifyEmail } from "~/server/email-templates";
 
@@ -69,9 +69,10 @@ export async function POST(req: Request) {
   const start = fromSalonLocal(body.kezdes) ?? new Date(body.kezdes);
   if (isNaN(start.getTime())) return json({ error: "Hibás időpont." }, origin, 400);
 
-  const earliest = new Date(Date.now() + LEAD_HOURS * 3600_000);
-  const latest   = new Date(Date.now() + HORIZON_DAYS * 86_400_000);
-  if (start < earliest) return json({ error: `Legalább ${LEAD_HOURS} órával előbb kérhetsz időpontot.` }, origin, 400);
+  const { leadHours, until } = await bookingLimits();
+  const earliest = new Date(Date.now() + leadHours * 3600_000);
+  const latest   = until;
+  if (start < earliest) return json({ error: `Legalább ${leadHours} órával előbb kérhetsz időpontot.` }, origin, 400);
   if (start > latest)   return json({ error: "Ilyen messzire még nem lehet időpontot kérni." }, origin, 400);
 
   const [worker, service] = await Promise.all([

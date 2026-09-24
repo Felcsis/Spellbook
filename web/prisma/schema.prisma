@@ -103,6 +103,29 @@ model User {
   @@schema("spellbook")
 }
 
+/// A szalon egyetlen beállítás-sora. Azért tábla és nem env-változó: ezeket a
+/// szalon állítja magának a felületen, nem fejlesztéskor dőlnek el.
+///
+/// A tábla egy korábbi, szalon-szintű Google-összekötésből maradt (a tokenek
+/// ma dolgozónként vannak, a `User`-en). A régi oszlopok az adatbázisban
+/// megmaradtak, de itt nem szerepelnek — nincs rájuk szükség.
+model SalonSetting {
+  /// Mindig "default" — egy sor van belőle.
+  id String @id @default("default")
+
+  /// Meddig lehet előre időpontot kérni. Üresen a `bookingHorizonDays` dönt.
+  /// Ezzel megy a "havonta nyitjuk a következő hónapot".
+  bookingOpenUntil   DateTime?
+  /// Ennél közelebbi időpontra már nem lehet online kérni.
+  bookingLeadHours   Int       @default(12)
+  /// Meddig lát előre a vendég, ha nincs kézi nyitási dátum.
+  bookingHorizonDays Int       @default(60)
+
+  updatedAt DateTime @updatedAt
+
+  @@schema("spellbook")
+}
+
 model WorkDay {
   id           String           @id @default(cuid())
   date         DateTime         @db.Date
@@ -161,6 +184,9 @@ model Guest {
   id        String      @id @default(cuid())
   name      String
   phone     String?
+  /// Online foglalásból kerül ide. A levelezéshez kell; a foglalás lemondása
+  /// után is megmarad, ezért a törlési kérésnél is számít.
+  email     String?
   notes     String?
   createdAt DateTime    @default(now())
   cards     GuestCard[]
@@ -374,6 +400,9 @@ model Booking {
   status      String    @default("megerosites_varo")
   /// Az e-mailes megerősítés ideje. Enélkül a kérés nem foglal helyet.
   confirmedAt DateTime?
+  /// Mikor ment ki az emlékeztető. Enélkül egy újrafutó napi feladat
+  /// többször is elküldené ugyanazt.
+  remindedAt  DateTime?
 
   /// Csak elfogadáskor töltődik ki.
   guest         Guest?  @relation(fields: [guestId], references: [id], onDelete: SetNull)

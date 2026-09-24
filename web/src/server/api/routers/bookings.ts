@@ -91,11 +91,21 @@ export const bookingsRouter = createTRPCRouter({
 
       // Vendég: a meglévőt keressük meg név szerint, hogy ne szaporodjanak.
       const name  = b.name.trim();
-      const guest = await ctx.db.guest.findFirst({
+      const existing = await ctx.db.guest.findFirst({
         where: { name: { equals: name, mode: "insensitive" } },
-      }) ?? await ctx.db.guest.create({
-        data: { name, phone: b.phone },
       });
+      const guest = existing
+        // A meglévő kártyán a most megadott elérhetőség a frissebb, de csak
+        // akkor írjuk felül, ha eddig nem volt — a szalon által beírt adatot
+        // egy online űrlap ne tüntesse el.
+        ? await ctx.db.guest.update({
+            where: { id: existing.id },
+            data: {
+              phone: existing.phone ?? b.phone,
+              email: existing.email ?? b.email,
+            },
+          })
+        : await ctx.db.guest.create({ data: { name, phone: b.phone, email: b.email } });
 
       const appointment = await ctx.db.appointment.create({
         data: {
@@ -185,5 +195,47 @@ export const bookingsRouter = createTRPCRouter({
       }
 
       return { ok: true };
+    }),
+
+  /**
+   * A foglalás korlátai: mennyivel előbb, és meddig előre lehet kérni.
+   *
+   * A "nyitva eddig" az, amivel havonta nyitjátok a következő hónapot: amíg
+   * üres, a horizont dönt.
+   */
+  limits: protectedProcedure.query(async ({ ctx }) => {
+    const s = await ctx.db.salonSetting.findUnique({ where: { id: "default" } });
+    return {
+      bookingOpenUntil:   s?.bookingOpenUntil ?? null,
+      bookingLeadHours:   s?.bookingLeadHours ?? 12,
+      bookingHorizonDays: s?.bookingHorizonDays ?? 60,
+    };
+  }),
+
+  setLimits: protectedProcedure
+    .input(z.object({
+      // Üres string = nincs kézi nyitási dátum, a horizont dönt.
+      bookingOpenUntil:   z.union([z.string(), z.null()]).optional(),
+      bookingLeadHours:   z.number().int().min(0).max(24 * 14),
+      bookingHorizonDays: z.number().int().min(1).max(365),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.session.user.role !== "admin")
+        throw new TRPCError({ code: "FORBIDDEN", message: "Csak admin állíthatja." });
+
+      const until = input.bookingOpenUntil ? new Date(`${input.bookingOpenUntil}T23:59:00`) : null;
+      if (until && isNaN(until.getTime()))
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Hibás dátum." });
+
+      const data = {
+        bookingOpenUntil:   until,
+        bookingLeadHours:   input.bookingLeadHours,
+        bookingHorizonDays: input.bookingHorizonDays,
+      };
+      return ctx.db.salonSetting.upsert({
+        where:  { id: "default" },
+        update: data,
+        create: { id: "default", ...data },
+      });
     }),
 });
