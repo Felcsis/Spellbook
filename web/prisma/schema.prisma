@@ -456,6 +456,11 @@ model Material {
   order     Int      @default(0)
   createdAt DateTime @default(now())
 
+  /// Melyik árlistához tartozik — ugyanúgy, mint a szolgáltatás-kategóriák.
+  /// A kozmetikusnak a szőkítőpor és a festék nem mond semmit, ezért mindenki
+  /// csak a saját anyagait látja, és a magáét veszi fel.
+  priceListType String @default("master")
+
   @@index([name])
   @@schema("spellbook")
 }

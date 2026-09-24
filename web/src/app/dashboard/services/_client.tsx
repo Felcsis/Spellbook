@@ -400,9 +400,11 @@ function MaterialRow({ mat, isAdmin }: { mat: Material; isAdmin: boolean }) {
 }
 
 // ── Materials panel ────────────────────────────────────────────────────────
-function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
+function MaterialsPanel({ priceListType }: { priceListType: PriceList }) {
   const utils = api.useUtils();
-  const { data: materials = [], isLoading } = api.materials.listAll.useQuery();
+  // Mindenki a saját árlistájának anyagait látja (az admin azt, amit épp néz),
+  // és oda vesz fel újat. A szűrést a szerver végzi.
+  const { data: materials = [], isLoading } = api.materials.listAll.useQuery({ priceListType });
   const create = api.materials.create.useMutation({ onSuccess: () => { void utils.materials.listAll.invalidate(); setName(""); setPrice(""); setUnit(""); } });
 
   const [name, setName]   = useState("");
@@ -412,13 +414,13 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
   function add() {
     const p = parseFloat(price);
     if (!name.trim() || isNaN(p)) return;
-    create.mutate({ name, price: p, unit: unit || undefined });
+    create.mutate({ name, price: p, unit: unit || undefined, priceListType });
   }
 
   return (
     <div>
-      {/* Add row — admin only */}
-      {isAdmin && <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem" }}>
+      {/* Felvitel: a saját anyagát bárki felveheti */}
+      {<div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap", padding: "1rem 1.25rem", background: panelBg, border, borderRadius: 12, marginBottom: "1.5rem" }}>
         <div className="mat-add-name">
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dimmed, marginBottom: "0.25rem" }}>Anyag neve</div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Szőkítőpor, L'Oréal festék…" style={inputStyle}
@@ -444,11 +446,11 @@ function MaterialsPanel({ isAdmin }: { isAdmin: boolean }) {
         <div style={{ background: panelBg, border, borderRadius: 12, padding: "3rem", textAlign: "center" }}>
           <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✦</div>
           <div style={{ fontFamily: "var(--font-cinzel)", color: gold, fontSize: "0.85rem", letterSpacing: "0.1em" }}>Még nincs anyag felvéve</div>
-          <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, marginTop: "0.5rem" }}>Add hozzá a szőkítőt, festéket és egyéb anyagokat.</div>
+          <div style={{ fontFamily: "var(--font-cormorant)", color: dimmed, marginTop: "0.5rem" }}>Vedd fel, amivel dolgozol — a nevét, az árát és az egységét.</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-          {materials.map(m => <MaterialRow key={m.id} mat={m} isAdmin={isAdmin} />)}
+          {materials.map(m => <MaterialRow key={m.id} mat={m} isAdmin />)}
         </div>
       )}
     </div>
@@ -758,7 +760,7 @@ export default function ServicesClient({ isAdmin, userId }: { isAdmin: boolean; 
       )}
 
       {/* Materials tab */}
-      {tab === "materials" && <MaterialsPanel isAdmin={isAdmin} />}
+      {tab === "materials" && <MaterialsPanel priceListType={effList} />}
 
       {addCat && <CategoryModal priceListType={effList} onClose={() => setAddCat(false)} />}
       {isAdmin && pdfImport && <PdfImportModal priceListType={effList} onClose={() => setPdfImport(false)} />}
