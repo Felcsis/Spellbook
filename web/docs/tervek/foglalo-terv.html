@@ -216,7 +216,7 @@
     <p class="eyebrow">Color Me Crazy · Salon Spellbook</p>
     <h1>Online időpontfoglalás</h1>
     <p class="lede">Hogyan kapcsoljuk össze a nyilvános weboldalt a szalon belső rendszerével úgy, hogy a vendég adata ott landoljon, ahol a receptkönyv is van.</p>
-    <p class="stamp">Terv · 2026. szeptember 17. · még nincs megvalósítva</p>
+    <p class="stamp">Terv · 2026. szeptember 17. · <strong>megvalósítva 2026. szeptember 24-én</strong> — az eltérések a lap alján</p>
   </header>
 
   <section>
@@ -488,5 +488,18 @@
     <p>Az adatvédelmi rész részletesen a repóban: <code>web/docs/tervek/idopontfoglalo-gdpr.md</code>, az e-mail árazás mellette. Ügyvéd ebben a felállásban nem kötelező, de egy egyszeri átnézés élesítés előtt megéri.</p>
   </section>
 
-  <footer>Salon Spellbook · terv, nem megvalósítás</footer>
+  <section>
+    <h2>Mi lett belőle</h2>
+    <p>Az öt fázis elkészült. Ahol eltértünk a tervtől, ott ez az ok:</p>
+    <table>
+      <tr><th>Terv</th><th>Ami lett</th><th>Miért</th></tr>
+      <tr><td>Külön „Foglalások” oldal a dashboardon</td><td>A jóváhagyás a <strong>naptárban</strong></td><td>A kérés ott jelenik meg, ahova szólna — látszik mellette, mi van aznap.</td></tr>
+      <tr><td>Beküldés után rögtön a szalon elé kerül</td><td>Előbb <strong>e-mailes megerősítés</strong></td><td>Bot-védelem: kitalált címmel beküldött kérés nem ér el senkit.</td></tr>
+      <tr><td>Csak havi nyitás (<code>bookingOpenUntil</code>)</td><td>Kiadott <strong>foglalható sávok</strong>, mellette a havi nyitás is</td><td>Nem az egész munkaidőt adjuk ki online, csak amennyit akarunk.</td></tr>
+      <tr><td><code>Booking.gcalEventId</code></td><td>A Google-esemény az <code>Appointment</code>-en</td><td>Elfogadáskor előjegyzés keletkezik; ugyanazt két helyen tartani hibaforrás.</td></tr>
+    </table>
+    <p>Amit a terv nem tartalmazott, de megépült: beküldés-korlát IP és e-mail szerint, az online foglalás főkapcsolója (<code>BOOKING_OPEN</code>), lemondás másik időpont felajánlásával, dolgozónkénti értesítési cím, és hogy mindenki a saját kéréseit bírálja el.</p>
+  </section>
+
+  <footer>Salon Spellbook · a terv megvalósult, az eltérésekkel együtt</footer>
 </div>
