@@ -168,23 +168,35 @@ export default function ServicesTab() {
         </Card>
 
         <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-          <Card style={{ flex: "2 1 360px" }}>
-            <SectionTitle>Munkatársanként</SectionTitle>
+          <Card style={{ flex: "1 1 100%" }}>
+            <SectionTitle hint="A munkaidő a vendégkártyán rögzített szolgáltatások idejének összege.">Ki mennyit dolgozott</SectionTitle>
             <TableWrap>
               <thead><tr>
-                <th style={{ ...th, textAlign: "left" }}>Név</th><th style={th}>Alkalom</th><th style={th}>Díj</th>
+                <th style={{ ...th, textAlign: "left" }}>Név</th><th style={th}>Munkaidő</th><th style={{ ...th, width: "18%" }}>Arány</th>
+                <th style={th}>Vendég</th><th style={th}>Alkalom</th><th style={th}>Díj</th>
                 <th style={th}>Átl. kosár</th><th style={th}>Óránként</th><th style={th}>Anyag / alk.</th>
               </tr></thead>
               <tbody>
                 {data.workers.map(w => (
                   <tr key={w.name}>
-                    <td style={tdLeft}>{w.name}</td><td style={td}>{w.visits}</td><td style={td}>{fmt(w.revenue)}</td>
+                    <td style={tdLeft}>{w.name}</td>
+                    <td style={td}>{Math.round(w.minutes / 60)} óra</td>
+                    <td style={td}><div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}><div style={{ flex: 1 }}><InlineBar value={w.hoursShare} max={1} /></div><span style={{ minWidth: 34 }}>{Math.round(w.hoursShare * 100)}%</span></div></td>
+                    <td style={td}>{w.guests}</td><td style={td}>{w.visits}</td><td style={td}>{fmt(w.revenue)}</td>
                     <td style={td}>{fmt(w.avgTicket)}</td><td style={td}>{w.perHour ? fmt(w.perHour) : "—"}</td>
                     <td style={{ ...td, color: "var(--text-soft)" }}>{fmt(w.avgMaterial)}</td>
                   </tr>
                 ))}
               </tbody>
             </TableWrap>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginTop: "1rem" }}>
+              {data.workers.map(w => (
+                <div key={w.name} style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: "var(--text-soft)" }}>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{w.name}</span> ideje:{" "}
+                  {w.byCategory.filter(c => c.minutes >= 60).map(c => `${c.category} ${Math.round(c.minutes / 60)} ó (${Math.round((c.minutes / w.minutes) * 100)}%)`).join(" · ")}
+                </div>
+              ))}
+            </div>
           </Card>
 
           {data.pairs.length > 0 && (

@@ -66,7 +66,7 @@ export const statsRouter = createTRPCRouter({
       const cards = await ctx.db.guestCard.findMany({
         where: { date: { gte: new Date(`${input.from}T00:00:00Z`), lt: new Date(`${input.to}T00:00:00Z`) } },
         select: {
-          id: true,
+          id: true, guestId: true,
           worker:    { select: { name: true } },
           services:  { select: { name: true, price: true, duration: true, categoryName: true } },
           materials: { select: { lineTotal: true } },
@@ -77,7 +77,7 @@ export const statsRouter = createTRPCRouter({
       type Row = { category: string; name: string; count: number; revenue: number; minutes: number; material: number; workers: Record<string, number> };
       const rows = new Map<string, Row & { catKey: string }>();
       const pairs = new Map<string, number>();
-      const workers = new Map<string, { visits: number; revenue: number; minutes: number; material: number }>();
+      const workers = new Map<string, { visits: number; revenue: number; minutes: number; material: number; guests: Set<string>; catMinutes: Map<string, number> }>();
       let visits = 0, revenue = 0, minutes = 0, material = 0;
 
       for (const c of cards) {
@@ -102,6 +102,9 @@ export const statsRouter = createTRPCRouter({
           r.count++; r.revenue += s.price; r.minutes += s.duration; r.material += cardMaterial * share;
           r.workers[who] = (r.workers[who] ?? 0) + 1;
           rows.set(key, r);
+          const w0 = workers.get(who) ?? { visits: 0, revenue: 0, minutes: 0, material: 0, guests: new Set<string>(), catMinutes: new Map<string, number>() };
+          w0.catMinutes.set(catKey, (w0.catMinutes.get(catKey) ?? 0) + s.duration);
+          workers.set(who, w0);
         }
         const uniq = [...new Set(keys)].sort();
         for (let i = 0; i < uniq.length; i++)
@@ -110,8 +113,9 @@ export const statsRouter = createTRPCRouter({
             pairs.set(k, (pairs.get(k) ?? 0) + 1);
           }
 
-        const w = workers.get(who) ?? { visits: 0, revenue: 0, minutes: 0, material: 0 };
+        const w = workers.get(who)!;
         w.visits++; w.revenue += cardPrice; w.minutes += cardMinutes; w.material += cardMaterial;
+        w.guests.add(c.guestId);
         workers.set(who, w);
         revenue += cardPrice; minutes += cardMinutes; material += cardMaterial;
       }
@@ -169,6 +173,13 @@ export const statsRouter = createTRPCRouter({
           avgTicket: Math.round(w.revenue / w.visits),
           avgMaterial: Math.round(w.material / w.visits),
           perHour: perHour(w.revenue, w.minutes),
+          minutes: w.minutes,
+          guests: w.guests.size,
+          hoursShare: minutes > 0 ? w.minutes / minutes : 0,
+          // Mire ment el az idő: kategóriánként, percben.
+          byCategory: [...w.catMinutes.entries()]
+            .map(([k, m]) => ({ category: shortCat(labels.get(k)), minutes: m }))
+            .sort((a, b) => b.minutes - a.minutes),
         })).sort((a, b) => b.revenue - a.revenue),
         pairs: [...pairs.entries()]
           .filter(([, n]) => n >= 2)
