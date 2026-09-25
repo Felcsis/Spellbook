@@ -5,6 +5,7 @@ import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { api } from "~/trpc/react";
 import { EntryList } from "./_entry-list";
 import { toDateStr } from "~/lib/date";
+import { PriceInput } from "~/app/dashboard/_price-input";
 import { catShort, serviceMatches } from "~/lib/service-label";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -53,7 +54,7 @@ const MAT_OPTIONS = [
   { name: "Pigment eltávolító", unitPrice: 5000, unit: "csomag" },
 ];
 
-type SelSvc = { uid: string; id: string; name: string; price: number; duration: number; categoryName: string; gender?: string; hours: number };
+type SelSvc = { uid: string; id: string; name: string; price: number; listPrice?: number; duration: number; categoryName: string; gender?: string; hours: number };
 type MatRow = { name: string; brand: string; colorCode: string; grams: string; unitPrice: number; lineTotal: number };
 
 const COLOR_KEYWORDS = ["festés","festek","szőkít","toner","féltartós","tartós festék","melír","balayage","ombre","pigment","highlight","szín"];
@@ -489,8 +490,9 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
                     style={{ width: 52, background: "var(--bg-card)", border: "1px solid rgba(82,118,102,0.35)", borderRadius: 6, padding: "0.18rem 0.4rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", textAlign: "center", outline: "none" }}
                   />
                   <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)" }}>óra</span>
+                  <PriceInput value={s.price} listPrice={s.listPrice} onChange={v => setSelSvcs(p => p.map(x => x.uid === s.uid ? { ...x, price: v } : x))} />
                   {s.hours !== 1 && (
-                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", color: "rgba(82,118,102,0.5)", letterSpacing: "0.08em" }}>{fmt(s.price)}/óra</span>
+                    <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.48rem", color: "rgba(82,118,102,0.5)", letterSpacing: "0.08em" }}>/óra</span>
                   )}
                   <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "rgba(82,118,102,0.85)", fontWeight: 700 }}>{fmt(s.price * s.hours)}</span>
                   {s.duration > 0 && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.8rem", color: "var(--text-soft)" }}>{Math.round(s.duration * s.hours)} perc</span>}
@@ -568,7 +570,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
                         {catSvcs.map(s => (
                             <div key={s.id}
                               onMouseDown={() => {
-                                setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: cat.name, hours: 1 }]);
+                                setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, listPrice: s.price, duration: s.duration ?? 0, categoryName: cat.name, hours: 1 }]);
                               }}
                               style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.9rem", cursor: "pointer", transition: "background 0.12s" }}
                               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.06)"; }}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { toDateStr } from "~/lib/date";
+import { PriceInput } from "~/app/dashboard/_price-input";
 import { catShort, serviceMatches } from "~/lib/service-label";
 
 export const fmt = (n: number) =>
@@ -26,7 +27,8 @@ const labelStyle: React.CSSProperties = {
 };
 
 export type MatRow = { name: string; brand: string; colorCode: string; grams: string; unitPrice: number; lineTotal: number };
-export type SvcRow = { uid: string; id: string; name: string; price: number; duration: number; categoryName: string; gender?: string; hours: number };
+/** `listPrice`: az árlistabeli ár a kiválasztáskor — ha a kártyán átírták, ehhez mérjük. */
+export type SvcRow = { uid: string; id: string; name: string; price: number; listPrice?: number; duration: number; categoryName: string; gender?: string; hours: number };
 
 function parseHours(rawName: string, rawPrice: number): { name: string; price: number; hours: number } {
   const m = /\((\d+(?:[.,]\d+)?) óra\)$/.exec(rawName.trim());
@@ -215,7 +217,8 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                         style={{ width: 52, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 6, padding: "0.18rem 0.4rem", color: "var(--text-primary)", fontFamily: "var(--font-cormorant)", fontSize: "0.9rem", textAlign: "center", outline: "none" }}
                       />
                       <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: dim }}>óra</span>
-                      {s.hours !== 1 && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", color: "var(--text-muted)", letterSpacing: "0.08em" }}>{fmt(s.price)}/óra</span>}
+                      <PriceInput value={s.price} listPrice={s.listPrice} onChange={v => setSelSvcs(p => p.map(x => x.uid === s.uid ? { ...x, price: v } : x))} />
+                      {s.hours !== 1 && <span style={{ fontFamily: "var(--font-cinzel)", fontSize: "0.46rem", color: "var(--text-muted)", letterSpacing: "0.08em" }}>/óra</span>}
                       <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price * s.hours)}</span>
                       {(["nő", "férfi", "gyermek"] as const).map(g => {
                         const c = gColors[g]!; const active = s.gender === g;
@@ -244,7 +247,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                       return (
                         <div key={s.id}>
                           {showCat && <div style={{ padding: "0.35rem 0.9rem 0.1rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "var(--text-dim)", textTransform: "uppercase" }}>{s.categoryName}</div>}
-                          <div onMouseDown={() => { setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: s.categoryName, hours: 1 }]); setSvcSearch(""); setSvcOpen(false); }}
+                          <div onMouseDown={() => { setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, listPrice: s.price, duration: s.duration ?? 0, categoryName: s.categoryName, hours: 1 }]); setSvcSearch(""); setSvcOpen(false); }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.9rem", cursor: "pointer" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>

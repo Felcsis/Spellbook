@@ -9,6 +9,7 @@ import { EditCardModal, fmt, MAT_OPTIONS } from "~/app/dashboard/_card-edit-moda
 import type { GuestCardData, MatRow, SvcRow } from "~/app/dashboard/_card-edit-modal";
 import { useIsMobile } from "~/app/_responsive";
 import { toDateStr } from "~/lib/date";
+import { PriceInput } from "~/app/dashboard/_price-input";
 import { catShort, serviceMatches } from "~/lib/service-label";
 
 const gold  = "var(--color-teal)";
@@ -581,7 +582,6 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
 
   const createGuest   = api.guests.createGuest.useMutation({ onSuccess: () => void utils.guests.listGuests.invalidate() });
   const createCard    = api.guests.createCard.useMutation({ onSuccess: () => { void utils.guests.guestBook.invalidate(); void utils.finance.list.invalidate(); void utils.calendar.month.invalidate(); } });
-  const createFinance = api.finance.create.useMutation({ onSuccess: () => void utils.finance.list.invalidate() });
 
   const [guestSearch, setGuestSearch] = useState(prefillGuestName ?? "");
   const [guestId,     setGuestId]     = useState(prefillGuestId ?? "");
@@ -656,7 +656,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
         name: r.name, brand: r.brand || undefined, colorCode: r.colorCode || undefined,
         grams: parseFloat(r.grams), unitPrice: r.unitPrice, lineTotal: r.lineTotal,
       }));
-    const card = await createCard.mutateAsync({
+    await createCard.mutateAsync({
       guestId: finalGuestId,
       workerId: finalWorkerId,
       date, notes: notes || undefined,
@@ -664,25 +664,9 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
       materials: mats,
     });
 
-    // Revenue entry linked to the card
-    const gLabel = (g?: string) => g === "nő" ? "Női" : g === "férfi" ? "Férfi" : g === "gyermek" ? "Gyermek" : "";
-    if (selSvcs.length > 0) {
-      const svcTotal = selSvcs.reduce((s, x) => s + x.price, 0);
-      const desc = selSvcs.map(s => [gLabel(s.gender), s.name, s.categoryName].filter(Boolean).join(" ")).join(", ");
-      await createFinance.mutateAsync({
-        type: "revenue", description: desc, amount: svcTotal, date,
-        guestCardId: card.id, workerUserId: finalWorkerId,
-      });
-    }
-    // Material entry linked to same card
-    if (mats.length > 0) {
-      const matTot = mats.reduce((s, r) => s + r.lineTotal, 0);
-      const matDesc = mats.map(r => `${r.name} (${r.grams}g)`).join(", ");
-      await createFinance.mutateAsync({
-        type: "material", description: matDesc, amount: matTot, date,
-        guestCardId: card.id, workerUserId: finalWorkerId,
-      });
-    }
+    // A bevételi és az anyag sort a szerver (guests.createCard) hozza létre a
+    // kártyával együtt. Itt korábban még egyszer rögzítettük, így a bevétel
+    // duplán szerepelt.
     onClose();
   }
 
@@ -782,7 +766,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.3rem 0.65rem", background: "var(--bg-active)", border: "1px solid var(--border)", borderRadius: 8, flexWrap: "wrap" }}>
                         <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)", flex: 1 }}>{s.name}{s.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(s.categoryName)}</span>}</span>
-                        <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "var(--color-teal)", opacity: 0.7, fontWeight: 700 }}>{fmt(s.price)}</span>
+                        <PriceInput value={s.price} listPrice={s.listPrice} onChange={v => setSelSvcs(p => p.map((x, j) => j === i ? { ...x, price: v } : x))} />
                         {(["nő", "férfi", "gyermek"] as const).map(g => {
                           const c = gColors[g]!;
                           const active = s.gender === g;
@@ -813,7 +797,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                       return (
                         <div key={s.id}>
                           {showCat && <div style={{ padding: "0.4rem 0.9rem 0.15rem", fontFamily: "var(--font-cinzel)", fontSize: "0.49rem", letterSpacing: "0.14em", color: "var(--text-dim)", textTransform: "uppercase" }}>{s.categoryName}</div>}
-                          <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: s.categoryName, hours: 1 }]); setSvcSearch(""); setSvcOpen(false); } }}
+                          <div onMouseDown={() => { if (!already) { setSelSvcs(p => [...p, { uid: crypto.randomUUID(), id: s.id, name: s.name, price: s.price, listPrice: s.price, duration: s.duration ?? 0, categoryName: s.categoryName, hours: 1 }]); setSvcSearch(""); setSvcOpen(false); } }}
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0.9rem", cursor: already ? "default" : "pointer", opacity: already ? 0.4 : 1, transition: "background 0.15s" }}
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
