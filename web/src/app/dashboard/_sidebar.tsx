@@ -11,7 +11,7 @@ const NAV_ADMIN = [
   { key: "calendar",     icon: "🌙", label: "Munkanaptár",    href: "/dashboard/calendar" },
   { key: "clients",      icon: "📖", label: "Recept könyv",   href: "/dashboard/guests" },
   { key: "finances",     icon: "⚗️", label: "Pénzügyek",      href: "/dashboard/finances" },
-  { key: "expenses",     icon: "📜", label: "Kiadások",       href: "/dashboard/expenses" },
+  { key: "expenses",     icon: "📜", label: "Kiadások/Bevételek", href: "/dashboard/expenses" },
   { key: "services",     icon: "✄", label: "Szolgáltatások", href: "/dashboard/services" },
   { key: "statisztika",  icon: "📊", label: "Statisztika",    href: "/dashboard/statisztika" },
   { key: "admin",        icon: "⚙️", label: "Admin",          href: "/dashboard/admin" },

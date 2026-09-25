@@ -211,12 +211,12 @@ export default function ExpensesClient({ isAdmin = false, userId = "" }: { isAdm
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: 0 }}>Kiadások ✦</h1>
-          <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-pink)", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>Számlák, rezsi, eszközök és egyéb kiadások</p>
+          <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: 0 }}>{isAdmin ? "Kiadások/Bevételek" : "Kiadások"} ✦</h1>
+          <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--color-pink)", opacity: 0.75, fontStyle: "italic", margin: "0.3rem 0 0" }}>{isAdmin ? "Számlák, rezsi, eszközök — és a székbérlet" : "Számlák, rezsi, eszközök és egyéb kiadások"}</p>
         </div>
         <button onClick={() => { setShowForm(v => !v); setEditId(null); resetForm(); }}
           className="btn-gold" style={{ padding: "0.75rem 1.5rem", borderRadius: 10, fontFamily: "var(--font-cinzel)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", flexShrink: 0 }}>
-          {showForm ? "Bezár" : "＋ Új kiadás"}
+          {showForm ? "Bezár" : isAdmin ? "＋ Új tétel" : "＋ Új kiadás"}
         </button>
       </div>
 
