@@ -9,6 +9,7 @@ import { EditCardModal, fmt, MAT_OPTIONS } from "~/app/dashboard/_card-edit-moda
 import type { GuestCardData, MatRow, SvcRow } from "~/app/dashboard/_card-edit-modal";
 import { useIsMobile } from "~/app/_responsive";
 import { toDateStr } from "~/lib/date";
+import { catShort, serviceMatches } from "~/lib/service-label";
 
 const gold  = "var(--color-teal)";
 const cream = "var(--text-primary)";
@@ -597,11 +598,15 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
   const [selSvcs,   setSelSvcs]   = useState<SvcRow[]>([]);
 
   const allSvcs: { id: string; name: string; price: number; duration: number; categoryName: string }[] = [];
-  categories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
+  // Csak annak az árlistája, aki a munkát végezte — különben a mester kártyájára
+  // a kezdő vagy a kozmetikus azonos nevű tétele is bekerülhet.
+  const workerPriceList = workers.find(u => u.id === workerId)?.priceListType;
+  const pickerCategories = workerPriceList ? categories.filter(c => c.priceListType === workerPriceList) : categories;
+  pickerCategories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
     allSvcs.push({ ...s, duration: s.duration ?? 0, categoryName: c.name })
   ));
   const filtSvcs = svcSearch.trim()
-    ? allSvcs.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()))
+    ? allSvcs.filter(s => serviceMatches(svcSearch, s.name, s.categoryName))
     : allSvcs;
 
   const [matRows,   setMatRows]   = useState<MatRow[]>([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
@@ -776,7 +781,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                     };
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.3rem 0.65rem", background: "var(--bg-active)", border: "1px solid var(--border)", borderRadius: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)", flex: 1 }}>{s.name}</span>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)", flex: 1 }}>{s.name}{s.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(s.categoryName)}</span>}</span>
                         <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.7rem", color: "var(--color-teal)", opacity: 0.7, fontWeight: 700 }}>{fmt(s.price)}</span>
                         {(["nő", "férfi", "gyermek"] as const).map(g => {
                           const c = gColors[g]!;
@@ -802,7 +807,8 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                 {svcOpen && filtSvcs.length > 0 && (
                   <div style={{ position: "absolute", left: 0, right: 0, zIndex: 200, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 10, marginTop: "0.2rem", maxHeight: 180, overflowY: "auto", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
                     {filtSvcs.map((s, i) => {
-                      const already = !!selSvcs.find(x => x.name === s.name);
+                      // Azonosító szerint: a név több kategóriában is ugyanaz lehet ("Rövid").
+                      const already = !!selSvcs.find(x => x.id === s.id);
                       const showCat = i === 0 || filtSvcs[i-1]?.categoryName !== s.categoryName;
                       return (
                         <div key={s.id}>
@@ -812,7 +818,7 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
                             onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                             {already && <span style={{ color: "var(--color-teal)", fontSize: "0.65rem" }}>✓</span>}
-                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: cream, flex: 1 }}>{s.name}</span>
+                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: cream, flex: 1 }}>{s.name}{s.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(s.categoryName)}</span>}</span>
                             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price)}</span>
                           </div>
                         </div>

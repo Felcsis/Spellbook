@@ -5,6 +5,7 @@ import { CardEditById } from "~/app/dashboard/_card-edit-modal";
 import { api } from "~/trpc/react";
 import { EntryList } from "./_entry-list";
 import { toDateStr } from "~/lib/date";
+import { catShort, serviceMatches } from "~/lib/service-label";
 
 const MONTHS = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
 
@@ -478,7 +479,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.55rem" }}>
               {selSvcs.map(s => (
                 <div key={s.uid} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 0.65rem", background: "rgba(82,118,102,0.1)", border: "1px solid rgba(82,118,102,0.3)", borderRadius: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#527666", flex: 1, minWidth: 120 }}>{s.name}</span>
+                  <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: "#527666", flex: 1, minWidth: 120 }}>{s.name}{s.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(s.categoryName)}</span>}</span>
                   {/* Óra szorzó */}
                   <input
                     type="number" min="0.5" step="0.5"
@@ -556,7 +557,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
                 <div style={{ maxHeight: 320, overflowY: "auto" }}>
                   {visibleCategories.map(cat => {
                     const catSvcs = (cat.services as { id: string; name: string; price: number; duration: number }[]).filter(s =>
-                      !svcSearch.trim() || s.name.toLowerCase().includes(svcSearch.toLowerCase()) || cat.name.toLowerCase().includes(svcSearch.toLowerCase())
+                      !svcSearch.trim() || serviceMatches(svcSearch, s.name, cat.name)
                     );
                     if (catSvcs.length === 0) return null;
                     return (
@@ -573,7 +574,7 @@ function VisitEntry({ onSaved, userId, isAdmin, selectedWorkerId, onWorkerChange
                               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(82,118,102,0.06)"; }}
                               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                               <span style={{ width: 14, flexShrink: 0 }} />
-                              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{s.name}</span>
+                              <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: "var(--text-primary)", flex: 1 }}>{s.name}{cat.name && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(cat.name)}</span>}</span>
                               <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: "var(--text-soft)", fontWeight: 700, flexShrink: 0 }}>{fmt(s.price)}</span>
                             </div>
                           ))}

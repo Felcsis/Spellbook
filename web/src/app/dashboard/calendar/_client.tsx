@@ -17,6 +17,7 @@ import { DayPanel, type DaySection, type Total } from "./_day-panel";
 import { WeekEntries, type WeekDayEntries } from "./_week-entries";
 import { SelectionBar } from "./_selection-bar";
 import { toDateStr } from "~/lib/date";
+import { catShort, serviceMatches } from "~/lib/service-label";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS  = ["Január","Február","Március","Április","Május","Június","Július","Augusztus","Szeptember","Október","November","December"];
@@ -227,11 +228,11 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
   // Filtered services for dropdown
   const allServicesFlat: (ServiceItem & { categoryName: string })[] = [];
   categories.forEach(c => c.services.forEach(s => allServicesFlat.push({ ...s, categoryName: c.name })));
-  const allServicesMap: Record<string, ServiceItem> = {};
+  const allServicesMap: Record<string, ServiceItem & { categoryName: string }> = {};
   allServicesFlat.forEach(s => { allServicesMap[s.id] = s; });
 
   const filteredSvcs = svcSearch.trim()
-    ? allServicesFlat.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase()) || s.categoryName.toLowerCase().includes(svcSearch.toLowerCase()))
+    ? allServicesFlat.filter(s => serviceMatches(svcSearch, s.name, s.categoryName))
     : allServicesFlat;
 
   const [mounted, setMounted] = useState(false);
@@ -480,7 +481,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                     const col = userColors[userId] ?? "#c4926e";
                     return (
                       <div key={id} style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.28rem 0.65rem", borderRadius: "7px", background: `${col}18`, border: `1px solid ${col}55` }}>
-                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: col }}>{svc.name}</span>
+                        <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.92rem", color: col }}>{svc.name}{svc.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(svc.categoryName)}</span>}</span>
                         <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.72rem", color: col, fontWeight: 700, opacity: 0.75 }}>{fmt(svc.price)}</span>
                         <button type="button" onClick={() => removeService(id)}
                           style={{ background: "none", border: "none", color: `${col}88`, cursor: "pointer", fontSize: "0.75rem", padding: "0 0.1rem", lineHeight: 1 }}>✕</button>
@@ -526,7 +527,7 @@ function DayModal({ dateStr, workEntries, costEntries, guestCards, users, userCo
                           onMouseEnter={e => { if (!already) (e.currentTarget as HTMLElement).style.background = `${col}12`; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = already ? "var(--bg-panel)" : "transparent"; }}>
                           {already && <span style={{ fontSize: "0.65rem", color: col }}>✓</span>}
-                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "var(--text-soft)" : "var(--text-primary)", flex: 1 }}>{svc.name}</span>
+                          <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "1rem", color: already ? "var(--text-soft)" : "var(--text-primary)", flex: 1 }}>{svc.name}{svc.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(svc.categoryName)}</span>}</span>
                           <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.82rem", color: col, fontWeight: 700 }}>{fmt(svc.price)}</span>
                         </div>
                       </div>

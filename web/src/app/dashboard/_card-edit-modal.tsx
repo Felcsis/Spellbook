@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { toDateStr } from "~/lib/date";
+import { catShort, serviceMatches } from "~/lib/service-label";
 
 export const fmt = (n: number) =>
   new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -116,10 +117,14 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
   const [activeMat, setActiveMat] = useState(0);
 
   const allSvcs: Omit<SvcRow, "uid" | "hours">[] = [];
-  categories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
+  // Csak annak az árlistája, aki a munkát végezte — különben a mester kártyájára
+  // a kezdő vagy a kozmetikus azonos nevű tétele is bekerülhet.
+  const workerPriceList = workers.find(u => u.id === workerId)?.priceListType;
+  const pickerCategories = workerPriceList ? categories.filter(c => c.priceListType === workerPriceList) : categories;
+  pickerCategories.forEach(c => c.services.forEach((s: { id: string; name: string; price: number; duration: number }) =>
     allSvcs.push({ id: s.id, name: s.name, price: s.price, duration: s.duration ?? 0, categoryName: c.name })
   ));
-  const filtSvcs = svcSearch.trim() ? allSvcs.filter(s => s.name.toLowerCase().includes(svcSearch.toLowerCase())) : allSvcs;
+  const filtSvcs = svcSearch.trim() ? allSvcs.filter(s => serviceMatches(svcSearch, s.name, s.categoryName)) : allSvcs;
   const filtMat  = matSearch.trim() ? MAT_OPTIONS.filter(m => m.name.toLowerCase().includes(matSearch.toLowerCase())) : MAT_OPTIONS;
 
   function updateMat(i: number, field: keyof MatRow, val: string | number) {
@@ -201,7 +206,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginBottom: "0.5rem" }}>
                   {selSvcs.map(s => (
                     <div key={s.uid} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.3rem 0.65rem", background: "var(--bg-active)", border: "1px solid var(--border)", borderRadius: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)", flex: 1 }}>{s.name}</span>
+                      <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: "var(--color-teal)", flex: 1 }}>{s.name}{s.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(s.categoryName)}</span>}</span>
                       <input
                         type="number" min="0.5" step="0.5"
                         value={s.hours}
@@ -243,7 +248,7 @@ export function EditCardModal({ card, onClose }: { card: GuestCardData; onClose:
                             style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.9rem", cursor: "pointer" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-highlight)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: cream, flex: 1 }}>{s.name}</span>
+                            <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.97rem", color: cream, flex: 1 }}>{s.name}{s.categoryName && <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.82rem", color: "var(--text-soft)", marginLeft: "0.35rem" }}>· {catShort(s.categoryName)}</span>}</span>
                             <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.8rem", color: "var(--color-teal)", fontWeight: 700 }}>{fmt(s.price)}</span>
                           </div>
                         </div>
