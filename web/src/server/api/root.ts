@@ -15,11 +15,13 @@ import { timeOffRouter } from "~/server/api/routers/timeoff";
 import { bookableRouter } from "~/server/api/routers/bookable";
 import { emailRouter } from "~/server/api/routers/email";
 import { bookingsRouter } from "~/server/api/routers/bookings";
+import { statsRouter } from "~/server/api/routers/stats";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
   post: postRouter,
   finance: financeRouter,
+  stats: statsRouter,
   calendar: calendarRouter,
   services: servicesRouter,
   materials: materialsRouter,

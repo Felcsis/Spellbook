@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import PeriodStats from "./_period-stats";
+import ServicesTab from "./_services-tab";
+import GuestsTab from "./_guests-tab";
+import { Chips } from "./_ui";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend,
@@ -63,7 +66,31 @@ function CustomPieTooltip({ active, payload }: { active?: boolean; payload?: { n
   );
 }
 
+type Tab = "overview" | "services" | "guests";
+
 export default function StatisztikaClient({ userId }: { userId: string }) {
+  const [tab, setTab] = useState<Tab>("overview");
+  return (
+    <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 960 }}>
+      <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: "0 0 0.3rem" }}>Statisztika ✦</h1>
+      <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem", margin: "0 0 1.25rem" }}>
+        {tab === "overview" ? "Időszakos kimutatás — személyenként és összesítve"
+          : tab === "services" ? "Mi mennyit hoz, mennyi idő alatt, és ki csinálja"
+          : "Kik jönnek vissza, mikor, és kiket érdemes megkeresni"}
+      </p>
+      <div style={{ marginBottom: "1.75rem" }}>
+        <Chips value={tab} onChange={setTab} options={[
+          { key: "overview", label: "Áttekintés" }, { key: "services", label: "Szolgáltatások" }, { key: "guests", label: "Vendégek" },
+        ]} />
+      </div>
+      {tab === "overview" && <Overview userId={userId} />}
+      {tab === "services" && <ServicesTab />}
+      {tab === "guests" && <GuestsTab />}
+    </div>
+  );
+}
+
+function Overview({ userId }: { userId: string }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
 
@@ -102,13 +129,7 @@ export default function StatisztikaClient({ userId }: { userId: string }) {
   const activeDays = dowData.filter(d => d.count > 0).length;
 
   return (
-    <div style={{ animation: "fadeInUp 0.5s ease", maxWidth: 860 }}>
-
-      {/* Fő cím + rugalmas időszakos kimutatás */}
-      <h1 style={{ fontFamily: "var(--font-playfair)", fontSize: "2rem", color: "var(--color-teal)", animation: "float 4s ease-in-out infinite", margin: "0 0 0.3rem" }}>Statisztika ✦</h1>
-      <p style={{ fontStyle: "italic", color: "var(--color-pink)", opacity: 0.75, fontFamily: "var(--font-cormorant)", fontSize: "1.05rem", margin: "0 0 1.75rem" }}>
-        Időszakos kimutatás — személyenként és összesítve
-      </p>
+    <div style={{ maxWidth: 860 }}>
       <PeriodStats />
 
       <div style={{ height: 1, background: "var(--border)", margin: "0.5rem 0 2rem" }} />
