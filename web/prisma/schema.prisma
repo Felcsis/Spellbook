@@ -496,6 +496,19 @@ model Material {
   @@schema("spellbook")
 }
 
+// A színreceptben választható márkák. Eddig szabad szöveg volt, és ugyanaz a
+// márka háromféleképpen szerepelt (Echos / echosline / Ecoshline) — a
+// statisztika és a készlet nem tudta összevonni.
+model MaterialBrand {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@schema("spellbook")
+}
+
 model Expense {
   id           String   @id @default(cuid())
   title        String

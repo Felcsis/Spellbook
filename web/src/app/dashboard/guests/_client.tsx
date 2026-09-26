@@ -10,6 +10,7 @@ import type { GuestCardData, MatRow, SvcRow } from "~/app/dashboard/_card-edit-m
 import { useIsMobile } from "~/app/_responsive";
 import { toDateStr } from "~/lib/date";
 import { PriceInput } from "~/app/dashboard/_price-input";
+import { ColorRecipeEditor, emptyMatRow } from "~/app/dashboard/_color-recipe";
 import { catShort, serviceMatches } from "~/lib/service-label";
 
 const gold  = "var(--color-teal)";
@@ -609,14 +610,8 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
     ? allSvcs.filter(s => serviceMatches(svcSearch, s.name, s.categoryName))
     : allSvcs;
 
-  const [matRows,   setMatRows]   = useState<MatRow[]>([{ name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }]);
-  const [matSearch, setMatSearch] = useState("");
-  const [matOpen,   setMatOpen]   = useState(false);
-  const [activeMat, setActiveMat] = useState(0);
+  const [matRows,   setMatRows]   = useState<MatRow[]>(() => [emptyMatRow()]);
 
-  const filtMat = matSearch.trim()
-    ? MAT_OPTIONS.filter(m => m.name.toLowerCase().includes(matSearch.toLowerCase()))
-    : MAT_OPTIONS;
 
   const filtGuests = guestSearch.trim()
     ? allGuests.filter(g => g.name.toLowerCase().includes(guestSearch.toLowerCase()))
@@ -626,20 +621,6 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
   const matTotal   = matRows.reduce((s, r) => s + r.lineTotal, 0);
   const grandTotal = svcTotal + matTotal;
 
-  function updateMat(i: number, field: keyof MatRow, val: string | number) {
-    setMatRows(prev => {
-      const rows = [...prev];
-      const row = { ...rows[i]! };
-      (row as Record<string, string | number>)[field] = val;
-      if (field === "grams" || field === "unitPrice") {
-        const g = parseFloat(field === "grams" ? String(val) : row.grams);
-        const p = field === "unitPrice" ? Number(val) : row.unitPrice;
-        row.lineTotal = isNaN(g) ? 0 : g * p;
-      }
-      rows[i] = row;
-      return rows;
-    });
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -815,55 +796,8 @@ function NewCardModal({ prefillGuestId, prefillGuestName, onClose }: {
 
             {/* Materials / Szín recept */}
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>✦ Szín recept</label>
-                <button type="button" onClick={() => setMatRows(p => [...p, { name: "", brand: "", colorCode: "", grams: "", unitPrice: 0, lineTotal: 0 }])}
-                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, color: "var(--color-teal)", cursor: "pointer", fontSize: "0.7rem", padding: "0.2rem 0.6rem", fontFamily: "var(--font-cinzel)", letterSpacing: "0.1em" }}>
-                  ＋ Sor
-                </button>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {matRows.map((row, i) => (
-                  <div key={i} style={{ background: "var(--bg-today)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.7rem 0.85rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <div style={{ flex: 2, position: "relative" }}>
-                        <input value={row.name}
-                          onChange={e => { updateMat(i, "name", e.target.value); setActiveMat(i); setMatSearch(e.target.value); setMatOpen(true); }}
-                          onFocus={() => { setActiveMat(i); setMatSearch(row.name); setMatOpen(true); }}
-                          onBlur={() => setTimeout(() => setMatOpen(false), 150)}
-                          placeholder="Anyag neve…"
-                          style={{ ...inputStyle, fontSize: "0.92rem", borderColor: "var(--border)" }} />
-                        {matOpen && activeMat === i && filtMat.length > 0 && (
-                          <div style={{ position: "absolute", left: 0, right: 0, zIndex: 300, background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 10, marginTop: "0.2rem", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
-                            {filtMat.map(m => (
-                              <div key={m.name}
-                                onMouseDown={() => { updateMat(i, "name", m.name); updateMat(i, "unitPrice", m.unitPrice); setMatSearch(""); setMatOpen(false); }}
-                                style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.48rem 0.85rem", cursor: "pointer", transition: "background 0.12s" }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-active)"; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                                <span style={{ fontFamily: "var(--font-cormorant)", fontSize: "0.95rem", color: cream, flex: 1 }}>{m.name}</span>
-                                <span style={{ fontFamily: "var(--font-playfair)", fontSize: "0.78rem", color: "var(--color-teal)", fontWeight: 700 }}>{m.unitPrice} Ft/{m.unit}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <input value={row.brand} onChange={e => updateMat(i, "brand", e.target.value)} placeholder="Márka" style={{ ...inputStyle, flex: 1.2, fontSize: "0.92rem" }} />
-                      <input value={row.colorCode} onChange={e => updateMat(i, "colorCode", e.target.value)} placeholder="Színkód" style={{ ...inputStyle, flex: 1, fontSize: "0.92rem" }} />
-                      <button type="button" onClick={() => setMatRows(p => p.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.85rem", padding: "0 0.2rem", alignSelf: "center" }}>✕</button>
-                    </div>
-                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                      <input type="number" value={row.grams} onChange={e => updateMat(i, "grams", e.target.value)} placeholder="Gramm" min="0" step="any"
-                        style={{ ...inputStyle, flex: 1, fontSize: "0.9rem", textAlign: "center" }} />
-                      <span style={{ fontFamily: "var(--font-cormorant)", color: dim, fontSize: "0.9rem" }}>g ×</span>
-                      <span style={{ fontFamily: "var(--font-cormorant)", color: "var(--text-muted)", fontSize: "0.9rem", minWidth: 55 }}>{fmt(row.unitPrice)}</span>
-                      <span style={{ color: dim, fontSize: "0.85rem" }}>=</span>
-                      <span style={{ fontFamily: "var(--font-playfair)", color: "var(--color-teal)", fontWeight: 700, fontSize: "0.95rem", marginLeft: "auto" }}>{fmt(row.lineTotal)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <label style={{ ...labelStyle, marginBottom: "0.5rem", display: "block" }}>✦ Szín recept</label>
+              <ColorRecipeEditor rows={matRows} onChange={setMatRows} options={MAT_OPTIONS} />
             </div>
 
             {/* Notes */}

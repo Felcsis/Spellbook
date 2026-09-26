@@ -46,6 +46,26 @@ async function assertOwn(
 const listInput = z.object({ priceListType: z.enum(PRICE_LIST_KEYS).optional() }).optional();
 
 export const materialsRouter = createTRPCRouter({
+  /** A színrecept márkái — mindenki ugyanazt a listát látja. */
+  brands: protectedProcedure.query(({ ctx }) =>
+    ctx.db.materialBrand.findMany({ where: { active: true }, orderBy: [{ order: "asc" }, { name: "asc" }], select: { id: true, name: true } })
+  ),
+
+  /** Új márka a színreceptből; ha már van (kis-nagybetűtől függetlenül), azt adja vissza. */
+  addBrand: protectedProcedure
+    .input(z.object({ name: z.string().trim().min(1).max(40) }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.materialBrand.findFirst({
+        where:  { name: { equals: input.name, mode: "insensitive" } },
+        select: { id: true, name: true, active: true },
+      });
+      if (existing) {
+        if (!existing.active) await ctx.db.materialBrand.update({ where: { id: existing.id }, data: { active: true } });
+        return { id: existing.id, name: existing.name };
+      }
+      return ctx.db.materialBrand.create({ data: { name: input.name, order: 100 }, select: { id: true, name: true } });
+    }),
+
   list: protectedProcedure
     .input(listInput)
     .query(async ({ ctx, input }) =>
