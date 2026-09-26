@@ -8,9 +8,12 @@ name: Napi karbantartás
 
 on:
   schedule:
-    # 06:10 UTC — nyáron 08:10, télen 07:10 Budapesten. Reggel megy ki az
-    # emlékeztető, hogy a vendégnek legyen ideje szólni, ha nem tud jönni.
-    - cron: "10 6 * * *"
+    # Napközben 3 óránként: 06:10–18:10 UTC (nyáron 08:10–20:10 Budapesten).
+    # Az emlékeztető a következő 24 órán belüli időpontokra megy, így a futások
+    # átfedik egymást — a GitHub ütemezése órákat is késhet, egyetlen napi
+    # futásnál a két futás közé eső időpontok kimaradtak volna. Egy vendég így
+    # is csak egy levelet kap (`remindedAt`), éjjel pedig nem megy levél.
+    - cron: "10 6-18/3 * * *"
   workflow_dispatch:   # kézzel is indítható
 
 jobs:
